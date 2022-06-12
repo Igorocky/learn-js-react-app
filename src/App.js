@@ -1,6 +1,7 @@
 import logo from './logo.svg';
 import './App.css';
 import Cmp1 from "./Cmp1";
+import {make as Cmp2} from "./Cmp2.bs";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           Learn React
         </a>
         <Cmp1/>
+        <Cmp2/>
       </header>
     </div>
   );

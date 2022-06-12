@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 /.idea/
 /learn-js-react-app.iml
+/lib/bs
+/.merlin
+/src/*.bs.js
