@@ -1,10 +1,13 @@
+open Mui
 
-module TextField = {
-  type size = [#medium | #small]
-
-  @module("@mui/material/TextField") @react.component
-  external make: (~size:size) => React.element = "default"
+type view = {
+  name: string,
+  render: () => React.element
 }
+
+let allViews:array<view> = [
+  {name:"JsonParseView", render: _ => <JsonParseView/>}
+]
 
 @react.component
 let make = () => {
@@ -12,8 +15,16 @@ let make = () => {
 
    Js.log2("url", Js.Json.stringifyAny(url)) 
 
+  let renderViewListItem = view =>
+    <ListItem >
+        <ListItemButton >
+            <ListItemText>{React.string(view.name)}</ListItemText>
+        </ListItemButton> 
+    </ListItem>
+
+   
    switch url.path {
    | list{"json-parse"} => <JsonParseView/>
-   | _ => <TextField size=#small></TextField>
+   | _ => <List>{ allViews -> Belt.Array.map(renderViewListItem) -> React.array }</List>
    }
 }
