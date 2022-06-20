@@ -22,7 +22,7 @@ module ListItem = {
 
 module ListItemButton = {
   @module("@mui/material/ListItemButton") @react.component
-  external make: (~children: React.element) => React.element = "default"
+  external make: (~onClick: option<_ => ()>=?, ~children: React.element) => React.element = "default"
 }
 
 module ListItemText = {
