@@ -29,3 +29,21 @@ module ListItemText = {
   @module("@mui/material/ListItemText") @react.component
   external make: (~children: React.element) => React.element = "default"
 }
+
+module ListItemIcon = {
+  @module("@mui/material/ListItemIcon") @react.component
+  external make: (~children: React.element) => React.element = "default"
+}
+
+module Icons = {
+
+  module Delete = {
+    @module("@mui/icons-material/Delete") @react.component
+    external make: () => React.element = "default"
+  }
+
+  module BrightnessLow = {
+    @module("@mui/icons-material/BrightnessLow") @react.component
+    external make: () => React.element = "default"
+  }
+}

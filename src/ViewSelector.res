@@ -21,7 +21,12 @@ let make = () => {
 
   let renderViewListItem = view =>
     <ListItem key={view.name}>
-      <ListItemButton onClick={_ => openView(view)}> <ListItemText> {React.string(view.name)} </ListItemText> </ListItemButton>
+      <ListItemButton onClick={_ => openView(view)}> 
+        <ListItemIcon>
+          <Icons.BrightnessLow/>
+        </ListItemIcon>
+        <ListItemText> {React.string(view.name)} </ListItemText> 
+      </ListItemButton>
     </ListItem>
 
    let renderViewByName = viewName =>
