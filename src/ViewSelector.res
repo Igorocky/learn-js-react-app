@@ -17,14 +17,14 @@ let make = () => {
 
   Js.log2("url", Js.Json.stringifyAny(url))
 
-  let openView = viewName => RescriptReactRouter.push("/" ++ viewName)
+  let openView = view => RescriptReactRouter.push("/" ++ view.name)
 
   let renderViewListItem = view =>
     <ListItem key={view.name}>
-      <ListItemButton onClick={_ => openView(view.name)}> <ListItemText> {React.string(view.name)} </ListItemText> </ListItemButton>
+      <ListItemButton onClick={_ => openView(view)}> <ListItemText> {React.string(view.name)} </ListItemText> </ListItemButton>
     </ListItem>
 
-   let renderSelectedView = viewName =>
+   let renderViewByName = viewName =>
       allViews
       -> Belt.Array.getBy(view => view.name == viewName)
       -> Belt.Option.map(v => v.render())
@@ -32,7 +32,7 @@ let make = () => {
 
 
   switch url.path {
-  | list{viewName} => renderSelectedView(viewName)
+  | list{viewName} => renderViewByName(viewName)
   | _ => <List> {allViews->Belt.Array.map(renderViewListItem)->React.array} </List>
   }
 }
