@@ -12,7 +12,8 @@
   "suffix": ".bs.js",
   "reason": { "react-jsx": 3 },
   "bs-dependencies": [
-    "@rescript/react"
+    "@rescript/react",
+    "@igye/common-functions"
   ],
   "warnings": {
     "error" : "+101"
