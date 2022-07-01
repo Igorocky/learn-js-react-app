@@ -13,7 +13,7 @@
   "reason": { "react-jsx": 3 },
   "bs-dependencies": [
     "@rescript/react",
-    "@igye/common-functions"
+    "@expln/utils"
   ],
   "warnings": {
     "error" : "+101"

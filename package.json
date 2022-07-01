@@ -6,7 +6,7 @@
     "@emotion/react": "^11.9.3",
     "@emotion/styled": "^11.9.3",
     "@fontsource/roboto": "^4.5.7",
-    "@igye/common-functions": "0.0.3",
+    "@expln/utils": "0.0.1",
     "@mui/icons-material": "^5.8.4",
     "@mui/material": "^5.8.4",
     "@rescript/react": "^0.10.3",
@@ -25,8 +25,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "rescript-build": "rescript",
-    "rescript-clean": "rescript clean -with-deps",
-    "rescript-start": "rescript build -w"
+    "rescript-build-with-deps": "rescript build -with-deps",
+    "rescript-start": "rescript build -w",
+    "rescript-clean": "rescript clean -with-deps"
   },
   "eslintConfig": {
     "extends": [
