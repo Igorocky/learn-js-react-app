@@ -1,43 +1,45 @@
 open Mui
 
 type view = {
-  name: string,
+  id: int,
+  title: string,
   render: unit => React.element,
 }
 
 let allViews: array<view> = [
-  {name: "JsonParseView", render: _ => <JsonParseView />}
+  {id: 1, title: "JsonParseView", render: _ => <JsonParseView />}
 ]
 
-let renderDefaultView = nameOfNonExistentView => <Paper>{ React.string("View not found: " ++ nameOfNonExistentView) }</Paper>
+let renderDefaultView = idOfNonExistentView => 
+    <Paper>{ 
+      React.string("View not found: " ++ (idOfNonExistentView -> Belt.Int.toString)) 
+    }</Paper>
 
 @react.component
 let make = () => {
-  let url = RescriptReactRouter.useUrl()
+  let (selectedViewId, setSelectedViewId) = React.useState(_ => None)
 
-  Js.log2("url", Js.Json.stringifyAny(url))
-
-  let openView = view => RescriptReactRouter.push("/" ++ view.name)
+  let openView = view => setSelectedViewId(_ => Some(view.id))
 
   let renderViewListItem = view =>
-    <ListItem key={view.name}>
+    <ListItem key={view.id -> Belt.Int.toString}>
       <ListItemButton onClick={_ => openView(view)}> 
         <ListItemIcon>
           <Icons.BrightnessLow/>
         </ListItemIcon>
-        <ListItemText> {React.string(view.name)} </ListItemText> 
+        <ListItemText> {React.string(view.title)} </ListItemText> 
       </ListItemButton>
     </ListItem>
 
-   let renderViewByName = viewName =>
+   let renderViewById = viewId =>
       allViews
-      -> Belt.Array.getBy(view => view.name == viewName)
-      -> Belt.Option.map(v => v.render())
-      -> Belt.Option.getWithDefault(renderDefaultView(viewName))
+      -> Belt.Array.getBy(view => view.id == viewId)
+      -> Belt.Option.map(view => view.render())
+      -> Belt.Option.getWithDefault(renderDefaultView(viewId))
 
 
-  switch url.path {
-  | list{viewName} => renderViewByName(viewName)
-  | _ => <List> {allViews->Belt.Array.map(renderViewListItem)->React.array} </List>
+  switch selectedViewId {
+  | Some(id) => renderViewById(id)
+  | None => <List> {allViews->Belt.Array.map(renderViewListItem)->React.array} </List>
   }
 }
