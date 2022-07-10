@@ -1,11 +1,15 @@
 open Mui
+open Js.Console
 
 @react.component
 let make = () => {
   let (jsonStr,setJsonStr) = React.useState(_ => "")
+  log2("jsonStr", jsonStr)
 
-  column(~style=ReactDOM.Style.make(~margin="5px", ()),~childStyle=ReactDOM.Style.make(~margin="5px", ()), [
-    <TextField key="3" size=#small multiline=true maxRows=20 label="JSON" />,
-    button(~text="Parse JSON", ~variant=#contained, ~onClick=_ => Js.Console.log("Click!"), ),
+  let onJsonStrChange = e => setJsonStr(_ => ReactEvent.Form.target(e)["value"])
+
+  column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
+    textField(~key="3", ~size=#small, ~multiline=true, ~maxRows=20, ~label="JSON", ~onChange=onJsonStrChange, ()),
+    button(~text="Parse JSON", ~variant=#contained, ~onClick=_ => Js.Console.log("Click!"), ()),
   ])
 }

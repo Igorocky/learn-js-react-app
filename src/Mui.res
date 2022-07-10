@@ -1,3 +1,4 @@
+let style = ReactDOM.Style.make
 
 module TextField = {
   type size = [#medium | #small]
@@ -9,15 +10,19 @@ module TextField = {
     ~multiline:bool=?,
     ~maxRows:int=?,
     ~rows:int=?,
+    ~onChange:ReactEvent.Form.t=>unit=?,
   ) => React.element = "default"
 }
+let textField = ( ~key=?, ~value=?, ~label=?, ~size=?, ~multiline=?, ~maxRows=?, ~rows=?, ~onChange=?, ()) => 
+  <TextField key=?key value=?value label=?label size=?size multiline=?multiline maxRows=?maxRows rows=?rows 
+    onChange=?onChange />
 
 module Button = {
   type variant = [#text|#contained|#outlined]
   @module("@mui/material/Button") @react.component
-  external make: (~onClick: _ => () =?, ~variant:variant=?, ~children: React.element) => React.element = "default"
+  external make: (~onClick: ReactEvent.Mouse.t=>unit=?, ~variant:variant=?, ~children: React.element) => React.element = "default"
 }
-let button = (~text, ~variant, ~onClick=?) => 
+let button = (~text, ~variant, ~onClick=?, ()) => 
   <Button variant onClick=?onClick>{React.string(text)}</Button>
 
 module Paper = {
