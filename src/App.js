@@ -2,30 +2,13 @@ import logo from './logo.svg';
 import './App.css';
 import Cmp1 from "./Cmp1";
 import {make as Cmp2} from "./Cmp2.bs";
-import {make as ViewSelector} from "./ViewSelector.bs";
+import {make as ViewSelector} from '@expln/utils/src/main/Expln_React_ViewSelector.bs';
+import {make as JsonParseView} from "./JsonParseView.bs";
 
 function App() {
-  return <ViewSelector/>
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        <Cmp1/>
-        <Cmp2/>
-      </header>
-    </div>
-  );
+  return <ViewSelector allViews = {[
+    {id: 1, title: "JsonParseView", render: _ => <JsonParseView/>}
+  ]}/>
 }
 
 export default App;

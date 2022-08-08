@@ -1,4 +1,4 @@
-open Mui
+open Expln_React_Mui
 open Js.Console
 
 @react.component
