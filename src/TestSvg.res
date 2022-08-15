@@ -1,4 +1,4 @@
-open Js.Console
+//open Js.Console
 open Expln_2d
 open Expln_common_bindings
 
@@ -48,7 +48,6 @@ let numToCell = n => {
   y: n / 8
 }
 let cellToName = ({x,y}) => Js_string2.fromCharCode(97+x) ++ i2s(y+1)
-//ints(0,63)->Belt_Array.forEach(i=>log3(i,numToCell(i), cellToName(numToCell(i))))
 let cellToBoudaries = ({x,y}) => {
   let diag = ex
     ->vecMult(cellSize)
@@ -91,10 +90,8 @@ let renderShape = () => {
       ->vecEnd
       ->pntTr(baseShift)
   let basePoints = ints(0,3)->arrFlatMap(y => ints(0,3)->arrMap(x => (x,y)))
-  log2("basePoints",basePoints)
   let ps = basePoints 
     -> arrMap(((x,y)) => baseToReal(x,y))
-  log2("ps",ps)
   let points = [ps[0], ps[1], ps[5], ps[6], ps[2], ps[3], ps[7], ps[6], ps[10], ps[11], ps[15], ps[14], ps[10], ps[9], ps[13], ps[12], ps[8], ps[9], ps[5], ps[4], ps[0]]
   let pointsStr = points->Belt_Array.joinWith(" ", p=>`${p->pntX->f2s},${p->pntY->f2s}`)
   <polyline key="shape" stroke="black" fill="none" strokeWidth="0.03" strokeLinejoin="miter" points=pointsStr />
@@ -110,19 +107,14 @@ let renderCellName = (n,style) => {
 
 @react.component
 let make = () => {
-  let (clicks, setClicks) = React.useState(_ => list{})
+  //let (clicks, setClicks) = React.useState(_ => list{})
   let (clickedCellNum, setClickedCellNum) = React.useState(_ => None)
-  log2("clickedCellNum",clickedCellNum)
   let (remainingCellNums, setRemainingCellNums) = React.useState(_ => ints(0,63)->Belt_Array.shuffle)
-  log2("remainingCellNums",remainingCellNums)
   let (clickIsCorrect, setClickIsCorrect) = React.useState(_ => true)
-  log2("clickIsCorrect",clickIsCorrect)
 
   let clickHandler = (e,p) => {
-    let coords = {"x":p->pntX,"y":p->pntY}
-    log2("coords",coords)
-    log2("clickedPoint",p)
-    setClicks(prev => list{coords, ...prev})
+    //let coords = {"x":p->pntX,"y":p->pntY}
+    //setClicks(prev => list{coords, ...prev})
 
     let clickedCellNum = getClickedCellNum(p)
     setClickedCellNum(_ => clickedCellNum)
@@ -141,12 +133,15 @@ let make = () => {
     }
   }
 
-  let circles = clicks -> Belt_List.toArray 
-    -> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
+  //let circles = clicks -> Belt_List.toArray 
+    //-> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
 
   Expln_React_Mui.column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
-    renderCellName(remainingCellNums[0], style(~color="red", ())),
-    <svg 
+    renderCellName(
+      remainingCellNums[0], 
+      style(~fontSize="40px", ~color=if(clickIsCorrect){"green"}else{"red"}, ())
+    ),
+    <svg
       viewBox=viewBox(boundaries)
       width=f2s(viewWidth) 
       height=f2s(viewHeight) 
@@ -162,23 +157,4 @@ let make = () => {
     )}
     </svg>
   ])
-
-  //<div>
-    //{renderCellName(remainingCellNums[0], style(~color="red", ()))}
-    //<svg 
-      //viewBox=viewBox(boundaries)
-      //width=f2s(viewWidth) 
-      //height=f2s(viewHeight) 
-      //onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
-    //>
-    //{React.array(
-      //Belt_Array.concatMany([
-        //[renderBackgroud()],
-        ////circles,
-        //[shape],
-        //[if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}]
-      //])
-    //)}
-    //</svg>
-  //</div>
 }
