@@ -2,6 +2,8 @@ open Js.Console
 open Expln_2d
 open Expln_common_bindings
 
+let style = ReactDOM.Style.make
+
 type boundaries = Expln_2d.boundaries
 let f2s = Belt.Float.toString
 let i2s = Belt.Int.toString
@@ -63,17 +65,17 @@ let getCellColor = ({x,y}) => mod(x+y, 2)
 let getCellColorStr = c => if (getCellColor(c) == 0) {"black"} else {"lightgrey"}
 let getClickedCellNum = p => allCells->Belt_Array.getIndexBy(((_,b)) => b->bndIncludes(p))
 let renderCellByNumOpt = nOpt => switch nOpt {
-  | None => []
+  | None => React.null
   | Some(n) =>
     let ({x,y}, b) = allCells[n]
-    [<rect 
+    <rect 
       key=`cell-${i2s(x)}-${i2s(y)}` 
       x={b->bndMinX->f2s} 
       y={b->bndMinY->f2s} 
       width={cellSize->f2s}
       height={cellSize->f2s}
-      fill="green"
-    />]
+      fill=getCellColorStr({x,y})
+    />
 
 }
 
@@ -99,34 +101,84 @@ let renderShape = () => {
 }
 let shape = renderShape()
 
+let renderCellName = (n,style) => {
+  let (c, _) = allCells[n]
+  <span style>
+    {React.string(cellToName(c))}
+  </span>
+}
+
 @react.component
 let make = () => {
   let (clicks, setClicks) = React.useState(_ => list{})
   let (clickedCellNum, setClickedCellNum) = React.useState(_ => None)
-  log2("clf2sdCellNum",clickedCellNum)
+  log2("clickedCellNum",clickedCellNum)
+  let (remainingCellNums, setRemainingCellNums) = React.useState(_ => ints(0,63)->Belt_Array.shuffle)
+  log2("remainingCellNums",remainingCellNums)
+  let (clickIsCorrect, setClickIsCorrect) = React.useState(_ => true)
+  log2("clickIsCorrect",clickIsCorrect)
+
   let clickHandler = (e,p) => {
     let coords = {"x":p->pntX,"y":p->pntY}
     log2("coords",coords)
     log2("clickedPoint",p)
     setClicks(prev => list{coords, ...prev})
-    setClickedCellNum(_ => getClickedCellNum(p))
+
+    let clickedCellNum = getClickedCellNum(p)
+    setClickedCellNum(_ => clickedCellNum)
+    let userClickedColor = if (e["button"] == 0) {1} else {0}
+    let clickIsCorrect = switch clickedCellNum {
+      | None => false
+      | Some(n) => n == remainingCellNums[0] && userClickedColor == getCellColor(numToCell(n))
+    }
+    setClickIsCorrect(_ => clickIsCorrect)
+    if (clickIsCorrect) {
+      if (Belt_Array.size(remainingCellNums) == 0) {
+        setRemainingCellNums(_ => ints(0,63)->Belt_Array.shuffle)
+      } else {
+        setRemainingCellNums(prev => prev->Belt_Array.slice(~offset=1, ~len=Belt_Array.size(prev)-1))
+      }
+    }
   }
 
   let circles = clicks -> Belt_List.toArray 
     -> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
-  <svg 
-    viewBox=viewBox(boundaries)
-    width=f2s(viewWidth) 
-    height=f2s(viewHeight) 
-    onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
-  >
-   {React.array(
-    Belt_Array.concatMany([
-      [renderBackgroud()],
-      circles,
-      [shape],
-      renderCellByNumOpt(clickedCellNum)
-    ])
-   )}
-  </svg>
+
+  Expln_React_Mui.column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
+    renderCellName(remainingCellNums[0], style(~color="red", ())),
+    <svg 
+      viewBox=viewBox(boundaries)
+      width=f2s(viewWidth) 
+      height=f2s(viewHeight) 
+      onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
+    >
+    {React.array(
+      Belt_Array.concatMany([
+        [renderBackgroud()],
+        //circles,
+        [shape],
+        [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}]
+      ])
+    )}
+    </svg>
+  ])
+
+  //<div>
+    //{renderCellName(remainingCellNums[0], style(~color="red", ()))}
+    //<svg 
+      //viewBox=viewBox(boundaries)
+      //width=f2s(viewWidth) 
+      //height=f2s(viewHeight) 
+      //onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
+    //>
+    //{React.array(
+      //Belt_Array.concatMany([
+        //[renderBackgroud()],
+        ////circles,
+        //[shape],
+        //[if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}]
+      //])
+    //)}
+    //</svg>
+  //</div>
 }
