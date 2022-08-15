@@ -81,6 +81,9 @@ let renderCellByNumOpt = nOpt => switch nOpt {
 let renderBackgroud = () =>
   <rect key="background" x="-1000" y="-1000" width="10000" height="10000" fill="grey"/>
 
+let renderTransparentPane = () =>
+  <rect key="TransparentPane" x="-1000" y="-1000" width="10000" height="10000" fill="black" opacity="0"/>
+
 let renderShape = () => {
   let baseShift = ex->vecMult(cellSize)->vecAdd(ey->vecMult(cellSize))
   let baseToReal = (x,y) =>
@@ -98,6 +101,17 @@ let renderShape = () => {
 }
 let shape = renderShape()
 
+let renderCellNameSvg = (n,color) => {
+  let (c, _) = allCells[n]
+  <text 
+    key="cell-name"
+    x={ex->vecMult(4. *. cellSize -. cellSize *. 0.5)->vecEnd->pntX->f2s}
+    y={ey->vecMult(4. *. cellSize -. cellSize *. 0.5)->vecEnd->pntY->f2s}
+    style=style(~fontSize="1", ~fill=color, ())
+  >
+    {React.string(cellToName(c))}
+  </text>
+}
 let renderCellName = (n,style) => {
   let (c, _) = allCells[n]
   <span style>
@@ -125,7 +139,7 @@ let make = () => {
     }
     setClickIsCorrect(_ => clickIsCorrect)
     if (clickIsCorrect) {
-      if (Belt_Array.size(remainingCellNums) == 0) {
+      if (Belt_Array.size(remainingCellNums) == 1) {
         setRemainingCellNums(_ => ints(0,63)->Belt_Array.shuffle)
       } else {
         setRemainingCellNums(prev => prev->Belt_Array.slice(~offset=1, ~len=Belt_Array.size(prev)-1))
@@ -135,12 +149,13 @@ let make = () => {
 
   //let circles = clicks -> Belt_List.toArray 
     //-> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
+  let textColor = if(clickIsCorrect){"#017101"}else{"#a30000"}
 
   Expln_React_Mui.column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
-    renderCellName(
-      remainingCellNums[0], 
-      style(~fontSize="40px", ~color=if(clickIsCorrect){"green"}else{"red"}, ())
-    ),
+    //renderCellName(
+      //remainingCellNums[0], 
+      //style(~fontSize="40px", ~color=textColor, ())
+    //),
     <svg
       viewBox=viewBox(boundaries)
       width=f2s(viewWidth) 
@@ -152,7 +167,9 @@ let make = () => {
         [renderBackgroud()],
         //circles,
         [shape],
-        [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}]
+        [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}],
+        [renderCellNameSvg(remainingCellNums[0], textColor)],
+        [renderTransparentPane()]
       ])
     )}
     </svg>
