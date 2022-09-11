@@ -10,7 +10,7 @@ let make = () => {
   let onJsonStrChange = evt2Str(str => setJsonStr(_ => str))
 
   <Col spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
-    <TextField size=#small multiline=true maxRows=20 label="JSON" onChange=onJsonStrChange inputProps={"size":20} />
+    <TextField size=TextField.Small multiline=true maxRows=20 label="JSON" onChange=onJsonStrChange inputProps={"size":20} />
     <Button variant=#contained onClick={_ => Js.Console.log("Click!")}>{React.string("Parse JSON")}</Button>
   </Col>
 }
