@@ -8,7 +8,7 @@ let make = () => {
   let (label, setLabel) = useState(None)
 
 
-  let rndParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~setValue:option<'a>=>unit, rndValue:'a=>reElem) => {
+  let rndParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~setValue:option<'a>=>unit, ~rndValue: ()=>reElem) => {
     <Row alignItems=#center spacing=2.>
       <Checkbox checked={Option.isSome(value)} onChange=evt2Bool(checked => setValue(if checked {Some(defaultValue)} else {None})) />
       {React.string(paramName)}
@@ -17,11 +17,11 @@ let make = () => {
   }
 
   let rndStringParam = (~paramName:string, ~defaultValue:string, ~value:option<string>, ~setValue:option<string>=>unit) => {
-    <Row alignItems=#center spacing=2.>
-      <Checkbox checked={Option.isSome(value)} onChange=evt2Bool(checked => setValue(if checked {Some(defaultValue)} else {None})) />
-      {React.string(paramName)}
-      <TextField disabled={value->Option.isNone} value={value->Option.getWithDefault("")} onChange=evt2Str(setValue) />
-    </Row>
+    rndParam(
+      ~paramName, ~defaultValue, ~value, ~setValue,
+      ~rndValue = () =>
+        <TextField disabled={value->Option.isNone} value={value->Option.getWithDefault("")} onChange=evt2Str(setValue) />
+    )
   }
 
   <Col justifyContent=#"flex-start" alignItems=#center spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
