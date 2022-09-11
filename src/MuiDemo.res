@@ -67,11 +67,25 @@ let make = () => {
   <Col justifyContent=#"flex-start" alignItems=#center spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
     <Row>
       <Paper style=ReactDOM.Style.make(~padding="50px", ()) >
-        <TextField 
+      {
+        let res = <TextField 
           value={value->strOrNull} 
           label={label->strOrNull} 
+          onChange=evt2Str(str => setValue(Some(str)))
           ?size
         />
+        let res = React.cloneElement(res, {
+            "InputProps": {
+              "endAdornment":
+                <InputAdornment position=#end>
+                  <IconButton onClick={_ => setValue(Some(""))}>
+                    <Icons.Clear/>
+                  </IconButton>
+                </InputAdornment>
+            }
+        })
+        res
+      }
       </Paper>
     </Row>
     {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue=setValue)}
