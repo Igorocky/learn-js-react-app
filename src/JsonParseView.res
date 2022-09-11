@@ -1,4 +1,5 @@
 open Expln_React_Mui
+open Expln_React_common
 open Js.Console
 
 @react.component
@@ -6,10 +7,10 @@ let make = () => {
   let (jsonStr,setJsonStr) = React.useState(_ => "")
   log2("jsonStr", jsonStr)
 
-  let onJsonStrChange = e => setJsonStr(_ => ReactEvent.Form.target(e)["value"])
+  let onJsonStrChange = evt2Str(str => setJsonStr(_ => str))
 
-  column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
-    textField(~key="3", ~size=#small, ~multiline=true, ~maxRows=20, ~label="JSON", ~onChange=onJsonStrChange, ()),
-    button(~text="Parse JSON", ~variant=#contained, ~onClick=_ => Js.Console.log("Click!"), ()),
-  ])
+  <Col spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
+    <TextField size=#small multiline=true maxRows=20 label="JSON" onChange=onJsonStrChange inputProps={"size":20} />
+    <Button variant=#contained onClick={_ => Js.Console.log("Click!")}>{React.string("Parse JSON")}</Button>
+  </Col>
 }

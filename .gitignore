@@ -27,3 +27,4 @@ yarn-error.log*
 /.merlin
 /src/*.bs.js
 /.bsb.lock
+/src/tmp/

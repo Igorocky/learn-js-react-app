@@ -1,6 +1,6 @@
-//open Js.Console
 open Expln_2d
-open Expln_common_bindings
+open Expln_utils_common
+open Expln_React_Mui
 
 let style = ReactDOM.Style.make
 
@@ -151,7 +151,7 @@ let make = () => {
     //-> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
   let textColor = if(clickIsCorrect){"#017101"}else{"#a30000"}
 
-  Expln_React_Mui.column(~style=style(~margin="5px", ()),~childStyle=style(~margin="5px", ()), [
+  <Col>
     //renderCellName(
       //remainingCellNums[0], 
       //style(~fontSize="40px", ~color=textColor, ())
@@ -173,5 +173,5 @@ let make = () => {
       ])
     )}
     </svg>
-  ])
+  </Col>
 }
