@@ -4,11 +4,15 @@ open Expln_React_Mui
 open Belt
 let strOrNull = Option.getWithDefault(_, "")
 
-let firstChar = "a"->Js_string2.charCodeAt(0)->f2i
-let lastChar = firstChar + 26
-let allChars = ints(firstChar,lastChar)
+let firstCharCode = "a"->Js_string2.charCodeAt(0)->f2i
+let lastCharCode = firstCharCode + 25
+let allChars = ints(firstCharCode,lastCharCode)->Array.map(Js.String2.fromCharCode)->Array.concat([
+  "[", "]", "{", "}", ",", "<", ".", ">", "/", "?", ";", ":", "'", "\"", "\\", "|",
+  //"`", "~", "1", "!", "2", "@", "3", "#", "4", "$", "5", "%", "6", "^", "7", "&", "8", "*", "9", "(", "0", ")", "-", "_", "=", "+" 
+])
+Js.Console.log2("allChars", allChars)
 let initRemainingKeys = () => allChars->Array.copy->Array.shuffle
-let getFirstRemainingKey = keys => keys[0]->Option.map(c=>Js.String2.fromCharCode(c))->Option.getWithDefault("getFirstRemainingKey: ERROR")
+let getFirstRemainingKey = keys => keys[0]->Option.getWithDefault("getFirstRemainingKey: ERROR")
 
 @react.component
 let make = () => {
