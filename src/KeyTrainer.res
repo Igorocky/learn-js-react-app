@@ -40,7 +40,7 @@ let make = () => {
   }
 
   <Col alignItems=#center spacing=2. justifyContent=#"space-between" style=ReactDOM.Style.make(~marginTop="100px", ())>
-    <Paper style=ReactDOM.Style.make(~padding="20px", ~fontSize="40px", ~color=if isMistake {"red"} else {"black"}, ())>
+    <Paper style=ReactDOM.Style.make(~padding="20px", ~fontFamily="Courier New", ~fontSize="40px", ~color=if isMistake {"red"} else {"black"}, ())>
       {React.string(question)}
     </Paper>
     <TextField autoFocus=true value="" onChange=evt2Str(acceptAnswer) />
