@@ -7,6 +7,6 @@ let make = () => {
       {id: "3", title: "MuiDemo", render: _ => <MuiDemo/>},
       {id: "4", title: "KeyTrainer", render: _ => <KeyTrainer/>},
     ]
-    defaultViewId="4"
+    defaultViewId="3"
   />
 }

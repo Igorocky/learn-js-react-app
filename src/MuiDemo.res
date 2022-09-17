@@ -19,6 +19,14 @@ let rndStringParam = (~paramName:string, ~defaultValue:string, ~value:option<str
   )
 }
 
+let rndBoolParam = (~paramName:string, ~defaultValue:bool, ~value:option<bool>, ~setValue:option<bool>=>unit) => {
+  rndParam(
+    ~paramName, ~defaultValue=defaultValue, ~value, ~setValue,
+    ~rndValue = () =>
+      React.null
+  )
+}
+
 let rndEnumParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~setValue:option<'a>=>unit, ~possibleValues:array<('a,string)>) => {
   let strToVal = str => 
     switch possibleValues->Array.getBy(((_,s)) => s==str)->Option.map(((v,_)) => v) {
@@ -63,6 +71,7 @@ let make = () => {
   let (value, setValue) = useState(None)
   let (label, setLabel) = useState(None)
   let (size, setSize) = useState(None)
+  let (adornment, setAdornment) = useState(None)
 
   <Col justifyContent=#"flex-start" alignItems=#center spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
     <Row>
@@ -74,17 +83,22 @@ let make = () => {
           onChange=evt2Str(str => setValue(Some(str)))
           ?size
         />
-        let res = React.cloneElement(res, {
-            "InputProps": {
-              "endAdornment":
-                <InputAdornment position=#end>
-                  <IconButton onClick={_ => setValue(Some(""))}>
-                    <Icons.Clear/>
-                  </IconButton>
-                </InputAdornment>
-            }
-        })
-        res
+        switch adornment {
+          | Some(pos) => 
+            let inputAdornment = 
+              <InputAdornment position=pos>
+                <IconButton onClick={_ => setValue(Some(""))}>
+                  <Icons.Clear/>
+                </IconButton>
+              </InputAdornment>
+            React.cloneElement(res, {
+              "InputProps": switch pos {
+                | #start => {"startAdornment": inputAdornment, "endAdornment": React.null}
+                | #end => {"startAdornment": React.null, "endAdornment": inputAdornment}
+              }
+            })
+          | None => res
+        }
       }
       </Paper>
     </Row>
@@ -93,6 +107,10 @@ let make = () => {
     {rndEnumParam( ~paramName="size", ~defaultValue=#medium, ~value=size, ~setValue=setSize, ~possibleValues = [
       (#medium, "medium"),
       (#small, "small"),
+    ])}
+    {rndEnumParam( ~paramName="adornment", ~defaultValue=#end, ~value=adornment, ~setValue=setAdornment, ~possibleValues = [
+      (#start, "start"),
+      (#end, "end"),
     ])}
   </Col>
 }
