@@ -124,17 +124,37 @@ let make = () => {
         simpleAttrs,
         tlFromStrings(["/>"])
       ])
-    let res = switch adornment {
-      | Some(_) =>
-        tlConcatAll([
-          tlFromStrings(["let textField = "]),
-          res->tlShift(codeTabWidth),
-          tlFromStrings(["let textField = React.cloneElement(tf, {"]),
-          rndAdornment()->tlShift(codeTabWidth),
-          tlFromStrings(["})"]),
-          tlFromStrings(["textField"]),
-        ])
-      | None => res
+    let res = if (adornment->Option.isSome || cols->Option.isSome) {
+      let res = tlConcatAll([
+        tlFromStrings(["let textField = "]),
+        res->tlShift(codeTabWidth),
+      ])
+      let res = switch adornment {
+        | Some(_) =>
+          tlConcatAll([
+            res,
+            tlFromStrings(["let textField = React.cloneElement(textField, {"]),
+            rndAdornment()->tlShift(codeTabWidth),
+            tlFromStrings(["})"]),
+          ])
+        | None => res
+      }
+      let res = switch cols {
+        | Some(cols) =>
+          tlConcatAll([
+            res,
+            tlFromStrings(["let textField = React.cloneElement(textField, {"]),
+            tlFromStrings([`"inputProps": {"cols": ${i2s(cols)}}`])->tlShift(codeTabWidth),
+            tlFromStrings(["})"]),
+          ])
+        | None => res
+      }
+      tlConcatAll([
+        res,
+        tlFromStrings(["textField"]),
+      ])
+    } else {
+      res
     }
     <div style=ReactDOM.Style.make(~padding="20px", ())>
       {textToElems(res)}
