@@ -32,7 +32,7 @@ let rndIntSliderParam = (~paramName:string, ~defaultValue:int, ~value:option<int
     ~paramName, ~defaultValue=defaultValue, ~value, ~setValue,
     ~rndValue = () =>
       <Box sx={"width": 300}>
-        <Slider disabled={value->Option.isNone} size=#small defaultValue=i2f(defaultValue) valueLabelDisplay=#on min=i2f(min) max=i2f(max) step=i2f(step) 
+        <Slider disabled={value->Option.isNone} size=#small defaultValue=i2f(defaultValue) valueLabelDisplay=#auto min=i2f(min) max=i2f(max) step=i2f(step) 
           onChange={(_, v) => setValue(Some(f2i(v)))} />
       </Box>
   )
@@ -86,6 +86,7 @@ let make = () => {
   let (multiline, setMultiline) = useState(None)
   let (minRows, setMinRows) = useState(None)
   let (maxRows, setMaxRows) = useState(None)
+  let (cols, setCols) = useState(None)
 
   let rndTextField = () => {
     let res = <TextField 
@@ -97,7 +98,7 @@ let make = () => {
       ?minRows
       ?maxRows
     />
-    switch adornment {
+    let res = switch adornment {
       | Some(pos) => 
         let inputAdornment = 
           <InputAdornment position=pos>
@@ -113,6 +114,14 @@ let make = () => {
         })
       | None => res
     }
+    let res = switch cols {
+      | Some(cols) => 
+        React.cloneElement(res, {
+          "inputProps": {"cols": cols}
+        })
+      | _ => res
+    }
+    res
   }
 
   <Col justifyContent=#"flex-start" alignItems=#center spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
@@ -132,5 +141,6 @@ let make = () => {
     {rndBoolParam( ~paramName="multiline", ~defaultValue=true, ~value=multiline, ~setValue=setMultiline)}
     {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue=setMinRows, ~min=1, ~max=10, ~step=1)}
     {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue=setMaxRows, ~min=1, ~max=20, ~step=1)}
+    {rndIntSliderParam( ~paramName="cols", ~defaultValue=20, ~value=cols, ~setValue=setCols, ~min=5, ~max=50, ~step=1)}
   </Col>
 }
