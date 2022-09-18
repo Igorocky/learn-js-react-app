@@ -27,6 +27,17 @@ let rndBoolParam = (~paramName:string, ~defaultValue:bool, ~value:option<bool>, 
   )
 }
 
+let rndIntSliderParam = (~paramName:string, ~defaultValue:int, ~value:option<int>, ~setValue:option<int>=>unit, ~min:int, ~max:int, ~step:int) => {
+  rndParam(
+    ~paramName, ~defaultValue=defaultValue, ~value, ~setValue,
+    ~rndValue = () =>
+      <Box sx={"width": 300}>
+        <Slider disabled={value->Option.isNone} size=#small defaultValue=i2f(defaultValue) valueLabelDisplay=#on min=i2f(min) max=i2f(max) step=i2f(step) 
+          onChange={(_, v) => setValue(Some(f2i(v)))} />
+      </Box>
+  )
+}
+
 let rndEnumParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~setValue:option<'a>=>unit, ~possibleValues:array<('a,string)>) => {
   let strToVal = str => 
     switch possibleValues->Array.getBy(((_,s)) => s==str)->Option.map(((v,_)) => v) {
@@ -72,35 +83,41 @@ let make = () => {
   let (label, setLabel) = useState(None)
   let (size, setSize) = useState(None)
   let (adornment, setAdornment) = useState(None)
+  let (multiline, setMultiline) = useState(None)
+  let (minRows, setMinRows) = useState(None)
+  let (maxRows, setMaxRows) = useState(None)
+
+  let rndTextField = () => {
+    let res = <TextField 
+      value={value->strOrNull} 
+      label={label->strOrNull} 
+      onChange=evt2Str(str => setValue(Some(str)))
+      ?size
+      ?multiline
+      ?minRows
+      ?maxRows
+    />
+    switch adornment {
+      | Some(pos) => 
+        let inputAdornment = 
+          <InputAdornment position=pos>
+            <IconButton onClick={_ => setValue(Some(""))}>
+              <Icons.Clear/>
+            </IconButton>
+          </InputAdornment>
+        React.cloneElement(res, {
+          "InputProps": switch pos {
+            | #start => {"startAdornment": inputAdornment, "endAdornment": React.null}
+            | #end => {"startAdornment": React.null, "endAdornment": inputAdornment}
+          }
+        })
+      | None => res
+    }
+  }
 
   <Col justifyContent=#"flex-start" alignItems=#center spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
     <Row>
-      <Paper style=ReactDOM.Style.make(~padding="50px", ()) >
-      {
-        let res = <TextField 
-          value={value->strOrNull} 
-          label={label->strOrNull} 
-          onChange=evt2Str(str => setValue(Some(str)))
-          ?size
-        />
-        switch adornment {
-          | Some(pos) => 
-            let inputAdornment = 
-              <InputAdornment position=pos>
-                <IconButton onClick={_ => setValue(Some(""))}>
-                  <Icons.Clear/>
-                </IconButton>
-              </InputAdornment>
-            React.cloneElement(res, {
-              "InputProps": switch pos {
-                | #start => {"startAdornment": inputAdornment, "endAdornment": React.null}
-                | #end => {"startAdornment": React.null, "endAdornment": inputAdornment}
-              }
-            })
-          | None => res
-        }
-      }
-      </Paper>
+      <Paper style=ReactDOM.Style.make(~padding="50px", ()) > { rndTextField() } </Paper>
     </Row>
     {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue=setValue)}
     {rndStringParam( ~paramName="label", ~defaultValue="label", ~value=label, ~setValue=setLabel)}
@@ -112,5 +129,8 @@ let make = () => {
       (#start, "start"),
       (#end, "end"),
     ])}
+    {rndBoolParam( ~paramName="multiline", ~defaultValue=true, ~value=multiline, ~setValue=setMultiline)}
+    {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue=setMinRows, ~min=1, ~max=10, ~step=1)}
+    {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue=setMaxRows, ~min=1, ~max=20, ~step=1)}
   </Col>
 }
