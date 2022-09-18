@@ -6,4 +6,4 @@ let tlFromStrings = ss => ss -> Array.map(s => (0, s)) -> List.fromArray
 let tlShift = (t, n) => t -> List.map(((i,s)) => (i+n, s))
 let tlConcat = List.concat
 let tlConcatAll = List.concatMany
-let tlMap = (t, f) => t -> List.map(((i,s)) => f(i, s)) -> List.toArray
+let tlMap = (t, f) => t -> List.mapWithIndex((idx, (i,s)) => f(idx, i, s)) -> List.toArray

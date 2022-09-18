@@ -5,8 +5,10 @@ open Belt
 open MuiDemoUtils
 open TextLines
 
-let textToElems = t => React.array(t->tlMap((i,s) => 
-      <div style=ReactDOM.Style.make(~paddingLeft= i2s(i*10) ++ "px", ())>
+let codeTabWidth = 4
+
+let textToElems = t => React.array(t->tlMap((idx,i,s) => 
+      <div key={i2s(idx)++s} style=ReactDOM.Style.make(~paddingLeft= i2s(i*10) ++ "px", ())>
         {React.string(s)}
       </div>
 ))
@@ -49,14 +51,6 @@ let make = () => {
   let (maxRows, setMaxRows) = useState(None)
   let (cols, setCols) = useState(None)
 
-  let linesToDivs = (lines:array<(string,reStyle)>) => {
-    React.array(
-      lines->Array.mapWithIndex((i, (str,st)) => 
-        <div key=i2s(i) style=st> {React.string(str)} </div>
-      )
-    )
-  }
-
   let rndTextField = () => {
     let res = <TextField 
       value={value->strOrNull} 
@@ -93,7 +87,7 @@ let make = () => {
     res
   }
 
-  let rndAdornment = ():reElem => {
+  let rndAdornment = (): TextLines.t => {
     switch adornment {
       | Some(pos) => 
         let attrName = 
@@ -101,18 +95,18 @@ let make = () => {
             | #start => "startAdornment"
             | #end => "endAdornment"
           }
-        linesToDivs([
-          (`"InputProps": {`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`"${attrName}": {`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`<InputAdornment position=#${valToStr(adornmentPossibleValues, pos)}>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`<IconButton onClick={_ => setValue(Some(""))}>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`<Icons.Clear/>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`</IconButton>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`</InputAdornment>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`}`, ReactDOM.Style.make(~paddingLeft="5px", ())),
-          (`}`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+        tlConcatAll([
+          tlFromStrings([`"InputProps": {`]),
+          tlFromStrings([`"${attrName}": {`])->tlShift(1*codeTabWidth),
+          tlFromStrings([`<InputAdornment position=#${valToStr(adornmentPossibleValues, pos)}>`])->tlShift(2*codeTabWidth),
+          tlFromStrings([`<IconButton onClick={_ => setValue(Some(""))}>`])->tlShift(3*codeTabWidth),
+          tlFromStrings([`<Icons.Clear/>`])->tlShift(4*codeTabWidth),
+          tlFromStrings([`</IconButton>`])->tlShift(3*codeTabWidth),
+          tlFromStrings([`</InputAdornment>`])->tlShift(2*codeTabWidth),
+          tlFromStrings(["}"])->tlShift(1*codeTabWidth),
+          tlFromStrings(["}"]),
         ])
-      | None => React.null
+      | None => tlFromStrings([""])
     }
   }
 
@@ -124,20 +118,26 @@ let make = () => {
         rndBoolAttr(~name="multiline", ~value=multiline),
         rndIntAttr(~name="minRows", ~value=minRows),
         rndIntAttr(~name="maxRows", ~value=maxRows),
-      ]) -> tlShift(4)
+      ]) -> tlShift(codeTabWidth)
     let res = tlConcatAll([
         tlFromStrings(["<TextField"]),
         simpleAttrs,
         tlFromStrings(["/>"])
       ])
+    let res = switch adornment {
+      | Some(_) =>
+        tlConcatAll([
+          tlFromStrings(["let textField = "]),
+          res->tlShift(codeTabWidth),
+          tlFromStrings(["let textField = React.cloneElement(tf, {"]),
+          rndAdornment()->tlShift(codeTabWidth),
+          tlFromStrings(["})"]),
+          tlFromStrings(["textField"]),
+        ])
+      | None => res
+    }
     <div style=ReactDOM.Style.make(~padding="20px", ())>
       {textToElems(res)}
-      //<div> {React.string("<TextField")} </div>
-      //{rndStrAttr(~name="value", ~value=value)}
-      //{rndStrAttr(~name="label", ~value=label)}
-      //{rndAttr(~name="size", ~value=size, ~renderValue=v=>valToCode(sizePossibleValues, v))}
-      //{rndAdornment()}
-      //<div> {React.string("/>")} </div>
     </div>
   }
 
