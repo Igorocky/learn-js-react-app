@@ -3,19 +3,31 @@ open Expln_React_common
 open Expln_React_Mui
 open Belt
 open MuiDemoUtils
+open TextLines
 
-let rndAttr = (~name:string, ~value:option<'a>, ~renderValue:'a => string) => {
-  switch value {
-    | Some(v) =>
-      <div style=ReactDOM.Style.make(~paddingLeft="20px", ())>
-        {React.string(`${name}=${renderValue(v)}`)}
+let textToElems = t => React.array(t->tlMap((i,s) => 
+      <div style=ReactDOM.Style.make(~paddingLeft= i2s(i*10) ++ "px", ())>
+        {React.string(s)}
       </div>
-    | None => React.null
+))
+
+let rndAttr = (~name:string, ~value:option<'a>, ~renderValue:'a => string): TextLines.t => {
+  switch value {
+    | Some(v) => tlFromStrings([`${name}=${renderValue(v)}`])
+    | None => tlFromStrings([])
   }
 }
 
 let rndStrAttr = (~name:string, ~value:option<string>) => {
   rndAttr(~name, ~value, ~renderValue= str =>`"${str}"`)
+}
+
+let rndIntAttr = (~name:string, ~value:option<int>) => {
+  rndAttr(~name, ~value, ~renderValue= i =>i2s(i))
+}
+
+let rndBoolAttr = (~name:string, ~value:option<bool>) => {
+  rndAttr(~name, ~value, ~renderValue= b => if b {"true"} else {"false"})
 }
 
 @react.component
@@ -36,6 +48,14 @@ let make = () => {
   let (minRows, setMinRows) = useState(None)
   let (maxRows, setMaxRows) = useState(None)
   let (cols, setCols) = useState(None)
+
+  let linesToDivs = (lines:array<(string,reStyle)>) => {
+    React.array(
+      lines->Array.mapWithIndex((i, (str,st)) => 
+        <div key=i2s(i) style=st> {React.string(str)} </div>
+      )
+    )
+  }
 
   let rndTextField = () => {
     let res = <TextField 
@@ -73,18 +93,56 @@ let make = () => {
     res
   }
 
-  let rndTextFieldCode = () => {
+  let rndAdornment = ():reElem => {
+    switch adornment {
+      | Some(pos) => 
+        let attrName = 
+          switch pos {
+            | #start => "startAdornment"
+            | #end => "endAdornment"
+          }
+        linesToDivs([
+          (`"InputProps": {`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`"${attrName}": {`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`<InputAdornment position=#${valToStr(adornmentPossibleValues, pos)}>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`<IconButton onClick={_ => setValue(Some(""))}>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`<Icons.Clear/>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`</IconButton>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`</InputAdornment>`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`}`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+          (`}`, ReactDOM.Style.make(~paddingLeft="5px", ())),
+        ])
+      | None => React.null
+    }
+  }
+
+  let rndTextFieldCode = (): reElem => {
+    let simpleAttrs = tlConcatAll([
+        rndStrAttr(~name="value", ~value=value),
+        rndStrAttr(~name="label", ~value=label),
+        rndAttr(~name="size", ~value=size, ~renderValue=v=>valToCode(sizePossibleValues, v)),
+        rndBoolAttr(~name="multiline", ~value=multiline),
+        rndIntAttr(~name="minRows", ~value=minRows),
+        rndIntAttr(~name="maxRows", ~value=maxRows),
+      ]) -> tlShift(4)
+    let res = tlConcatAll([
+        tlFromStrings(["<TextField"]),
+        simpleAttrs,
+        tlFromStrings(["/>"])
+      ])
     <div style=ReactDOM.Style.make(~padding="20px", ())>
-      <div> {React.string("<TextField")} </div>
-      {rndStrAttr(~name="value", ~value=value)}
-      {rndStrAttr(~name="label", ~value=label)}
-      {rndAttr(~name="size", ~value=size, ~renderValue=v=>valToCode(sizePossibleValues, v))}
-      <div> {React.string("/>")} </div>
+      {textToElems(res)}
+      //<div> {React.string("<TextField")} </div>
+      //{rndStrAttr(~name="value", ~value=value)}
+      //{rndStrAttr(~name="label", ~value=label)}
+      //{rndAttr(~name="size", ~value=size, ~renderValue=v=>valToCode(sizePossibleValues, v))}
+      //{rndAdornment()}
+      //<div> {React.string("/>")} </div>
     </div>
   }
 
   <Col justifyContent=#"flex-start" spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
-    <Row>
+    <Row spacing=1.>
       <Paper style=ReactDOM.Style.make(~padding="50px", ()) > { rndTextField() } </Paper>
       <Paper>
         {rndTextFieldCode()}
