@@ -50,6 +50,7 @@ let make = () => {
   let (minRows, setMinRows) = useState(None)
   let (maxRows, setMaxRows) = useState(None)
   let (cols, setCols) = useState(None)
+  let (disabled, setDisabled) = useState(None)
 
   let rndTextField = () => {
     let res = <TextField 
@@ -60,6 +61,7 @@ let make = () => {
       ?multiline
       ?minRows
       ?maxRows
+      ?disabled
     />
     let res = switch adornment {
       | Some(pos) => 
@@ -118,6 +120,7 @@ let make = () => {
         rndBoolAttr(~name="multiline", ~value=multiline),
         rndIntAttr(~name="minRows", ~value=minRows),
         rndIntAttr(~name="maxRows", ~value=maxRows),
+        rndBoolAttr(~name="disabled", ~value=disabled),
       ]) -> tlShift(codeTabWidth)
     let res = tlConcatAll([
         tlFromStrings(["<TextField"]),
@@ -176,5 +179,6 @@ let make = () => {
     {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue=setMinRows, ~min=1, ~max=10, ~step=1)}
     {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue=setMaxRows, ~min=1, ~max=20, ~step=1)}
     {rndIntSliderParam( ~paramName="cols", ~defaultValue=20, ~value=cols, ~setValue=setCols, ~min=5, ~max=50, ~step=1)}
+    {rndBoolParam( ~paramName="disabled", ~defaultValue=true, ~value=disabled, ~setValue=setDisabled)}
   </Col>
 }
