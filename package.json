@@ -19,9 +19,13 @@
     "rescript": "*",
     "web-vitals": "^2.1.4"
   },
+  "devDependencies": {
+    "mocha": "^10.0.0"
+  },
   "scripts": {
     "compile": "rescript",
     "compile-with-deps": "rescript build -with-deps",
+    "compile-test": "rescript && mocha src/test/**/*.js",
     "rescript-start": "rescript build -w",
     "rescript-clean": "rescript clean -with-deps",
     "start": "react-scripts start",

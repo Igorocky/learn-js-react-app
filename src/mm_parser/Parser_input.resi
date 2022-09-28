@@ -1,5 +1,6 @@
 type t
 
+let makeParserInput: string => t
 let charAtRel: (t,int)=>string
 let charAt: (t,int)=>string
 let proceed: (t,int)=>t
