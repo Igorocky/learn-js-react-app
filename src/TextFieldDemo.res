@@ -41,6 +41,12 @@ let make = () => {
     (#medium, "medium", "#medium"),
     (#small, "small", "#small"),
   ]
+  let (variant, setVariant) = useState(None)
+  let variantPossibleValues = [
+    (#filled, "filled", "#filled"),
+    (#outlined, "outlined", "#outlined"),
+    (#standard, "standard", "#standard"),
+  ]
   let (adornment, setAdornment) = useState(None)
   let adornmentPossibleValues = [
     (#start, "start", "#start"),
@@ -58,6 +64,7 @@ let make = () => {
       label={label->strOrNull} 
       onChange=evt2Str(str => setValue(Some(str)))
       ?size
+      ?variant
       ?multiline
       ?minRows
       ?maxRows
@@ -117,6 +124,7 @@ let make = () => {
         rndStrAttr(~name="value", ~value=value),
         rndStrAttr(~name="label", ~value=label),
         rndAttr(~name="size", ~value=size, ~renderValue=v=>valToCode(sizePossibleValues, v)),
+        rndAttr(~name="variant", ~value=variant, ~renderValue=v=>valToCode(variantPossibleValues, v)),
         rndBoolAttr(~name="multiline", ~value=multiline),
         rndIntAttr(~name="minRows", ~value=minRows),
         rndIntAttr(~name="maxRows", ~value=maxRows),
@@ -174,6 +182,7 @@ let make = () => {
     {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue=setValue)}
     {rndStringParam( ~paramName="label", ~defaultValue="label", ~value=label, ~setValue=setLabel)}
     {rndEnumParam( ~paramName="size", ~defaultValue=#medium, ~value=size, ~setValue=setSize, ~possibleValues = sizePossibleValues)}
+    {rndEnumParam( ~paramName="variant", ~defaultValue=#outlined, ~value=variant, ~setValue=setVariant, ~possibleValues = variantPossibleValues)}
     {rndEnumParam( ~paramName="adornment", ~defaultValue=#end, ~value=adornment, ~setValue=setAdornment, ~possibleValues = adornmentPossibleValues)}
     {rndBoolParam( ~paramName="multiline", ~defaultValue=true, ~value=multiline, ~setValue=setMultiline)}
     {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue=setMinRows, ~min=1, ~max=10, ~step=1)}

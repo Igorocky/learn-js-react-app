@@ -25,6 +25,6 @@ yarn-error.log*
 /learn-js-react-app.iml
 /lib/bs
 /.merlin
-/src/*.bs.js
+/src/**/*.bs.js
 /.bsb.lock
 /src/tmp/
