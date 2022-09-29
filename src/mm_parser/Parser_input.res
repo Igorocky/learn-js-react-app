@@ -11,7 +11,7 @@ let proceed = (t,i)=>{...t, begin: t.begin+i}
 let proceedTo = (t,i)=>{...t, begin: i}
 let currPositionStr = t=> {
     let lengthToShow = 20
-    let ellipsis = if (t.text->Js.String2.length < t.begin+lengthToShow) {"..."} else {""}
+    let ellipsis = if (t.text->Js.String2.length < t.begin+lengthToShow) {""} else {"..."}
     "'" ++ t.text->Js.String2.substrAtMost(~from=t.begin, ~length=lengthToShow) ++ ellipsis ++ "'"
 }
 let currPositionStrI = (t,i)=> t->proceedTo(i)->currPositionStr
