@@ -14,11 +14,13 @@ describe("parseComment", (.) => {
         switch res {
             | Ok(res) => {
                 assertEq(res.result.text, " this is a comment ")
+                assertEq(res.result.beginIdx, 5)
+                assertEq(res.result.endIdx, 27)
             }
-            | Error(msg) => failS(msg)
+            | Error(msg) => failWithMsg(msg)
         }
     })
-    
+
     it("parses comment at the end of a text", (.) => {
         //given
         let inp = makeParserInput(" abc $( this is a comment $)")->proceedTo(5)
@@ -31,7 +33,7 @@ describe("parseComment", (.) => {
             | Ok(res) => {
                 assertEq(res.result.text, " this is a comment ")
             }
-            | Error(msg) => failS(msg)
+            | Error(msg) => failWithMsg(msg)
         }
     })
 
