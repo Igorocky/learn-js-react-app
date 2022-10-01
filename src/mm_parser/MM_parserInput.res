@@ -1,4 +1,6 @@
-type t = {
+open MM_types
+
+type parserInput = {
     text: string,
     begin: int
 }
@@ -16,3 +18,4 @@ let currPositionStr = t=> {
 }
 let currPositionStrI = (t,i)=> t->proceedTo(i)->currPositionStr
 let currPositionStrRel = (t,i)=> t->proceedTo( t->toAbsolute(i) )->currPositionStr
+let err = (t,msg) => Error(`${msg} at ${t->currPositionStr}`)

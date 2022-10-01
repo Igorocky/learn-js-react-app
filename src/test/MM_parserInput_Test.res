@@ -1,8 +1,8 @@
 open Expln_test
-open Parser_input
+open MM_parserInput
 
-describe("aaa", (.) => {
-    it("fffff", (.) => {
+describe("parser_input", (.) => {
+    it("works", (.) => {
         let inp = makeParserInput("fun curPositionStr(i:Int):String = this.proceedTo(i).currPositionStr()")->proceed(4)
 
         assertEq(inp->charAtRel(0), "c")
