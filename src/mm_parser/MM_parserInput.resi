@@ -4,6 +4,7 @@ type parserInput = {
 }
 
 let makeParserInput: string => parserInput
+let makeParserInput2: (string,int) => parserInput
 let charAtRel: (parserInput,int)=>string
 let charAt: (parserInput,int)=>string
 let proceed: (parserInput,int)=>parserInput

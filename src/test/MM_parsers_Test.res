@@ -16,6 +16,7 @@ describe("parseComment", (.) => {
                 assertEq(res.result.text, " this is a comment ")
                 assertEq(res.result.beginIdx, 5)
                 assertEq(res.result.endIdx, 27)
+                assertEq(res.end, 27)
             }
             | Error(msg) => failWithMsg(msg)
         }

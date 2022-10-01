@@ -1,16 +1,6 @@
 open MM_types
 open MM_parserInput
 
-let extractComments = (text:string):(array<comment>, array<nonComment>) => {
-    let comments = []
-    let nonComments = []
-    let idx = ref(0)
-
-
-
-    (comments, nonComments)
-}
-
 let collectWhile = (inp:parserInput, predicate:(string,int) => result<bool,string>): parseResult<string> => {
     let length = Js_string2.length(inp.text)
     let i = ref(inp.begin)
@@ -66,5 +56,51 @@ let parseComment = (inp: parserInput): parseResult<comment> => {
             }
             | Error(msg) => Error(msg)
         }
+    }
+}
+
+let isWhiteSpace = str => str == " " || str == "\t" || str == "\n" || str == "\r"
+
+let extractComments = (text:string):parseResult<(array<comment>, array<nonComment>)> => {
+    let comments = []
+    let nonComments = []
+    let idx = ref(0)
+    let textLength = text->Js_string2.length
+    let charAt = i => text->Js_string2.charAt(i)
+    let charAtIdx = () => charAt(idx.contents)
+    let charAtIdxPlus1 = () => charAt(idx.contents+1)
+    let err = ref(None)
+    while (err.contents->Belt_Option.isNone && idx.contents < textLength) {
+        while (idx.contents < textLength && charAtIdx()->isWhiteSpace) {
+            idx.contents = idx.contents + 1
+        }
+        if (idx.contents+1 < textLength && charAtIdx() == "$" && charAtIdxPlus1() == "(") {
+            switch parseComment(makeParserInput2(text,idx.contents)) {
+                | Ok(comment) => {
+                    let _ = comments->Js_array2.push(comment.result)
+                    idx.contents = comment.end+1
+                }
+                | Error(msg) => {
+                    err.contents = Some(msg)
+                }
+            }
+        } else {
+            let beginOfNonCommentIdx = idx.contents
+            while (idx.contents < textLength && !(idx.contents+1 < textLength && charAtIdx() == "$" && charAtIdxPlus1() == "(")) {
+                idx.contents = idx.contents + 1
+            }
+            if (beginOfNonCommentIdx < idx.contents) {
+                let _ = nonComments->Js_array2.push({
+                    text: text->Js_string2.substring(~from=beginOfNonCommentIdx, ~to_=idx.contents),
+                    beginIdx: beginOfNonCommentIdx,
+                    endIdx: idx.contents-1,
+                    lastComment: comments->Belt_Array.get(comments->Belt_Array.size-1)
+                })
+            }
+        }
+    }
+    switch err.contents {
+        | None => Ok({result:(comments, nonComments), end: textLength-1})
+        | Some(msg) => Error(msg)
     }
 }

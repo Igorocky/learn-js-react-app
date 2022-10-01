@@ -6,6 +6,7 @@ type parserInput = {
 }
 
 let makeParserInput = s => {text: s, begin: 0}
+let makeParserInput2 = (s,i) => {text: s, begin: i}
 let toAbsolute = (t,i)=> t.begin+i
 let charAtRel = (t,i)=> Js.String2.charAt(t.text, toAbsolute(t, i)) 
 let charAt = (t,i)=> Js.String2.charAt(t.text, i) 
