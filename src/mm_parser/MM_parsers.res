@@ -31,7 +31,7 @@ let collectWhile = (inp:parserInput, predicate:(string,int) => result<bool,strin
     switch err.contents {
         | Some(err) => err
         | None => {
-            let end = i.contents-1
+            let end = i.contents-2
             if (end < inp.begin) {
                 Ok({result:"", end})
             } else {
@@ -43,15 +43,14 @@ let collectWhile = (inp:parserInput, predicate:(string,int) => result<bool,strin
 
 let parseComment = (inp: parserInput): parseResult<comment> => {
     if ("$" != inp->charAtRel(0) || "(" != inp->charAtRel(1)) {
-        inp->err("cannot parse comment")
+        inp->err("cannot parse comment: the input doesn't begin with $(")
     } else {
         let text = inp.text
-        let maxIdx = inp.text->Js_string2.length - 1
-        let maxIdxForCommentEnd = maxIdx-1
+        let maxIdxForCommentEnd = text->Js_string2.length - 2
         let isEndOfComment = i => i <= maxIdxForCommentEnd && "$" == text->Js_string2.charAt(i) && ")" == text->Js_string2.charAt(i+1)
         let commentText = collectWhile(inp->proceed(2), (_,i) => {
             if (i > maxIdxForCommentEnd) {
-                inp->err("cannot parse comment")
+                inp->err("cannot parse comment: comment is not closed [1]")
             } else {
                 Ok(!isEndOfComment(i))
             }
@@ -59,7 +58,7 @@ let parseComment = (inp: parserInput): parseResult<comment> => {
         switch commentText {
             | Ok(commentText) => {
                 if (!isEndOfComment(commentText.end+1)) {
-                    inp->err("cannot parse comment")
+                    inp->err("cannot parse comment: comment is not closed [2]")
                 } else {
                     let end = commentText.end+2
                     Ok({result: {text: commentText.result, beginIdx:inp.begin, endIdx: end}, end})
