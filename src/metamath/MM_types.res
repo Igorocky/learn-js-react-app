@@ -16,4 +16,6 @@ type expression =
     | SequenceOfSymbols(sequenceOfSymbols)
     | LabeledSequenceOfSymbols(labeledSequenceOfSymbols)
 
+
+
 exception ParseError(string)

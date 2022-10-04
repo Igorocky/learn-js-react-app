@@ -61,7 +61,7 @@ let parseComment = (inp: parserInput): parseResult<comment> => {
 
 let isWhiteSpace = str => str == " " || str == "\t" || str == "\n" || str == "\r"
 
-let extractComments = (text:string):parseResult<(array<comment>, array<nonComment>)> => {
+let preprocess = (text:string):parseResult<(array<comment>, array<nonComment>)> => {
     let comments = []
     let nonComments = []
     let idx = ref(0)

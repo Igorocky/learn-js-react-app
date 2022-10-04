@@ -11,7 +11,7 @@ let make = () => {
 
     let loadMmFileContent = text => {
         setMmFileContent(Some(text))
-        switch extractComments(text) {
+        switch preprocess(text) {
             | Ok({result:(comments, nonComments)}) => {
                 setComments(Some(comments))
                 setNonComments(Some(nonComments))
@@ -20,7 +20,7 @@ let make = () => {
         }
     }
     let rndMmFile = (~comments, ~nonComments) => {
-        <MM_proof_explorer comments nonComments />
+        <MM_cmp_proof_explorer comments nonComments />
     }
 
     let rndMmFileContentOrError = () => {
