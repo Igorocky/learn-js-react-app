@@ -1,11 +1,12 @@
 open MM_types
 open Expln_React_Mui
 open Expln_utils_common
+open MM_parser
 
 @react.component
-let make = (~comments:array<comment>, ~nonComments:array<nonComment>) => {
+let make = (~mmFile:stmt) => {
+    Js.Console.log2("mmFile", mmFile)
     <Col>
-        {React.string(`Comments: ${comments->Js_array2.length->i2s}`)}
-        {React.string(`Non-comments: ${nonComments->Js_array2.length->i2s}`)}
+        {React.string(`MM file was parsed successfully.`)}
     </Col>
 }

@@ -5,18 +5,20 @@ type proof =
     | Compressed(array<string>, string)
 
 type rec stmt =
-    | Comment(string)
-    | Const(array<string>)
-    | Block(array<stmt>)
-    | Var(array<string>)
-    | Disj(array<string>)
-    | Floating(string, string, string)
-    | Essential(string, array<string>)
-    | Axiom(string, array<string>)
-    | Provable(string, array<string>, proof)
+    | Comment(int, int, string)
+    | Const(int, int, array<string>)
+    | Block(int, int, array<stmt>)
+    | Var(int, int, array<string>)
+    | Disj(int, int, array<string>)
+    | Floating(int, int, string, string, string)
+    | Essential(int, int, string, array<string>)
+    | Axiom(int, int, string, array<string>)
+    | Provable(int, int, string, array<string>, proof)
 
 type mmAstNode = {
     beginIdx: int,
     endIdx: int,
     stmt: stmt,
 }
+
+let parseMmFile: string => result<stmt,string>

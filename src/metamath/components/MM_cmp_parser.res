@@ -1,36 +1,33 @@
 open Expln_React_common
 open Expln_React_Mui
 open MM_parsers
+open MM_parser
 
 @react.component
 let make = () => {
     let (mmFileContent, setMmFileContent) = useState(None)
-    let (comments, setComments) = useState(None)
-    let (nonComments, setNonComments) = useState(None)
+    let (mmFileParsed, setMmFileParsed) = useState(None)
     let (parseError, setParseError) = useState(None)
 
     let loadMmFileContent = text => {
         setMmFileContent(Some(text))
-        switch preprocess(text) {
-            | Ok({result:(comments, nonComments)}) => {
-                setComments(Some(comments))
-                setNonComments(Some(nonComments))
-            }
+        switch parseMmFile(text) {
+            | Ok(stmt) => setMmFileParsed(Some(stmt))
             | Error(msg) => setParseError(Some(msg))
         }
     }
-    let rndMmFile = (~comments, ~nonComments) => {
-        <MM_cmp_proof_explorer comments nonComments />
+    let rndMmFile = (~mmFile) => {
+        <MM_cmp_proof_explorer mmFile />
     }
 
     let rndMmFileContentOrError = () => {
         switch parseError {
             | Some(msg) =>
-                <div style=ReactDOM.Style.make(~color="red", ())>
+                <pre style=ReactDOM.Style.make(~color="red", ())>
                     {React.string("Parse error: " ++ msg)}
-                </div>
-            | None => switch (comments, nonComments) {
-                | (Some(comments), Some(nonComments)) => rndMmFile(~comments, ~nonComments)
+                </pre>
+            | None => switch mmFileParsed {
+                | Some(mmFile) => rndMmFile(~mmFile)
                 | _ => React.null
             }
         }
