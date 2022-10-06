@@ -10,7 +10,7 @@ type rec stmt =
     | Block(int, int, array<stmt>)
     | Var(int, int, array<string>)
     | Disj(int, int, array<string>)
-    | Floating(int, int, string, string, string)
+    | Floating(int, int, string, array<string>)
     | Essential(int, int, string, array<string>)
     | Axiom(int, int, string, array<string>)
     | Provable(int, int, string, array<string>, proof)
@@ -68,7 +68,7 @@ let parseMmFile = (text:string): result<stmt,string> => {
         text->Js_string2.substring(~from=beginIdx, ~to_=idx.contents)
     }
 
-    let readAllTill = (tillToken:string):option<string> => {
+    let readAllTextTill = (tillToken:string):option<string> => {
         let result = ref(None)
         let beginIdx = idx.contents
         while (result.contents->Belt_Option.isNone) {
@@ -88,18 +88,112 @@ let parseMmFile = (text:string): result<stmt,string> => {
         result.contents->Belt_Option.getExn
     }
 
+    let readAllTokensTill = (tillToken:string):option<array<string>> => {
+        let result = ref(None)
+        let tokens = []
+        while (result.contents->Belt_Option.isNone) {
+            let token = readNextToken()
+            if (token == "") {
+                result.contents = Some(None)
+            } else if (token == tillToken) {
+                result.contents = Some(Some(tokens))
+            } else {
+                let _ = tokens->Js_array2.push(token)
+            }
+        }
+        result.contents->Belt_Option.getExn
+    }
+
     let textAt = i => makeParserInput2(text, i)->currPositionStr
 
     let parseComment = (~beginIdx:int):result<stmt,string> => {
-        switch readAllTill("$)") {
+        switch readAllTextTill("$)") {
             | None => Error(`A comment is not closed at ${textAt(beginIdx)}`)
             | Some(commentText) => Ok(Comment(beginIdx, idx.contents-1, commentText))
         }
     }
+    
+    let parseConst = (~beginIdx:int):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`A constant statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Const(beginIdx, idx.contents-1, tokens))
+        }
+    }
 
-    let parseBlock = (~beginIdx:int, ~level:int):result<stmt,string> => {// parses text until $} token or until the end of text
+    let parseVar = (~beginIdx:int):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`A variable statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Var(beginIdx, idx.contents-1, tokens))
+        }
+    }
+
+    let parseDisj = (~beginIdx:int):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`A disjoint statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Disj(beginIdx, idx.contents-1, tokens))
+        }
+    }
+
+    let parseFloating = (~beginIdx:int, ~label:string):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`A floating statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Floating(beginIdx, idx.contents-1, label, tokens))
+        }
+    }
+
+    let parseEssential = (~beginIdx:int, ~label:string):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`An essential statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Essential(beginIdx, idx.contents-1, label, tokens))
+        }
+    }
+
+    let parseAxiom = (~beginIdx:int, ~label:string):result<stmt,string> => {
+        switch readAllTokensTill("$.") {
+            | None => Error(`An axiom statement is not closed at ${textAt(beginIdx)}`)
+            | Some(tokens) => Ok(Axiom(beginIdx, idx.contents-1, label, tokens))
+        }
+    }
+
+    let parseProvable = (~beginIdx:int, ~label:string):result<stmt,string> => {
+        switch readAllTokensTill("$=") {
+            | None => Error(`A probale statement is not closed[1] at ${textAt(beginIdx)}`)
+            | Some(expression) => {
+                let firstProofToken = readNextToken()
+                if (firstProofToken == "(") {
+                    switch readAllTokensTill(")") {
+                        | None => Error(`A probale statement is not closed[2] at ${textAt(beginIdx)}`)
+                        | Some(proofLabels) => {
+                            switch readAllTokensTill("$.") {
+                                | None => Error(`A probale statement is not closed[3] at ${textAt(beginIdx)}`)
+                                | Some(compressedProofBlocks) => 
+                                    Ok(Provable(beginIdx, idx.contents-1, label, expression,
+                                        Compressed(proofLabels, ""->Js_string2.concatMany(compressedProofBlocks))
+                                    ))
+                            }
+                        }
+                    }
+                } else {
+                    switch readAllTokensTill("$.") {
+                        | None => Error(`A probale statement is not closed[4] at ${textAt(beginIdx)}`)
+                        | Some(proofLabels) => 
+                            Ok(Provable(beginIdx, idx.contents-1, label, expression, Uncompressed(proofLabels)))
+                    }
+                }
+            }
+        }
+    }
+
+    let rec parseBlock = (~beginIdx:int, ~level:int):result<stmt,string> => {// parses text until $} token or until the end of text
         let result = ref(None)
         let statements = []
+
+        let pushStmt = stmt =>
+            switch stmt {
+                | Error(msg) => result.contents = Some(Error(msg))
+                | Ok(stmt) => let _ = statements->Js_array2.push(stmt)
+            }
+
         while (result.contents->Belt_Option.isNone) {
             let token = readNextToken()
             let tokenIdx = idx.contents - token->Js_string2.length
@@ -111,13 +205,36 @@ let parseMmFile = (text:string): result<stmt,string> => {
                 }
             } else if (token == "$}") {
                 result.contents = Some(Ok(Block(beginIdx, idx.contents-1, statements)))
-            } else if (token == "$(") {
-                switch parseComment(~beginIdx=tokenIdx) {
+            } else if (token == "${") {
+                switch parseBlock(~beginIdx=tokenIdx, ~level=level+1) {
                     | Error(msg) => result.contents = Some(Error(msg))
-                    | Ok(comment) => let _ = statements->Js_array2.push(comment)
+                    | Ok(stmt) => let _ = statements->Js_array2.push(stmt)
                 }
+            } else if (token == "$(") {
+                pushStmt(parseComment(~beginIdx=tokenIdx))
+            } else if (token == "$c") {
+                pushStmt(parseConst(~beginIdx=tokenIdx))
+            } else if (token == "$v") {
+                pushStmt(parseVar(~beginIdx=tokenIdx))
+            } else if (token == "$d") {
+                pushStmt(parseDisj(~beginIdx=tokenIdx))
             } else {
-                result.contents = Some(Error(`Unexpected token '${token}' at ${textAt(tokenIdx)}`))
+                let label = token
+                let token2 = readNextToken()
+                let token2Idx = idx.contents - token2->Js_string2.length
+                if (token2 == "") {
+                    result.contents = Some(Error(`Unexpected end of file at ${textAt(tokenIdx)}`))
+                } else if (token2 == "$f") {
+                    pushStmt(parseFloating(~beginIdx=tokenIdx, ~label))
+                } else if (token2 == "$e") {
+                    pushStmt(parseEssential(~beginIdx=tokenIdx, ~label))
+                } else if (token2 == "$a") {
+                    pushStmt(parseAxiom(~beginIdx=tokenIdx, ~label))
+                } else if (token2 == "$p") {
+                    pushStmt(parseProvable(~beginIdx=tokenIdx, ~label))
+                } else {
+                    result.contents = Some(Error(`Unexpected token '${token2}' at ${textAt(token2Idx)}`))
+                }
             }
         }
         result.contents->Belt_Option.getExn

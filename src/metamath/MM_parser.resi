@@ -10,7 +10,7 @@ type rec stmt =
     | Block(int, int, array<stmt>)
     | Var(int, int, array<string>)
     | Disj(int, int, array<string>)
-    | Floating(int, int, string, string, string)
+    | Floating(int, int, string, array<string>)
     | Essential(int, int, string, array<string>)
     | Axiom(int, int, string, array<string>)
     | Provable(int, int, string, array<string>, proof)
