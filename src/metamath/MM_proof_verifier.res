@@ -2,13 +2,13 @@ open MM_parser
 
 type expr = array<int>
 
-type mandHyp =
+type hypothesis =
     | F(expr)
     | E(expr)
 
 type frame = {
     disj: Belt.Map.Int.t<Belt_SetInt.t>,
-    hyps: array<mandHyp>,
+    hyps: array<hypothesis>,
     asrt: expr,
     label: string,
     description: string,
@@ -22,6 +22,7 @@ type rec mmContext = {
     vars: array<string>,
     symToInt: Belt.MutableMap.String.t<int>,
     disj: Belt.MutableMap.Int.t<Belt_MutableSetInt.t>,
+    hyps: array<hypothesis>,
     mutable lastComment: option<string>,
     frames: Belt.MutableMap.String.t<frame>,
 }
@@ -32,6 +33,7 @@ let createEmptyContext: unit => mmContext = () => {
     vars: [],
     symToInt: Belt.MutableMap.String.make(),
     disj: Belt.MutableMap.Int.make(),
+    hyps: [],
     lastComment: None,
     frames: Belt.MutableMap.String.make(),
 }
@@ -42,6 +44,7 @@ let openChildContext: mmContext => mmContext = ctx => {
     vars: ctx.vars->Js_array2.copy,
     symToInt: ctx.symToInt->Belt.MutableMap.String.map(x=>x),
     disj: ctx.disj->Belt.MutableMap.Int.map(x=>x),
+    hyps: ctx.hyps->Js_array2.copy,
     lastComment: ctx.lastComment,
     frames: ctx.frames->Belt.MutableMap.String.map(x=>x),
 }
