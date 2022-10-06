@@ -1,5 +1,3 @@
-open MM_parserInput
-
 type proof =
     | Uncompressed(array<string>)
     | Compressed(array<string>, string)
@@ -14,12 +12,6 @@ type rec stmt =
     | Essential(int, int, string, array<string>)
     | Axiom(int, int, string, array<string>)
     | Provable(int, int, string, array<string>, proof)
-
-type mmAstNode = {
-    beginIdx: int,
-    endIdx: int,
-    stmt: stmt,
-}
 
 let isWhitespace = str => str == " " || str == "\t" || str == "\n" || str == "\r"
 
@@ -104,7 +96,11 @@ let parseMmFile = (text:string): result<stmt,string> => {
         result.contents->Belt_Option.getExn
     }
 
-    let textAt = i => makeParserInput2(text, i)->currPositionStr
+    let textAt = i => {
+        let lengthToShow = 20
+        let ellipsis = if (i+lengthToShow < textLength) {"..."} else {""}
+        "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
+    }
 
     let parseComment = (~beginIdx:int):result<stmt,string> => {
         switch readAllTextTill("$)") {

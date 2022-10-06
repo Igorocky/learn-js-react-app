@@ -1,5 +1,3 @@
-open MM_parserInput
-
 type proof =
     | Uncompressed(array<string>)
     | Compressed(array<string>, string)
@@ -14,11 +12,5 @@ type rec stmt =
     | Essential(int, int, string, array<string>)
     | Axiom(int, int, string, array<string>)
     | Provable(int, int, string, array<string>, proof)
-
-type mmAstNode = {
-    beginIdx: int,
-    endIdx: int,
-    stmt: stmt,
-}
 
 let parseMmFile: string => result<stmt,string>

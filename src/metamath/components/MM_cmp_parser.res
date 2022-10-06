@@ -1,6 +1,5 @@
 open Expln_React_common
 open Expln_React_Mui
-open MM_parsers
 open MM_parser
 
 @react.component

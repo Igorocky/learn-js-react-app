@@ -1,4 +1,3 @@
-open MM_types
 open Expln_React_Mui
 open Expln_utils_common
 open MM_parser
