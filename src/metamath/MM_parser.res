@@ -2,20 +2,33 @@ type proof =
     | Uncompressed({labels:array<string>})
     | Compressed({labels:array<string>, compressedProofBlock:string})
 
-type rec stmt =
-    | Comment({text:string, begin:int, end:int})
-    | Const({symbols:array<string>, begin:int, end:int})
-    | Block({statements:array<stmt>, begin:int, end:int})
-    | Var({symbols:array<string>, begin:int, end:int})
-    | Disj({vars:array<string>, begin:int, end:int})
-    | Floating({label:string, expr:array<string>, begin:int, end:int})
-    | Essential({label:string, expr:array<string>, begin:int, end:int})
-    | Axiom({label:string, expr:array<string>, begin:int, end:int})
-    | Provable({label:string, expr:array<string>, proof:proof, begin:int, end:int})
+type rec mmAstNode = {
+    begin: int,
+    end: int,
+    stmt: stmt
+}
+and stmt =
+    | Comment({text:string})
+    | Const({symbols:array<string>})
+    | Block({statements:array<mmAstNode>})
+    | Var({symbols:array<string>})
+    | Disj({vars:array<string>})
+    | Floating({label:string, expr:array<string>})
+    | Essential({label:string, expr:array<string>})
+    | Axiom({label:string, expr:array<string>})
+    | Provable({label:string, expr:array<string>, proof:proof})
+
 
 let isWhitespace = str => str == " " || str == "\t" || str == "\n" || str == "\r"
 
-let parseMmFile = (text:string): result<stmt,string> => {
+let textAt = (text,i) => {
+    let textLength = text->Js_string2.length
+    let lengthToShow = 20
+    let ellipsis = if (i+lengthToShow < textLength) {"..."} else {""}
+    "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
+}
+
+let parseMmFile = (text:string): result<mmAstNode,string> => {
     let textLength = text->Js_string2.length
     let idx = ref(0) // index of the next char to read.
     let endOfFile = ref(false) // if idx is outside of text then endOfFile is true.
@@ -96,62 +109,58 @@ let parseMmFile = (text:string): result<stmt,string> => {
         result.contents->Belt_Option.getExn
     }
 
-    let textAt = i => {
-        let lengthToShow = 20
-        let ellipsis = if (i+lengthToShow < textLength) {"..."} else {""}
-        "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
-    }
+    let textAt = textAt(text, _)
 
-    let parseComment = (~beginIdx:int):result<stmt,string> => {
+    let parseComment = (~beginIdx:int):result<mmAstNode,string> => {
         switch readAllTextTill("$)") {
             | None => Error(`A comment is not closed at ${textAt(beginIdx)}`)
-            | Some(commentText) => Ok(Comment({begin:beginIdx, end:idx.contents-1, text:commentText}))
+            | Some(commentText) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Comment({text:commentText})})
         }
     }
     
-    let parseConst = (~beginIdx:int):result<stmt,string> => {
+    let parseConst = (~beginIdx:int):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`A constant statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Const({begin:beginIdx, end:idx.contents-1, symbols:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Const({symbols:tokens})})
         }
     }
 
-    let parseVar = (~beginIdx:int):result<stmt,string> => {
+    let parseVar = (~beginIdx:int):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`A variable statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Var({begin:beginIdx, end:idx.contents-1, symbols:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Var({symbols:tokens})})
         }
     }
 
-    let parseDisj = (~beginIdx:int):result<stmt,string> => {
+    let parseDisj = (~beginIdx:int):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`A disjoint statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Disj({begin:beginIdx, end:idx.contents-1, vars:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Disj({vars:tokens})})
         }
     }
 
-    let parseFloating = (~beginIdx:int, ~label:string):result<stmt,string> => {
+    let parseFloating = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`A floating statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Floating({begin:beginIdx, end:idx.contents-1, label, expr:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Floating({label, expr:tokens})})
         }
     }
 
-    let parseEssential = (~beginIdx:int, ~label:string):result<stmt,string> => {
+    let parseEssential = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`An essential statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Essential({begin:beginIdx, end:idx.contents-1, label, expr:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Essential({label, expr:tokens})})
         }
     }
 
-    let parseAxiom = (~beginIdx:int, ~label:string):result<stmt,string> => {
+    let parseAxiom = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
         switch readAllTokensTill("$.") {
             | None => Error(`An axiom statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok(Axiom({begin:beginIdx, end:idx.contents-1, label, expr:tokens}))
+            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Axiom({label, expr:tokens})})
         }
     }
 
-    let parseProvable = (~beginIdx:int, ~label:string):result<stmt,string> => {
+    let parseProvable = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
         switch readAllTokensTill("$=") {
             | None => Error(`A probale statement is not closed[1] at ${textAt(beginIdx)}`)
             | Some(expression) => {
@@ -163,9 +172,9 @@ let parseMmFile = (text:string): result<stmt,string> => {
                             switch readAllTokensTill("$.") {
                                 | None => Error(`A probale statement is not closed[3] at ${textAt(beginIdx)}`)
                                 | Some(compressedProofBlocks) => 
-                                    Ok(Provable({begin:beginIdx, end:idx.contents-1, label, expr:expression,
+                                    Ok({begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression,
                                         proof:Compressed({labels:proofLabels, compressedProofBlock:""->Js_string2.concatMany(compressedProofBlocks)})
-                                    }))
+                                    })})
                             }
                         }
                     }
@@ -173,14 +182,14 @@ let parseMmFile = (text:string): result<stmt,string> => {
                     switch readAllTokensTill("$.") {
                         | None => Error(`A probale statement is not closed[4] at ${textAt(beginIdx)}`)
                         | Some(proofLabels) => 
-                            Ok(Provable({begin:beginIdx, end:idx.contents-1, label, expr:expression, proof:Uncompressed({labels:proofLabels})}))
+                            Ok({begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression, proof:Uncompressed({labels:proofLabels})})})
                     }
                 }
             }
         }
     }
 
-    let rec parseBlock = (~beginIdx:int, ~level:int):result<stmt,string> => {// parses text until $} token or until the end of text
+    let rec parseBlock = (~beginIdx:int, ~level:int):result<mmAstNode,string> => {// parses text until $} token or until the end of text
         let result = ref(None)
         let statements = []
 
@@ -195,12 +204,12 @@ let parseMmFile = (text:string): result<stmt,string> => {
             let tokenIdx = idx.contents - token->Js_string2.length
             if (token == "") {
                 if (level == 0) {
-                    result.contents = Some(Ok(Block({begin:beginIdx, end:idx.contents-1, statements})))
+                    result.contents = Some(Ok({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})}))
                 } else {
                     result.contents = Some(Error(`Unexpected end of a block. The block begins at ${textAt(beginIdx)} and is not closed.`))
                 }
             } else if (token == "$}") {
-                result.contents = Some(Ok(Block({begin:beginIdx, end:idx.contents-1, statements})))
+                result.contents = Some(Ok({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})}))
             } else if (token == "${") {
                 switch parseBlock(~beginIdx=tokenIdx, ~level=level+1) {
                     | Error(msg) => result.contents = Some(Error(msg))

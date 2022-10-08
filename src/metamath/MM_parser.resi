@@ -2,15 +2,21 @@ type proof =
     | Uncompressed({labels:array<string>})
     | Compressed({labels:array<string>, compressedProofBlock:string})
 
-type rec stmt =
-    | Comment({text:string, begin:int, end:int})
-    | Const({symbols:array<string>, begin:int, end:int})
-    | Block({statements:array<stmt>, begin:int, end:int})
-    | Var({symbols:array<string>, begin:int, end:int})
-    | Disj({vars:array<string>, begin:int, end:int})
-    | Floating({label:string, expr:array<string>, begin:int, end:int})
-    | Essential({label:string, expr:array<string>, begin:int, end:int})
-    | Axiom({label:string, expr:array<string>, begin:int, end:int})
-    | Provable({label:string, expr:array<string>, proof:proof, begin:int, end:int})
+type rec mmAstNode = {
+    begin: int,
+    end: int,
+    stmt: stmt
+}
+and stmt =
+    | Comment({text:string})
+    | Const({symbols:array<string>})
+    | Block({statements:array<mmAstNode>})
+    | Var({symbols:array<string>})
+    | Disj({vars:array<string>})
+    | Floating({label:string, expr:array<string>})
+    | Essential({label:string, expr:array<string>})
+    | Axiom({label:string, expr:array<string>})
+    | Provable({label:string, expr:array<string>, proof:proof})
 
-let parseMmFile: string => result<stmt,string>
+let parseMmFile: string => result<mmAstNode,string>
+let textAt: (string,int) => string

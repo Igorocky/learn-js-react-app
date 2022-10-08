@@ -89,7 +89,7 @@ let addVar: (mmContext,string) => result<unit,string> = (ctx,vName) => {
         Error(`An attempt to re-declare the math symbol '${vName}' as a variable.`)
     } else {
         ctx.symToInt->Belt_MutableMapString.set(vName, ctx.vars->Js_array2.length)
-        let _ = ctx.consts->Js_array2.push(vName)
+        let _ = ctx.vars->Js_array2.push(vName)
         Ok(())
     }
 }
@@ -318,19 +318,23 @@ let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<u
     }
 }
 
-let rec applyStmt = (ctx:mmContext, stmt:stmt):result<unit,string> => {
+let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> => {
+    let mkResult = result => switch result {
+        | Ok(()) => Ok(())
+        | Error(msg) => Error((msg, stmt.begin))
+    }
     switch stmt {
-        | Comment({text}) => addComment(ctx, text)
-        | Const({symbols}) => {
+        | {stmt:Comment({text})} => addComment(ctx, text)->mkResult
+        | {stmt:Const({symbols})} => {
             symbols->Js_array2.reduce(
                 (prevRes, cName) => switch prevRes {
-                    | Ok(_) => addConst(ctx, cName)
+                    | Ok(_) => addConst(ctx, cName)->mkResult
                     | err => err
                 },
                 Ok(())
             )
         }
-        | Block({statements}) =>
+        | {stmt:Block({statements})} =>
             statements->Js_array2.reduce(
                 (prevRes, stmt) => switch prevRes {
                     | Ok(_) => applyStmt(ctx, stmt)
@@ -338,24 +342,24 @@ let rec applyStmt = (ctx:mmContext, stmt:stmt):result<unit,string> => {
                 },
                 Ok(())
             )
-        | Var({symbols}) => {
+        | {stmt:Var({symbols})} => {
             symbols->Js_array2.reduce(
                 (prevRes, vName) => switch prevRes {
-                    | Ok(_) => addVar(ctx, vName)
+                    | Ok(_) => addVar(ctx, vName)->mkResult
                     | err => err
                 },
                 Ok(())
             )
         }
-        | Disj({vars}) => addDisj(ctx, vars)
-        | Floating({label, expr}) => addFloating(ctx, ~label, ~exprStr=expr)
-        | Essential({label, expr}) => addEssential(ctx, ~label, ~exprStr=expr)
-        | Axiom({label, expr}) => addAssertion(ctx, ~label, ~exprStr=expr)
-        | Provable({label, expr}) => addAssertion(ctx, ~label, ~exprStr=expr)
+        | {stmt:Disj({vars})} => addDisj(ctx, vars)->mkResult
+        | {stmt:Floating({label, expr})} => addFloating(ctx, ~label, ~exprStr=expr)->mkResult
+        | {stmt:Essential({label, expr})} => addEssential(ctx, ~label, ~exprStr=expr)->mkResult
+        | {stmt:Axiom({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)->mkResult
+        | {stmt:Provable({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)->mkResult
     }
 }
 
-let createContext: stmt => result<mmContext,string> = stmt => {
+let createContext: mmAstNode => result<mmContext,(string,int)> = stmt => {
     let ctx = createEmptyContext()
     switch applyStmt(ctx, stmt) {
         | Error(msg) => Error(msg)

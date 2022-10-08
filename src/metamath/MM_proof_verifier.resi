@@ -3,7 +3,7 @@ open MM_parser
 type mmContext
 
 let createEmptyContext: unit => mmContext
-let createContext: stmt => result<mmContext,string>
+let createContext: mmAstNode => result<mmContext,(string,int)>
 let openChildContext: mmContext => mmContext
 let closeChildContext: mmContext => result<mmContext,string>
-let applyStmt: (mmContext, stmt) => result<unit,string>
+let applyStmt: (mmContext, mmAstNode) => result<unit,(string,int)>

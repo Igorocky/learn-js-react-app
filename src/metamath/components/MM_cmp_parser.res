@@ -15,8 +15,8 @@ let make = () => {
             | Error(msg) => setParseError(Some(msg))
         }
     }
-    let rndMmFile = (~mmFile) => {
-        <MM_cmp_proof_explorer mmFile />
+    let rndMmFile = (~ast) => {
+        <MM_cmp_proof_explorer mmFileContent={mmFileContent->Belt.Option.getExn} ast />
     }
 
     let rndMmFileContentOrError = () => {
@@ -26,7 +26,7 @@ let make = () => {
                     {React.string("Parse error: " ++ msg)}
                 </pre>
             | None => switch mmFileParsed {
-                | Some(mmFile) => rndMmFile(~mmFile)
+                | Some(ast) => rndMmFile(~ast)
                 | _ => React.null
             }
         }
