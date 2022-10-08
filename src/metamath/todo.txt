@@ -1,0 +1,1 @@
+- use uncurried functions everywhere
