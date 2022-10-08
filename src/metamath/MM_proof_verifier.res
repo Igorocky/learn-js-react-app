@@ -308,7 +308,7 @@ let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => result<fr
     }
 }
 
-let addAxiom: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string> = (ctx, ~label, ~exprStr) => {
+let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string> = (ctx, ~label, ~exprStr) => {
     switch createFrame(ctx, ~label, ~exprStr) {
         | Error(msg) => Error(msg)
         | Ok(frame) => {
@@ -317,6 +317,3 @@ let addAxiom: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,
         }
     }
 }
-
-//let addProvable: (mmContext, ~label:string, ~expr:array<string>, ~proof:proof) => result<unit,string>
-

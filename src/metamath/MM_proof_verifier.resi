@@ -12,8 +12,7 @@ let addVar: (mmContext,string) => result<unit,string>
 let addDisj: (mmContext,array<string>) => result<unit,string>
 let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string>
 let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string>
-let addAxiom: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string>
-//let addProvable: (mmContext, ~label:string, ~exprStr:array<string>, ~proof:proof) => result<unit,string>
+let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string>
 
 let isConst: (mmContext,string) => bool
 let isVar: (mmContext,string) => bool
