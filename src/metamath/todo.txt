@@ -1,1 +1,2 @@
+- use named Variants for stmt
 - use uncurried functions everywhere

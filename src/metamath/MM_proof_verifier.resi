@@ -5,6 +5,7 @@ type mmContext
 let createEmptyContext: unit => mmContext
 let openChildContext: mmContext => mmContext
 let closeChildContext: mmContext => result<mmContext,string>
+//let createContext: stmt => result<mmContext,string>
 
 let addComment: (mmContext,string) => result<unit,string>
 let addConst: (mmContext,string) => result<unit,string>

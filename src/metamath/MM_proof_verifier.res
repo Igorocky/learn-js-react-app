@@ -317,3 +317,38 @@ let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<u
         }
     }
 }
+
+//let createContext: stmt => result<mmContext,string> = stmt => {
+    //let applyStmt = (ctx:mmContext, stmt:stmt):result<unit,string> => {
+        //switch stmt {
+            //| Comment(_, _, string) => addComment(ctx, string)
+            //| Const(_, _, symbols) => {
+                //symbols->Js_array2.reduce(
+                    //(prevRes, cName) => switch prevRes {
+                        //| Ok(_) => addConst(ctx, cName)
+                        //| err => err
+                    //},
+                    //Ok(())
+                //)
+            //}
+            //| Block(_, _, stmts) => applyStmts(ctx, stmts)
+            //| Var(_, _, symbols) => {
+                //symbols->Js_array2.reduce(
+                    //(prevRes, vName) => switch prevRes {
+                        //| Ok(_) => addConst(ctx, vName)
+                        //| err => err
+                    //},
+                    //Ok(())
+                //)
+            //}
+            //| Disj(_, _, symbols) => addDisj(ctx, symbols)
+            //| Floating(_, _, string, array<string>)
+            //| Essential(_, _, string, array<string>)
+            //| Axiom(_, _, string, array<string>)
+            //| Provable(_, _, string, array<string>, proof)
+        //}
+    //}
+    //let applyStmts = (ctx:mmContext, stmts:array<stmt>):result<unit,string> => {
+
+    //}
+//}
