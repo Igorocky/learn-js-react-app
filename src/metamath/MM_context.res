@@ -14,6 +14,8 @@ type frame = {
     description: string,
     intToSymb: Belt_MapInt.t<string>,
     varTypes: array<int>,
+    numOfVars: int,
+    numOfArgs: int,
 }
 
 type rec mmContext = {
@@ -303,14 +305,18 @@ let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (
                 let mandatoryDisj: Belt_MapInt.t<Belt_SetInt.t> = extractMandatoryDisj(ctx, mandatoryVars)
                 let mandatoryHypotheses: array<hypothesis> = extractMandatoryHypotheses(ctx, mandatoryVars)
                 let varRenumbering: Belt_MapInt.t<int> = mandatoryVars -> Belt_SetInt.toArray -> Js_array2.mapi((v,i) => (v,i)) -> Belt_MapInt.fromArray
+                let varTypes = extractVarTypes(ctx, mandatoryVars, varRenumbering)
+                let hyps = mandatoryHypotheses->Js_array2.map(renumberVarsInHypothesis(_, varRenumbering))
                 {
                     disj: mandatoryDisj->renumberVarsInDisj(varRenumbering),
-                    hyps: mandatoryHypotheses->Js_array2.map(renumberVarsInHypothesis(_, varRenumbering)),
+                    hyps,
                     asrt: asrt->renumberVarsInExpr(varRenumbering),
-                    label: label,
+                    label,
                     description: ctx.lastComment,
                     intToSymb: createIntToSymbMap(ctx, mandatoryHypotheses, asrt, varRenumbering),
-                    varTypes: extractVarTypes(ctx, mandatoryVars, varRenumbering)
+                    varTypes,
+                    numOfVars: varTypes->Js_array2.length,
+                    numOfArgs: hyps->Js_array2.length
                 }
             }
         }
@@ -381,3 +387,7 @@ let createContext: mmAstNode => mmContext = stmt => {
     applyStmt(ctx, stmt)
     ctx
 }
+
+let getHypothesisExpr: (mmContext,string) => option<expr> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)
+let getFrame: (mmContext,string) => option<frame> = (ctx,label) => ctx.frames->Belt_MutableMapString.get(label)
+
