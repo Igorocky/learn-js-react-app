@@ -5,11 +5,12 @@ type rec proofNode =
     | Hypothesis({hypLabel:string, expr:expr})
     | Calculated({args:array<proofNode>, asrtLabel:string, expr:expr})
 
-let getExpr = (stack:array<proofNode>, i:int):expr => {
-    switch stack[i] {
+let getExprFromNode = (node:proofNode):expr => {
+    switch node {
         | Hypothesis({expr}) | Calculated({expr}) => expr
     }
 }
+let getExprFromStack = (stack:array<proofNode>, i:int):expr => getExprFromNode(stack[i])
 
 let compareSubArrays = (~src:array<'t>, ~srcFromIdx:int, ~dst:array<'t>, ~dstFromIdx:int, ~len:int): bool => {
     let s = ref(srcFromIdx)
@@ -101,7 +102,7 @@ let extractSubstitution = (stack:array<proofNode>, stackLength, frame):array<exp
                 if (subsLock[v]) {
                     raise(MmException({msg:`subsLock[v]`}))
                 } else {
-                    let subsExpr = stack->getExpr(baseIdx+i)
+                    let subsExpr = stack->getExprFromStack(baseIdx+i)
                     if (subsExpr->Js_array2.length < 2) {
                         raise(MmException({msg:`subsExpr->Js_array2.length < 2`}))
                     } else if (subsExpr[0] != t) {
@@ -127,8 +128,8 @@ let validateTopOfStackMatchesFrame = (stack:array<proofNode>, stackLength, frame
     frame.hyps->Js_array2.forEachi((hyp,i) => {
         switch hyp {
             | E(ess) => {
-                if (!compareExprAfterSubstitution(ess, subs, stack->getExpr(baseIdx+i))) {
-                    raise(MmException({msg:`!compareExprAfterSubstitution(ess, subs, stack->getExpr(baseIdx+i))`}))
+                if (!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))) {
+                    raise(MmException({msg:`!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))`}))
                 }
             }
             | _ => ()
@@ -148,7 +149,7 @@ let applyAsrt = (stack:array<proofNode>, frame):unit => {
             args: stack->Js_array2.sliceFrom(stackLength - frame.numOfArgs),
             expr: applySubs(frame.asrt, subs)
         })
-        for i in 1 to frame.numOfArgs {
+        for _ in 1 to frame.numOfArgs {
             let _ = stack->Js_array2.pop
         }
         let _ = stack->Js_array2.push(newNode)
@@ -179,7 +180,7 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     }
     if (stack->Js_array2.length != 1) {
         raise(MmException({msg:`stack->Js_array2.length != 1`}))
-    } else if (stack->getExpr(0) != expr) {
+    } else if (stack->getExprFromStack(0) != expr) {
         raise(MmException({msg:`stack[0] != expr`}))
     } else {
         stack[0]

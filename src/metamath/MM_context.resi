@@ -14,7 +14,7 @@ type frame = {
     asrt: expr,
     label: string,
     description: string,
-    intToSymb: Belt_MapInt.t<string>,
+    frameVarToSymb: Belt_MapInt.t<string>,
     varTypes: array<int>,
     numOfVars: int,
     numOfArgs: int,
@@ -29,3 +29,5 @@ let applyStmt: (mmContext, mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?,
 let getHypothesisExpr: (mmContext,string) => option<expr>
 let getFrame: (mmContext,string) => option<frame>
 let makeExpr: (mmContext,array<string>) => expr
+let ctxExprToStr: (mmContext, expr) => array<string>
+let frameExprToStr: (mmContext, frame, expr) => array<string>

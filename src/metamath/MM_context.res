@@ -12,7 +12,7 @@ type frame = {
     asrt: expr,
     label: string,
     description: string,
-    intToSymb: Belt_MapInt.t<string>,
+    frameVarToSymb: Belt_MapInt.t<string>,
     varTypes: array<int>,
     numOfVars: int,
     numOfArgs: int,
@@ -189,7 +189,7 @@ let extractMandatoryVariables = (ctx,asrt) => {
             ctx.hyps
                 ->Js_array2.filter(hyp => {
                     switch hyp {
-                        | E(expr) => true
+                        | E(_) => true
                         | _ => false
                     }
                 })
@@ -225,7 +225,7 @@ let extractMandatoryHypotheses = (ctx, mandatoryVars) => {
         ->Js_array2.filter(hyp => {
             switch hyp {
                 | F([_,v]) => mandatoryVars->Belt_SetInt.has(v)
-                | E(_) => true
+                | _ => true
             }
         })
 }
@@ -253,7 +253,7 @@ let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: Belt_MapInt.t<int>
     }
 }
 
-let createIntToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varRenumbering: Belt_MapInt.t<int>): Belt_MapInt.t<string> => {
+let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varRenumbering: Belt_MapInt.t<int>): Belt_MapInt.t<string> => {
     asrt->Js_array2.concatMany(
         mandatoryHypotheses->Js_array2.map(hyp => {
             switch hyp {
@@ -262,14 +262,11 @@ let createIntToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varR
             }
         })
     )
+        ->Js_array2.filter(i => i >= 0)
         ->Belt_SetInt.fromArray
         ->Belt_SetInt.toArray
         ->Js_array2.map(i => {
-            if (i < 0) {
-                (i, ctx.consts[-i])
-            } else {
-                (varRenumbering->Belt_MapInt.getExn(i), ctx.vars[i])
-            }
+            (varRenumbering->Belt_MapInt.getExn(i), ctx.vars[i])
         })
         ->Belt_MapInt.fromArray
 }
@@ -313,7 +310,7 @@ let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (
                     asrt: asrt->renumberVarsInExpr(varRenumbering),
                     label,
                     description: ctx.lastComment,
-                    intToSymb: createIntToSymbMap(ctx, mandatoryHypotheses, asrt, varRenumbering),
+                    frameVarToSymb: createFrameVarToSymbMap(ctx, mandatoryHypotheses, asrt, varRenumbering),
                     varTypes,
                     numOfVars: varTypes->Js_array2.length,
                     numOfArgs: hyps->Js_array2.length
@@ -327,32 +324,6 @@ let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
     ctx.frames->Belt_MutableMapString.set(label, createFrame(ctx, ~label, ~exprStr))
 }
 
-let strJoin = (ss:array<string>, ~sep:option<string>=?):string => {
-    switch sep {
-        | None => ""->Js.String2.concatMany(ss)
-        | Some(sep) => {
-            let lastIdx = ss->Js.Array2.length - 1
-            ss->Js.Array2.mapi((s,i) => if (i != lastIdx) {s++sep} else {s})->Js_string2.concatMany("", _)
-        }
-    }
-}
-
-let printListOfSymbols = ss => strJoin(ss, ~sep=" ")
-
-let stmtToString = ast => {
-    switch ast {
-        | {stmt:Comment({text})} => `Comment()`
-        | {stmt:Const({symbols})} => `Const({symbols:${printListOfSymbols(symbols)}})`
-        | {stmt:Block({statements})} => `Block({statements:${"array of " ++ Expln_utils_common.i2s(statements->Js_array2.length) ++ " items"}})`
-        | {stmt:Var({symbols})} => `Var({symbols:${printListOfSymbols(symbols)}})`
-        | {stmt:Disj({vars})} => `Disj({vars:${printListOfSymbols(vars)}})`
-        | {stmt:Floating({label, expr})} => `Floating({label:'${label}', expr:symbols:${printListOfSymbols(expr)}})`
-        | {stmt:Essential({label, expr})} => `Essential({label:'${label}', expr:${printListOfSymbols(expr)}})`
-        | {stmt:Axiom({label, expr})} => `Axiom({label:'${label}', expr:${printListOfSymbols(expr)}})`
-        | {stmt:Provable({label, expr, proof})} => `Provable({label:'${label}', expr:${printListOfSymbols(expr)}})`
-    }
-}
-
 let rec applyStmt = (ctx:mmContext, ast:mmAstNode, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()):bool => {
     let shouldStop = (expectedAsrtLabel, currentAsrtLabel) => {
         switch expectedAsrtLabel {
@@ -360,8 +331,6 @@ let rec applyStmt = (ctx:mmContext, ast:mmAstNode, ~stopBefore:option<string>=?,
             | None => false
         }
     }
-    //Js.log("applyStmt >>>" ++ stmtToString(ast))
-    //Js.log("applyStmt")
     try {
         let continue = ref(true)
         switch ast {
@@ -416,4 +385,12 @@ let makeExpr: (mmContext,array<string>) => expr = (ctx, symbols) => {
             | Some(i) => i
         }
     })
+}
+
+let ctxExprToStr: (mmContext, expr) => array<string> = (ctx, expr) => {
+    expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]})
+}
+
+let frameExprToStr: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
+    expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)})
 }

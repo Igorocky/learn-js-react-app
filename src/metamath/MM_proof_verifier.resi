@@ -6,3 +6,4 @@ type rec proofNode =
     | Calculated({args:array<proofNode>, asrtLabel:string, expr:expr})
 
 let verifyProof: (mmContext, expr, proof) => proofNode
+let getExprFromNode: proofNode => expr
