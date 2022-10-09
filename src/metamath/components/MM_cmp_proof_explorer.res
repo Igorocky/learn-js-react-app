@@ -8,7 +8,7 @@ let make = (~mmFileContent:string, ~ast:mmAstNode) => {
     React.useEffect0(() => {
         try {
             let _ = createContext(ast)
-            ()
+            Js.log(`MM context was created successfully.`)
         } catch {
             | MmException(ex) => Js.log("Error processing mm file: " ++ ex.msg ++ " at:" ++ textAt(mmFileContent, ex.begin->Belt_Option.getWithDefault(-1)))
         }

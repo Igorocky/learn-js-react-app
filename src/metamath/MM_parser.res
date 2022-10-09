@@ -98,22 +98,6 @@ let parseMmFile = (text:string): mmAstNode => {
         result.contents->Belt_Option.getExn
     }
 
-    let readAllTokensTill = (tillToken:string):option<array<string>> => {
-        let result = ref(None)
-        let tokens = []
-        while (result.contents->Belt_Option.isNone) {
-            let token = readNextToken()
-            if (token == "") {
-                result.contents = Some(None)
-            } else if (token == tillToken) {
-                result.contents = Some(Some(tokens))
-            } else {
-                let _ = tokens->Js_array2.push(token)
-            }
-        }
-        result.contents->Belt_Option.getExn
-    }
-
     let textAt = textAt(text, _)
 
     let parseComment = (~beginIdx:int):mmAstNode => {
@@ -121,6 +105,25 @@ let parseMmFile = (text:string): mmAstNode => {
             | None => raise(MmException({msg:`A comment is not closed at ${textAt(beginIdx)}`}))
             | Some(commentText) => {begin:beginIdx, end:idx.contents-1, stmt:Comment({text:commentText})}
         }
+    }
+
+    let readAllTokensTill = (tillToken:string):option<array<string>> => {
+        let result = ref(None)
+        let tokens = []
+        while (result.contents->Belt_Option.isNone) {
+            let token = readNextToken()
+            if (token == "") {
+                result.contents = Some(None)
+            } else if (token == "$(") {
+                //skipping comments inside of statements
+                let _ = parseComment(~beginIdx=idx.contents)
+            } else if (token == tillToken) {
+                result.contents = Some(Some(tokens))
+            } else {
+                let _ = tokens->Js_array2.push(token)
+            }
+        }
+        result.contents->Belt_Option.getExn
     }
 
     let parseConst = (~beginIdx:int):mmAstNode => {
