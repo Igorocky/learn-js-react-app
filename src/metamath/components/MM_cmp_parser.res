@@ -1,6 +1,6 @@
 open Expln_React_common
 open Expln_React_Mui
-open MM_parser
+open MM_parser2
 
 @react.component
 let make = () => {
@@ -8,15 +8,21 @@ let make = () => {
     let (mmFileParsed, setMmFileParsed) = useState(None)
     let (parseError, setParseError) = useState(None)
 
+    Js.Console.log2("mmFileParsed", mmFileParsed)
+    Js.Console.log2("parseError", parseError)
+
     let loadMmFileContent = text => {
         setMmFileContent(Some(text))
-        switch parseMmFile(text) {
-            | Ok(stmt) => setMmFileParsed(Some(stmt))
-            | Error(msg) => setParseError(Some(msg))
+        try {
+            let ast = parseMmFile(text)
+            setMmFileParsed(Some(ast))
+        } catch {
+            | MmException({msg}) => setParseError(Some(msg))
         }
     }
     let rndMmFile = (~ast) => {
-        <MM_cmp_proof_explorer mmFileContent={mmFileContent->Belt.Option.getExn} ast />
+        React.null
+        //<MM_cmp_proof_explorer mmFileContent={mmFileContent->Belt.Option.getExn} ast />
     }
 
     let rndMmFileContentOrError = () => {

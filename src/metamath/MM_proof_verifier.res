@@ -362,7 +362,7 @@ let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> =>
             )
         }
         | {stmt:Block({statements})} => {
-            openChildContext(ctx)
+            //openChildContext(ctx)
             statements->Js_array2.reduce(
                 (prevRes, stmt) => switch prevRes {
                     | Ok(_) => applyStmt(ctx, stmt)
