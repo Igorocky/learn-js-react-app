@@ -199,7 +199,10 @@ let parseMmFile = (text:string): mmAstNode => {
                     switch readAllTokensTill("$.") {
                         | None => raise(MmException({msg:`A provable statement is not closed[4] at ${textAt(beginIdx)}`}))
                         | Some(proofLabels) =>
-                            {begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression, proof:Uncompressed({labels:proofLabels})})}
+                            {
+                                begin:beginIdx, end:idx.contents-1, 
+                                stmt:Provable({label, expr:expression, proof:Uncompressed({labels:[firstProofToken]->Js.Array2.concat(proofLabels)})})
+                            }
                     }
                 }
             }
@@ -283,4 +286,32 @@ let traverseAllNodes = (context:'c, root:mmAstNode, consumer:('c,mmAstNode)=>opt
         }
     }
     res.contents
+}
+
+let stmtToStr: mmAstNode => array<string> = stmt => {
+    open Expln_utils_common
+    let level = ref(0)
+    let res = []
+    let _ = traverseAllNodes((), stmt, ((), node) => {
+        let str = switch node {
+            | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
+            | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Block({level: newLevel})} => {
+                level.contents = newLevel
+                `begin block level=${i2s(newLevel)}`
+            }
+            | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Floating({label, expr})} =>  label ++ " $f " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Essential({label, expr})} =>  label ++ " $e " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Axiom({label, expr})} =>  label ++ " $a " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+            | {stmt:Provable({label, expr, proof})} =>  label ++ " $p " ++ expr->strJoin(~sep=" ", ()) ++ " $= " ++ switch proof {
+                | Uncompressed({labels}) => labels->strJoin(~sep=" ", ())
+                | _ => "..."
+            } ++ " $."
+        }
+        let _ = res->Js_array2.push(str->Js_string2.replaceByRe(%re("/[\n\r]/g"), " "))
+        None
+    })
+    res
 }
