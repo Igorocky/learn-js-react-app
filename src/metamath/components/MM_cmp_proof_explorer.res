@@ -1,7 +1,7 @@
 open Expln_React_Mui
 open Expln_utils_common
 open MM_parser
-open MM_proof_verifier2
+open MM_proof_verifier
 
 @react.component
 let make = (~mmFileContent:string, ~ast:mmAstNode) => {

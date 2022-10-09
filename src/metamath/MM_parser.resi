@@ -10,7 +10,7 @@ type rec mmAstNode = {
 and stmt =
     | Comment({text:string})
     | Const({symbols:array<string>})
-    | Block({statements:array<mmAstNode>})
+    | Block({level:int, statements:array<mmAstNode>})
     | Var({symbols:array<string>})
     | Disj({vars:array<string>})
     | Floating({label:string, expr:array<string>})

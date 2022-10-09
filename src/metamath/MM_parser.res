@@ -10,7 +10,7 @@ type rec mmAstNode = {
 and stmt =
     | Comment({text:string})
     | Const({symbols:array<string>})
-    | Block({statements:array<mmAstNode>})
+    | Block({level:int, statements:array<mmAstNode>})
     | Var({symbols:array<string>})
     | Disj({vars:array<string>})
     | Floating({label:string, expr:array<string>})
@@ -207,12 +207,12 @@ let parseMmFile = (text:string): mmAstNode => {
             let tokenIdx = idx.contents - token->Js_string2.length
             if (token == "") {
                 if (level == 0) {
-                    result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})})
+                    result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({level, statements:statements})})
                 } else {
                     raise(MmException({msg:`Unexpected end of a block. The block begins at ${textAt(beginIdx)} and is not closed.`}))
                 }
             } else if (token == "$}") {
-                result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})})
+                result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({level, statements:statements})})
             } else if (token == "${") {
                 pushStmt(parseBlock(~beginIdx=tokenIdx, ~level=level+1))
             } else if (token == "$(") {

@@ -17,13 +17,13 @@ type frame = {
 }
 
 type rec mmContext = {
-    parent: option<mmContext>,
-    consts: array<string>,
-    vars: array<string>,
-    symToInt: Belt.MutableMap.String.t<int>,
-    disj: Belt.MutableMap.Int.t<Belt_MutableSetInt.t>,
-    hyps: array<hypothesis>,
-    symToHyp: Belt.MutableMap.String.t<expr>,
+    mutable parent: option<mmContext>,
+    mutable consts: array<string>,
+    mutable vars: array<string>,
+    mutable symToInt: Belt.MutableMap.String.t<int>,
+    mutable disj: Belt.MutableMap.Int.t<Belt_MutableSetInt.t>,
+    mutable hyps: array<hypothesis>,
+    mutable symToHyp: Belt.MutableMap.String.t<expr>,
     mutable lastComment: string,
     frames: Belt.MutableMap.String.t<frame>,
 }
@@ -40,30 +40,44 @@ let createEmptyContext: unit => mmContext = () => {
     frames: Belt.MutableMap.String.make(),
 }
 
-let openChildContext: mmContext => mmContext = ctx => {
-    parent: Some(ctx),
+let cloneMutableMapString = (mmi:Belt_MutableMapString.t<'v>, cloneValue:'v=>'v) => mmi->Belt_MutableMapString.map(cloneValue)
+let cloneMutableMapInt = (mmi:Belt_MutableMapInt.t<'v>, cloneValue:'v=>'v) => mmi->Belt_MutableMapInt.map(cloneValue)
+let cloneMutableSetInt = (ms:Belt_MutableSetInt.t) => ms->Belt_MutableSetInt.copy
+
+let cloneContext: mmContext => mmContext = ctx => {
+    parent: ctx.parent,
     consts: ctx.consts->Js_array2.copy,
     vars: ctx.vars->Js_array2.copy,
-    symToInt: ctx.symToInt->Belt.MutableMap.String.map(x=>x),
-    disj: ctx.disj->Belt.MutableMap.Int.map(x=>x),
+    symToInt: ctx.symToInt->cloneMutableMapString(x=>x),
+    disj: ctx.disj->cloneMutableMapInt(cloneMutableSetInt),
     hyps: ctx.hyps->Js_array2.copy,
-    symToHyp: ctx.symToHyp->Belt.MutableMap.String.map(x=>x),
+    symToHyp: ctx.symToHyp->cloneMutableMapString(x=>x),
     lastComment: ctx.lastComment,
-    frames: ctx.frames->Belt.MutableMap.String.map(x=>x),
+    frames: ctx.frames->cloneMutableMapString(x=>x),
 }
 
-let closeChildContext: mmContext => result<mmContext,string> = ctx => {
+let openChildContext: mmContext => unit = ctx => {
+    ctx.parent = Some(ctx->cloneContext)
+}
+
+let closeChildContext: mmContext => unit = ctx => {
     switch ctx.parent {
-        | None => Error(`Cannot close the root context.`)
-        | Some(parent) => Ok({
-            ...parent,
-            frames: ctx.frames
-        })
+        | None => raise(MmException({msg:`Cannot close the root context.`}))
+        | Some(parent) => {
+            ctx.parent = parent.parent
+            ctx.consts = parent.consts
+            ctx.vars = parent.vars
+            ctx.symToInt = parent.symToInt
+            ctx.disj = parent.disj
+            ctx.hyps = parent.hyps
+            ctx.symToHyp = parent.symToHyp
+            ctx.lastComment = parent.lastComment
+        }
     }
 }
 
-let addComment: (mmContext,string) => result<unit,string> = (ctx,str) => {
-    Ok(ctx.lastComment = str)
+let addComment: (mmContext,string) => unit = (ctx,str) => {
+    ctx.lastComment = str
 }
 
 let isConst: (mmContext,string) => bool = (ctx, sym) => 
@@ -72,25 +86,23 @@ let isConst: (mmContext,string) => bool = (ctx, sym) =>
 let isVar: (mmContext,string) => bool = (ctx, sym) => 
     ctx.symToInt->Belt_MutableMapString.get(sym)->Belt_Option.map(i => i >= 0)->Belt_Option.getWithDefault(false)
 
-let addConst: (mmContext,string) => result<unit,string> = (ctx,cName) => {
+let addConst: (mmContext,string) => unit = (ctx,cName) => {
     if (ctx.symToInt->Belt_MutableMapString.has(cName)) {
-        Error(`An attempt to re-declare the math symbol '${cName}' as a constant.`)
+        raise(MmException({msg:`An attempt to re-declare the math symbol '${cName}' as a constant.`}))
     } else if (ctx.parent->Belt_Option.isSome) {
-        Error(`An attempt to declare a constant '${cName}' in an inner block.`)
+        raise(MmException({msg:`An attempt to declare a constant '${cName}' in an inner block.`}))
     } else {
         ctx.symToInt->Belt_MutableMapString.set(cName, -(ctx.consts->Js_array2.length))
         let _ = ctx.consts->Js_array2.push(cName)
-        Ok(())
     }
 }
 
-let addVar: (mmContext,string) => result<unit,string> = (ctx,vName) => {
+let addVar: (mmContext,string) => unit = (ctx,vName) => {
     if (ctx.symToInt->Belt_MutableMapString.has(vName)) {
-        Error(`An attempt to re-declare the math symbol '${vName}' as a variable.`)
+        raise(MmException({msg:`An attempt to re-declare the math symbol '${vName}' as a variable.`}))
     } else {
         ctx.symToInt->Belt_MutableMapString.set(vName, ctx.vars->Js_array2.length)
         let _ = ctx.vars->Js_array2.push(vName)
-        Ok(())
     }
 }
 
@@ -103,9 +115,9 @@ let addDisjPairToMap = (disjMap, n, m) => {
 
 let addDisjPair = (ctx, n, m) => addDisjPairToMap(ctx.disj,n,m)
 
-let addDisj: (mmContext,array<string>) => result<unit,string> = (ctx, vars) => {
+let addDisj: (mmContext,array<string>) => unit = (ctx, vars) => {
     switch vars->Js_array2.find(sym => !(ctx->isVar(sym))) {
-        | Some(sym) => Error(`The symbol '${sym}' is not a variable but it is used in a disjoint statement.`)
+        | Some(sym) => raise(MmException({msg:`The symbol '${sym}' is not a variable but it is used in a disjoint statement.`}))
         | None => {
             let varInts = vars->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
             let maxIdx = varInts->Js_array2.length - 1
@@ -117,20 +129,19 @@ let addDisj: (mmContext,array<string>) => result<unit,string> = (ctx, vars) => {
                     ctx->addDisjPair(m,n)
                 }
             }
-            Ok(())
         }
     }
 }
 
-let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string> = (ctx, ~label, ~exprStr) => {
+let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (ctx, ~label, ~exprStr) => {
     if (exprStr->Js_array2.length != 2) {
-        Error(`Length of a floating expression must be 2.`)
+        raise(MmException({msg:`Length of a floating expression must be 2.`}))
     } else if (!(ctx->isConst(exprStr[0]))) {
-        Error(`The first symbol in a floating expression must be a constant.`)
+        raise(MmException({msg:`The first symbol in a floating expression must be a constant.`}))
     } else if (!(ctx->isVar(exprStr[1]))) {
-        Error(`The second symbol in a floating expression must be a variable.`)
+        raise(MmException({msg:`The second symbol in a floating expression must be a variable.`}))
     } else if (ctx.symToHyp->Belt_MutableMapString.has(label)) {
-        Error(`Cannot reuse the label '${label}'`)
+        raise(MmException({msg:`Cannot reuse the label '${label}'`}))
     } else {
         let varName = exprStr[1]
         let varInt = ctx.symToInt->Belt_MutableMapString.getExn(varName)
@@ -142,29 +153,27 @@ let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => result<un
                 }
             })
         if (existingFloating->Js_array2.length != 0) {
-            Error(`Cannot redefined typecode for the variable '${varName}'`)
+            raise(MmException({msg:`Cannot redefined typecode for the variable '${varName}'`}))
         } else {
             let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
             let _ = ctx.hyps->Js_array2.push(F(expr))
             ctx.symToHyp->Belt_MutableMapString.set(label, expr)
-            Ok(())
         }
     }
 }
 
-let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string> = (ctx, ~label, ~exprStr) => {
+let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (ctx, ~label, ~exprStr) => {
     if (exprStr->Js_array2.length < 1) {
-        Error(`Length of an essential expression must be at least 1.`)
+        raise(MmException({msg:`Length of an essential expression must be at least 1.`}))
     } else if (!(ctx->isConst(exprStr[0]))) {
-        Error(`The first symbol in an essential expression must be a constant.`)
+        raise(MmException({msg:`The first symbol in an essential expression must be a constant.`}))
     } else {
         switch exprStr->Js_array2.find(sym => !(ctx.symToInt->Belt_MutableMapString.has(sym))) {
-            | Some(sym) => Error(`The symbol '${sym}' must be either a constant or a variable.`)
+            | Some(sym) => raise(MmException({msg:`The symbol '${sym}' must be either a constant or a variable.`}))
             | None => {
                 let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
                 let _ = ctx.hyps->Js_array2.push(E(expr))
                 ctx.symToHyp->Belt_MutableMapString.set(label, expr)
-                Ok(())
             }
         }
     }
@@ -278,23 +287,23 @@ let extractVarTypes = (ctx, mandatoryVars: Belt_SetInt.t, varRenumbering: Belt_M
     varTypes
 }
 
-let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => result<frame,string> = (ctx, ~label, ~exprStr) => {
+let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (ctx, ~label, ~exprStr) => {
     if (ctx.frames->Belt_MutableMapString.has(label)) {
-        Error(`The label '${label}' is already used for another assertion.`)
+        raise(MmException({msg:`The label '${label}' is already used for another assertion.`}))
     } else if (exprStr->Js_array2.length < 1) {
-        Error(`Length of an assertion expression must be at least 1.`)
+        raise(MmException({msg:`Length of an assertion expression must be at least 1.`}))
     } else if (!(ctx->isConst(exprStr[0]))) {
-        Error(`The first symbol in an assertion expression must be a constant.`)
+        raise(MmException({msg:`The first symbol in an assertion expression must be a constant.`}))
     } else {
         switch exprStr->Js_array2.find(sym => !(ctx.symToInt->Belt_MutableMapString.has(sym))) {
-            | Some(sym) => Error(`The symbol '${sym}' must be either a constant or a variable.`)
+            | Some(sym) => raise(MmException({msg:`The symbol '${sym}' must be either a constant or a variable.`}))
             | None => {
                 let asrt: expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
                 let mandatoryVars: Belt_SetInt.t = extractMandatoryVariables(ctx, asrt)
                 let mandatoryDisj: Belt_MapInt.t<Belt_SetInt.t> = extractMandatoryDisj(ctx, mandatoryVars)
                 let mandatoryHypotheses: array<hypothesis> = extractMandatoryHypotheses(ctx, mandatoryVars)
                 let varRenumbering: Belt_MapInt.t<int> = mandatoryVars -> Belt_SetInt.toArray -> Js_array2.mapi((v,i) => (v,i)) -> Belt_MapInt.fromArray
-                Ok({
+                {
                     disj: mandatoryDisj->renumberVarsInDisj(varRenumbering),
                     hyps: mandatoryHypotheses->Js_array2.map(renumberVarsInHypothesis(_, varRenumbering)),
                     asrt: asrt->renumberVarsInExpr(varRenumbering),
@@ -302,20 +311,14 @@ let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => result<fr
                     description: ctx.lastComment,
                     intToSymb: createIntToSymbMap(ctx, mandatoryHypotheses, asrt, varRenumbering),
                     varTypes: extractVarTypes(ctx, mandatoryVars, varRenumbering)
-                })
+                }
             }
         }
     }
 }
 
-let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<unit,string> = (ctx, ~label, ~exprStr) => {
-    switch createFrame(ctx, ~label, ~exprStr) {
-        | Error(msg) => Error(msg)
-        | Ok(frame) => {
-            ctx.frames->Belt_MutableMapString.set(label, frame)
-            Ok(())
-        }
-    }
+let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (ctx, ~label, ~exprStr) => {
+    ctx.frames->Belt_MutableMapString.set(label, createFrame(ctx, ~label, ~exprStr))
 }
 
 let strJoin = (ss:array<string>, ~sep:option<string>=?):string => {
@@ -344,54 +347,37 @@ let stmtToString = ast => {
     }
 }
 
-let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> => {
-    Js.log("applyStmt: " ++ stmtToString(stmt))
-    let mkResult = result => switch result {
-        | Ok(()) => Ok(())
-        | Error(msg) => Error((msg, stmt.begin))
+let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):unit => {
+    //Js.log("applyStmt: " ++ stmtToString(stmt))
+    //Js.log("applyStmt")
+    try {
+        switch stmt {
+            | {stmt:Comment({text})} => addComment(ctx, text)
+            | {stmt:Const({symbols})} => symbols->Js_array2.forEach(addConst(ctx, _))
+            | {stmt:Block({level,statements})} => {
+                if (level > 0) {
+                    openChildContext(ctx)
+                }
+                statements->Js_array2.forEach(applyStmt(ctx, _))
+                if (level > 0) {
+                    closeChildContext(ctx)
+                }
+            }
+            | {stmt:Var({symbols})} => symbols->Js_array2.forEach(addVar(ctx, _))
+            | {stmt:Disj({vars})} => addDisj(ctx, vars)
+            | {stmt:Floating({label, expr})} => addFloating(ctx, ~label, ~exprStr=expr)
+            | {stmt:Essential({label, expr})} => addEssential(ctx, ~label, ~exprStr=expr)
+            | {stmt:Axiom({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)
+            | {stmt:Provable({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)
+        }
+    } catch {
+        | MmException(ex) => raise(MmException({msg:ex.msg, begin:ex.begin->Belt.Option.getWithDefault(stmt.begin)}))
     }
-    switch stmt {
-        | {stmt:Comment({text})} => addComment(ctx, text)->mkResult
-        | {stmt:Const({symbols})} => {
-            symbols->Js_array2.reduce(
-                (prevRes, cName) => switch prevRes {
-                    | Ok(_) => addConst(ctx, cName)->mkResult
-                    | err => err
-                },
-                Ok(())
-            )
-        }
-        | {stmt:Block({statements})} => {
-            //openChildContext(ctx)
-            statements->Js_array2.reduce(
-                (prevRes, stmt) => switch prevRes {
-                    | Ok(_) => applyStmt(ctx, stmt)
-                    | err => err
-                },
-                Ok(())
-            )
-        }
-        | {stmt:Var({symbols})} => {
-            symbols->Js_array2.reduce(
-                (prevRes, vName) => switch prevRes {
-                    | Ok(_) => addVar(ctx, vName)->mkResult
-                    | err => err
-                },
-                Ok(())
-            )
-        }
-        | {stmt:Disj({vars})} => addDisj(ctx, vars)->mkResult
-        | {stmt:Floating({label, expr})} => addFloating(ctx, ~label, ~exprStr=expr)->mkResult
-        | {stmt:Essential({label, expr})} => addEssential(ctx, ~label, ~exprStr=expr)->mkResult
-        | {stmt:Axiom({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)->mkResult
-        | {stmt:Provable({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)->mkResult
-    }
+
 }
 
-let createContext: mmAstNode => result<mmContext,(string,int)> = stmt => {
+let createContext: mmAstNode => mmContext = stmt => {
     let ctx = createEmptyContext()
-    switch applyStmt(ctx, stmt) {
-        | Error(msg) => Error(msg)
-        | Ok(()) => Ok(ctx)
-    }
+    applyStmt(ctx, stmt)
+    ctx
 }
