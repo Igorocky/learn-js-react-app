@@ -353,19 +353,31 @@ let stmtToString = ast => {
     }
 }
 
-let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):unit => {
-    //Js.log("applyStmt: " ++ stmtToString(stmt))
+let rec applyStmt = (ctx:mmContext, ast:mmAstNode, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()):bool => {
+    let shouldStop = (expectedAsrtLabel, currentAsrtLabel) => {
+        switch expectedAsrtLabel {
+            | Some(expectedAsrtLabel) => expectedAsrtLabel == currentAsrtLabel
+            | None => false
+        }
+    }
+    //Js.log("applyStmt >>>" ++ stmtToString(ast))
     //Js.log("applyStmt")
     try {
-        switch stmt {
+        let continue = ref(true)
+        switch ast {
             | {stmt:Comment({text})} => addComment(ctx, text)
             | {stmt:Const({symbols})} => symbols->Js_array2.forEach(addConst(ctx, _))
             | {stmt:Block({level,statements})} => {
                 if (level > 0) {
                     openChildContext(ctx)
                 }
-                statements->Js_array2.forEach(applyStmt(ctx, _))
-                if (level > 0) {
+                let i = ref(0)
+                let len = statements->Js_array2.length
+                while (i.contents < len && continue.contents) {
+                    continue.contents = applyStmt(ctx, statements[i.contents], ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())
+                    i.contents = i.contents + 1
+                }
+                if (continue.contents && level > 0) {
                     closeChildContext(ctx)
                 }
             }
@@ -373,21 +385,35 @@ let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):unit => {
             | {stmt:Disj({vars})} => addDisj(ctx, vars)
             | {stmt:Floating({label, expr})} => addFloating(ctx, ~label, ~exprStr=expr)
             | {stmt:Essential({label, expr})} => addEssential(ctx, ~label, ~exprStr=expr)
-            | {stmt:Axiom({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)
-            | {stmt:Provable({label, expr})} => addAssertion(ctx, ~label, ~exprStr=expr)
+            | {stmt:Axiom({label, expr})} | {stmt:Provable({label, expr})} => {
+                if (shouldStop(stopBefore, label)) {
+                    continue.contents = false
+                } else {
+                    addAssertion(ctx, ~label, ~exprStr=expr)
+                    continue.contents = !shouldStop(stopAfter, label)
+                }
+            }
         }
+        continue.contents
     } catch {
-        | MmException(ex) => raise(MmException({msg:ex.msg, begin:ex.begin->Belt.Option.getWithDefault(stmt.begin)}))
+        | MmException(ex) => raise(MmException({msg:ex.msg, begin:ex.begin->Belt.Option.getWithDefault(ast.begin)}))
     }
-
 }
 
-let createContext: mmAstNode => mmContext = stmt => {
+let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext = (ast, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()) => {
     let ctx = createEmptyContext()
-    applyStmt(ctx, stmt)
+    let _ = applyStmt(ctx, ast, ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())
     ctx
 }
 
 let getHypothesisExpr: (mmContext,string) => option<expr> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)
 let getFrame: (mmContext,string) => option<frame> = (ctx,label) => ctx.frames->Belt_MutableMapString.get(label)
 
+let makeExpr: (mmContext,array<string>) => expr = (ctx, symbols) => {
+    symbols->Js_array2.map(sym => {
+        switch ctx.symToInt->Belt_MutableMapString.get(sym) {
+            | None => raise(MmException({msg:`error in makeExpr: cannot find symbol '${sym}'`}))
+            | Some(i) => i
+        }
+    })
+}

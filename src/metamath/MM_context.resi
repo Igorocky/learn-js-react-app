@@ -21,10 +21,11 @@ type frame = {
 }
 
 let createEmptyContext: unit => mmContext
-let createContext: mmAstNode => mmContext
+let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
-let applyStmt: (mmContext, mmAstNode) => unit
+let applyStmt: (mmContext, mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => bool
 
 let getHypothesisExpr: (mmContext,string) => option<expr>
 let getFrame: (mmContext,string) => option<frame>
+let makeExpr: (mmContext,array<string>) => expr

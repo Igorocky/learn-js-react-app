@@ -69,15 +69,6 @@ let parseMmFile = (text:string): mmAstNode => {
         }
     }
 
-    let readNextToken = ():string => {
-        skipWhitespaces()
-        let beginIdx = idx.contents
-        while (!endOfFile.contents && !(ch.contents->isWhitespace)) {
-            readNextChar()
-        }
-        text->Js_string2.substring(~from=beginIdx, ~to_=idx.contents)
-    }
-
     let readAllTextTill = (tillToken:string):option<string> => {
         let result = ref(None)
         let beginIdx = idx.contents
@@ -107,11 +98,29 @@ let parseMmFile = (text:string): mmAstNode => {
         }
     }
 
+    let rec readNextToken = (~skipComments=true, ()):string => {
+        if (!skipComments) {
+            skipWhitespaces()
+            let beginIdx = idx.contents
+            while (!endOfFile.contents && !(ch.contents->isWhitespace)) {
+                readNextChar()
+            }
+            text->Js_string2.substring(~from=beginIdx, ~to_=idx.contents)
+        } else {
+            let nextToken = ref(readNextToken(~skipComments=false, ()))
+            while (nextToken.contents == "$(") {
+                let _ = parseComment(~beginIdx=idx.contents)
+                nextToken.contents = readNextToken(~skipComments=false, ())
+            }
+            nextToken.contents
+        }
+    }
+
     let readAllTokensTill = (tillToken:string):option<array<string>> => {
         let result = ref(None)
         let tokens = []
         while (result.contents->Belt_Option.isNone) {
-            let token = readNextToken()
+            let token = readNextToken(())
             if (token == "") {
                 result.contents = Some(None)
             } else if (token == "$(") {
@@ -172,7 +181,7 @@ let parseMmFile = (text:string): mmAstNode => {
         switch readAllTokensTill("$=") {
             | None => raise(MmException({msg:`A provable statement is not closed[1] at ${textAt(beginIdx)}`}))
             | Some(expression) => {
-                let firstProofToken = readNextToken()
+                let firstProofToken = readNextToken(())
                 if (firstProofToken == "(") {
                     switch readAllTokensTill(")") {
                         | None => raise(MmException({msg:`A provable statement is not closed[2] at ${textAt(beginIdx)}`}))
@@ -206,7 +215,7 @@ let parseMmFile = (text:string): mmAstNode => {
         }
 
         while (result.contents->Belt_Option.isNone) {
-            let token = readNextToken()
+            let token = readNextToken(~skipComments=false, ())
             let tokenIdx = idx.contents - token->Js_string2.length
             if (token == "") {
                 if (level == 0) {
@@ -228,7 +237,7 @@ let parseMmFile = (text:string): mmAstNode => {
                 pushStmt(parseDisj(~beginIdx=tokenIdx))
             } else {
                 let label = token
-                let token2 = readNextToken()
+                let token2 = readNextToken(())
                 let token2Idx = idx.contents - token2->Js_string2.length
                 if (token2 == "") {
                     raise(MmException({msg:`Unexpected end of file at ${textAt(tokenIdx)}`}))
@@ -249,4 +258,29 @@ let parseMmFile = (text:string): mmAstNode => {
     }
 
     parseBlock(~beginIdx=idx.contents, ~level=0)
+}
+
+let traverseAllNodes = (context:'c, root:mmAstNode, consumer:('c,mmAstNode)=>option<'res>): option<'res> => {
+    let nodesToProcess = Belt_MutableStack.make()
+    nodesToProcess->Belt_MutableStack.push(root)
+    let res = ref(None)
+    while (!(nodesToProcess->Belt_MutableStack.isEmpty) && res.contents->Belt_Option.isNone) {
+        switch nodesToProcess->Belt_MutableStack.pop {
+            | Some(currNode) => {
+                res.contents = consumer(context, currNode)
+                if (res.contents->Belt_Option.isNone) {
+                    switch currNode {
+                        | {stmt:Block({statements})} => {
+                            for i in statements->Js_array2.length - 1 downto 0 {
+                                nodesToProcess->Belt_MutableStack.push(statements[i])
+                            }
+                        }
+                        | _ => ()
+                    }
+                }
+            }
+            | None => ()
+        }
+    }
+    res.contents
 }
