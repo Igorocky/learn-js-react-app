@@ -18,5 +18,11 @@ and stmt =
     | Axiom({label:string, expr:array<string>})
     | Provable({label:string, expr:array<string>, proof:proof})
 
-let parseMmFile: string => result<mmAstNode,string>
+type mmException = {
+    msg:string,
+    begin?:int,
+}
+exception MmException(mmException)
+
+let parseMmFile: string => mmAstNode
 let textAt: (string,int) => string

@@ -18,6 +18,11 @@ and stmt =
     | Axiom({label:string, expr:array<string>})
     | Provable({label:string, expr:array<string>, proof:proof})
 
+type mmException = {
+    msg:string,
+    begin?:int,
+}
+exception MmException(mmException)
 
 let isWhitespace = str => str == " " || str == "\t" || str == "\n" || str == "\r"
 
@@ -28,7 +33,7 @@ let textAt = (text,i) => {
     "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
 }
 
-let parseMmFile = (text:string): result<mmAstNode,string> => {
+let parseMmFile = (text:string): mmAstNode => {
     let textLength = text->Js_string2.length
     let idx = ref(0) // index of the next char to read.
     let endOfFile = ref(false) // if idx is outside of text then endOfFile is true.
@@ -111,110 +116,105 @@ let parseMmFile = (text:string): result<mmAstNode,string> => {
 
     let textAt = textAt(text, _)
 
-    let parseComment = (~beginIdx:int):result<mmAstNode,string> => {
+    let parseComment = (~beginIdx:int):mmAstNode => {
         switch readAllTextTill("$)") {
-            | None => Error(`A comment is not closed at ${textAt(beginIdx)}`)
-            | Some(commentText) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Comment({text:commentText})})
-        }
-    }
-    
-    let parseConst = (~beginIdx:int):result<mmAstNode,string> => {
-        switch readAllTokensTill("$.") {
-            | None => Error(`A constant statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Const({symbols:tokens})})
+            | None => raise(MmException({msg:`A comment is not closed at ${textAt(beginIdx)}`}))
+            | Some(commentText) => {begin:beginIdx, end:idx.contents-1, stmt:Comment({text:commentText})}
         }
     }
 
-    let parseVar = (~beginIdx:int):result<mmAstNode,string> => {
+    let parseConst = (~beginIdx:int):mmAstNode => {
         switch readAllTokensTill("$.") {
-            | None => Error(`A variable statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Var({symbols:tokens})})
+            | None => raise(MmException({msg:`A constant statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Const({symbols:tokens})}
         }
     }
 
-    let parseDisj = (~beginIdx:int):result<mmAstNode,string> => {
+    let parseVar = (~beginIdx:int):mmAstNode => {
         switch readAllTokensTill("$.") {
-            | None => Error(`A disjoint statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Disj({vars:tokens})})
+            | None => raise(MmException({msg:`A variable statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Var({symbols:tokens})}
         }
     }
 
-    let parseFloating = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
+    let parseDisj = (~beginIdx:int):mmAstNode => {
         switch readAllTokensTill("$.") {
-            | None => Error(`A floating statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Floating({label, expr:tokens})})
+            | None => raise(MmException({msg:`A disjoint statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Disj({vars:tokens})}
         }
     }
 
-    let parseEssential = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
+    let parseFloating = (~beginIdx:int, ~label:string):mmAstNode => {
         switch readAllTokensTill("$.") {
-            | None => Error(`An essential statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Essential({label, expr:tokens})})
+            | None => raise(MmException({msg:`A floating statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Floating({label, expr:tokens})}
         }
     }
 
-    let parseAxiom = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
+    let parseEssential = (~beginIdx:int, ~label:string):mmAstNode => {
         switch readAllTokensTill("$.") {
-            | None => Error(`An axiom statement is not closed at ${textAt(beginIdx)}`)
-            | Some(tokens) => Ok({begin:beginIdx, end:idx.contents-1, stmt:Axiom({label, expr:tokens})})
+            | None => raise(MmException({msg:`An essential statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Essential({label, expr:tokens})}
         }
     }
 
-    let parseProvable = (~beginIdx:int, ~label:string):result<mmAstNode,string> => {
+    let parseAxiom = (~beginIdx:int, ~label:string):mmAstNode => {
+        switch readAllTokensTill("$.") {
+            | None => raise(MmException({msg:`An axiom statement is not closed at ${textAt(beginIdx)}`}))
+            | Some(tokens) => {begin:beginIdx, end:idx.contents-1, stmt:Axiom({label, expr:tokens})}
+        }
+    }
+
+    let parseProvable = (~beginIdx:int, ~label:string):mmAstNode => {
         switch readAllTokensTill("$=") {
-            | None => Error(`A probale statement is not closed[1] at ${textAt(beginIdx)}`)
+            | None => raise(MmException({msg:`A provable statement is not closed[1] at ${textAt(beginIdx)}`}))
             | Some(expression) => {
                 let firstProofToken = readNextToken()
                 if (firstProofToken == "(") {
                     switch readAllTokensTill(")") {
-                        | None => Error(`A probale statement is not closed[2] at ${textAt(beginIdx)}`)
+                        | None => raise(MmException({msg:`A provable statement is not closed[2] at ${textAt(beginIdx)}`}))
                         | Some(proofLabels) => {
                             switch readAllTokensTill("$.") {
-                                | None => Error(`A probale statement is not closed[3] at ${textAt(beginIdx)}`)
-                                | Some(compressedProofBlocks) => 
-                                    Ok({begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression,
+                                | None => raise(MmException({msg:`A probale statement is not closed[3] at ${textAt(beginIdx)}`}))
+                                | Some(compressedProofBlocks) =>
+                                    {begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression,
                                         proof:Compressed({labels:proofLabels, compressedProofBlock:""->Js_string2.concatMany(compressedProofBlocks)})
-                                    })})
+                                    })}
                             }
                         }
                     }
                 } else {
                     switch readAllTokensTill("$.") {
-                        | None => Error(`A probale statement is not closed[4] at ${textAt(beginIdx)}`)
-                        | Some(proofLabels) => 
-                            Ok({begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression, proof:Uncompressed({labels:proofLabels})})})
+                        | None => raise(MmException({msg:`A provable statement is not closed[4] at ${textAt(beginIdx)}`}))
+                        | Some(proofLabels) =>
+                            {begin:beginIdx, end:idx.contents-1, stmt:Provable({label, expr:expression, proof:Uncompressed({labels:proofLabels})})}
                     }
                 }
             }
         }
     }
 
-    let rec parseBlock = (~beginIdx:int, ~level:int):result<mmAstNode,string> => {// parses text until $} token or until the end of text
+    let rec parseBlock = (~beginIdx:int, ~level:int):mmAstNode => {// parses text until $} token or until the end of text
         let result = ref(None)
         let statements = []
 
-        let pushStmt = stmt =>
-            switch stmt {
-                | Error(msg) => result.contents = Some(Error(msg))
-                | Ok(stmt) => let _ = statements->Js_array2.push(stmt)
-            }
+        let pushStmt = stmt => {
+            let _ = statements->Js_array2.push(stmt)
+        }
 
         while (result.contents->Belt_Option.isNone) {
             let token = readNextToken()
             let tokenIdx = idx.contents - token->Js_string2.length
             if (token == "") {
                 if (level == 0) {
-                    result.contents = Some(Ok({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})}))
+                    result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})})
                 } else {
-                    result.contents = Some(Error(`Unexpected end of a block. The block begins at ${textAt(beginIdx)} and is not closed.`))
+                    raise(MmException({msg:`Unexpected end of a block. The block begins at ${textAt(beginIdx)} and is not closed.`}))
                 }
             } else if (token == "$}") {
-                result.contents = Some(Ok({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})}))
+                result.contents = Some({begin:beginIdx, end:idx.contents-1, stmt:Block({statements:statements})})
             } else if (token == "${") {
-                switch parseBlock(~beginIdx=tokenIdx, ~level=level+1) {
-                    | Error(msg) => result.contents = Some(Error(msg))
-                    | Ok(stmt) => let _ = statements->Js_array2.push(stmt)
-                }
+                pushStmt(parseBlock(~beginIdx=tokenIdx, ~level=level+1))
             } else if (token == "$(") {
                 pushStmt(parseComment(~beginIdx=tokenIdx))
             } else if (token == "$c") {
@@ -228,7 +228,7 @@ let parseMmFile = (text:string): result<mmAstNode,string> => {
                 let token2 = readNextToken()
                 let token2Idx = idx.contents - token2->Js_string2.length
                 if (token2 == "") {
-                    result.contents = Some(Error(`Unexpected end of file at ${textAt(tokenIdx)}`))
+                    raise(MmException({msg:`Unexpected end of file at ${textAt(tokenIdx)}`}))
                 } else if (token2 == "$f") {
                     pushStmt(parseFloating(~beginIdx=tokenIdx, ~label))
                 } else if (token2 == "$e") {
@@ -238,7 +238,7 @@ let parseMmFile = (text:string): result<mmAstNode,string> => {
                 } else if (token2 == "$p") {
                     pushStmt(parseProvable(~beginIdx=tokenIdx, ~label))
                 } else {
-                    result.contents = Some(Error(`Unexpected token '${token2}' at ${textAt(token2Idx)}`))
+                    raise(MmException({msg:`Unexpected token '${token2}' at ${textAt(token2Idx)}`}))
                 }
             }
         }

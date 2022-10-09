@@ -1,6 +1,6 @@
 open Expln_React_common
 open Expln_React_Mui
-open MM_parser2
+open MM_parser
 
 @react.component
 let make = () => {
@@ -21,8 +21,7 @@ let make = () => {
         }
     }
     let rndMmFile = (~ast) => {
-        React.null
-        //<MM_cmp_proof_explorer mmFileContent={mmFileContent->Belt.Option.getExn} ast />
+        <MM_cmp_proof_explorer mmFileContent={mmFileContent->Belt.Option.getExn} ast />
     }
 
     let rndMmFileContentOrError = () => {
