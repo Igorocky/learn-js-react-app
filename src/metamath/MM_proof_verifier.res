@@ -232,7 +232,7 @@ let renumberVarsInDisj = (disj: Belt_MapInt.t<Belt_SetInt.t>, renumbering: Belt_
 }
 
 let renumberVarsInExpr = (expr: expr, renumbering: Belt_MapInt.t<int>): expr => {
-    expr->Js_array2.map(renumbering->Belt_MapInt.getExn)
+    expr->Js_array2.map(i => if (i<0) {i} else {renumbering->Belt_MapInt.getExn(i)})
 }
 
 let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: Belt_MapInt.t<int>): hypothesis => {
@@ -318,7 +318,34 @@ let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => result<u
     }
 }
 
+let strJoin = (ss:array<string>, ~sep:option<string>=?):string => {
+    switch sep {
+        | None => ""->Js.String2.concatMany(ss)
+        | Some(sep) => {
+            let lastIdx = ss->Js.Array2.length - 1
+            ss->Js.Array2.mapi((s,i) => if (i != lastIdx) {s++sep} else {s})->Js_string2.concatMany("", _)
+        }
+    }
+}
+
+let printListOfSymbols = ss => strJoin(ss, ~sep=" ")
+
+let stmtToString = ast => {
+    switch ast {
+        | {stmt:Comment({text})} => `Comment()`
+        | {stmt:Const({symbols})} => `Const({symbols:${printListOfSymbols(symbols)}})`
+        | {stmt:Block({statements})} => `Block({statements:${"array of " ++ Expln_utils_common.i2s(statements->Js_array2.length) ++ " items"}})`
+        | {stmt:Var({symbols})} => `Var({symbols:${printListOfSymbols(symbols)}})`
+        | {stmt:Disj({vars})} => `Disj({vars:${printListOfSymbols(vars)}})`
+        | {stmt:Floating({label, expr})} => `Floating({label:'${label}', expr:symbols:${printListOfSymbols(expr)}})`
+        | {stmt:Essential({label, expr})} => `Essential({label:'${label}', expr:${printListOfSymbols(expr)}})`
+        | {stmt:Axiom({label, expr})} => `Axiom({label:'${label}', expr:${printListOfSymbols(expr)}})`
+        | {stmt:Provable({label, expr, proof})} => `Provable({label:'${label}', expr:${printListOfSymbols(expr)}})`
+    }
+}
+
 let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> => {
+    Js.log("applyStmt: " ++ stmtToString(stmt))
     let mkResult = result => switch result {
         | Ok(()) => Ok(())
         | Error(msg) => Error((msg, stmt.begin))
@@ -334,7 +361,8 @@ let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> =>
                 Ok(())
             )
         }
-        | {stmt:Block({statements})} =>
+        | {stmt:Block({statements})} => {
+            openChildContext(ctx)
             statements->Js_array2.reduce(
                 (prevRes, stmt) => switch prevRes {
                     | Ok(_) => applyStmt(ctx, stmt)
@@ -342,6 +370,7 @@ let rec applyStmt = (ctx:mmContext, stmt:mmAstNode):result<unit,(string,int)> =>
                 },
                 Ok(())
             )
+        }
         | {stmt:Var({symbols})} => {
             symbols->Js_array2.reduce(
                 (prevRes, vName) => switch prevRes {
