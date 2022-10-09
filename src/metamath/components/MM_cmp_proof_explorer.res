@@ -1,7 +1,7 @@
 open Expln_React_Mui
 open Expln_utils_common
 open MM_parser
-open MM_proof_verifier
+open MM_context
 
 @react.component
 let make = (~mmFileContent:string, ~ast:mmAstNode) => {
@@ -10,7 +10,12 @@ let make = (~mmFileContent:string, ~ast:mmAstNode) => {
             let _ = createContext(ast)
             Js.log(`MM context was created successfully.`)
         } catch {
-            | MmException(ex) => Js.log("Error processing mm file: " ++ ex.msg ++ " at:" ++ textAt(mmFileContent, ex.begin->Belt_Option.getWithDefault(-1)))
+            | MmException(ex) =>
+                Js.log(
+                    "Error processing mm file: "
+                        ++ ex.msg ++ " at:"
+                        ++ ex.begin->Belt.Option.map(textAt(mmFileContent, _))->Belt_Option.getWithDefault("No location info is available.")
+                )
         }
         Some(() => ())
     })
