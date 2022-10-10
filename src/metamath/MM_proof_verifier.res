@@ -216,14 +216,32 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
     })
 }
 
-let applyCompressedProof = (ctx, stack, labels, compressedProofBlock) => {
+let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
     ()
+    //let steps = compressedProofBlockToArray(compressedProofBlock)
+    //let hyps = getMandHyps(ctx, expr)->Js_array2.map(hypToExpr)
+    //let hypLen = hyps->Js_array2.length
+    //let savedNodes = []
+    //steps->Belt_Array.forEach(step => {
+        //if (step == "Z") {
+            //if (stack->Js_array2.length == 0) {
+                //raise(MmException({msg:`Cannot execute 'Z' command because the stack is empty`}))
+            //} else {
+                //savedNodes->Js_array2.push()->ignore
+            //}
+        //} else {
+            //let i = compressedProofStrToInt(step)
+            //if (1 <= i && i <= hypLen) {
+                //stack->Js_array2.push(hyps[i-1])->ignore
+            //} else if ()
+        //}
+    //})
 }
 
 let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     let stack = []
     switch proof {
-        | Compressed({labels, compressedProofBlock}) => applyCompressedProof(ctx, stack, labels, compressedProofBlock)
+        | Compressed({labels, compressedProofBlock}) => applyCompressedProof(ctx, expr, stack, labels, compressedProofBlock)
         | Uncompressed({labels}) => applyUncompressedProof(ctx, stack, labels)
     }
     if (stack->Js_array2.length != 1) {

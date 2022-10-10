@@ -31,3 +31,5 @@ let getFrame: (mmContext,string) => option<frame>
 let makeExpr: (mmContext,array<string>) => expr
 let ctxExprToStr: (mmContext, expr) => array<string>
 let frameExprToStr: (mmContext, frame, expr) => array<string>
+let getMandHyps: (mmContext, expr) => array<hypothesis>
+let hypToExpr: hypothesis => expr

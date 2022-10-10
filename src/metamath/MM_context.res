@@ -253,14 +253,15 @@ let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: Belt_MapInt.t<int>
     }
 }
 
+let hypToExpr: hypothesis => expr = hyp => {
+    switch hyp {
+        | F(expr) | E(expr) => expr
+    }
+}
+
 let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varRenumbering: Belt_MapInt.t<int>): Belt_MapInt.t<string> => {
     asrt->Js_array2.concatMany(
-        mandatoryHypotheses->Js_array2.map(hyp => {
-            switch hyp {
-                | F(expr) => expr
-                | E(expr) => expr
-            }
-        })
+        mandatoryHypotheses->Js_array2.map(hypToExpr)
     )
         ->Js_array2.filter(i => i >= 0)
         ->Belt_SetInt.fromArray
@@ -393,4 +394,9 @@ let ctxExprToStr: (mmContext, expr) => array<string> = (ctx, expr) => {
 
 let frameExprToStr: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
     expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)})
+}
+
+let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
+    let mandatoryVars: Belt_SetInt.t = extractMandatoryVariables(ctx, expr)
+    extractMandatoryHypotheses(ctx, mandatoryVars)
 }
