@@ -109,7 +109,7 @@ let parseMmFile = (text:string): mmAstNode => {
         } else {
             let nextToken = ref(readNextToken(~skipComments=false, ()))
             while (nextToken.contents == "$(") {
-                let _ = parseComment(~beginIdx=idx.contents)
+                parseComment(~beginIdx=idx.contents)->ignore
                 nextToken.contents = readNextToken(~skipComments=false, ())
             }
             nextToken.contents
@@ -125,11 +125,11 @@ let parseMmFile = (text:string): mmAstNode => {
                 result.contents = Some(None)
             } else if (token == "$(") {
                 //skipping comments inside of statements
-                let _ = parseComment(~beginIdx=idx.contents)
+                parseComment(~beginIdx=idx.contents)->ignore
             } else if (token == tillToken) {
                 result.contents = Some(Some(tokens))
             } else {
-                let _ = tokens->Js_array2.push(token)
+                tokens->Js_array2.push(token)->ignore
             }
         }
         result.contents->Belt_Option.getExn
@@ -214,7 +214,7 @@ let parseMmFile = (text:string): mmAstNode => {
         let statements = []
 
         let pushStmt = stmt => {
-            let _ = statements->Js_array2.push(stmt)
+            statements->Js_array2.push(stmt)->ignore
         }
 
         while (result.contents->Belt_Option.isNone) {
@@ -292,7 +292,7 @@ let stmtToStr: mmAstNode => array<string> = stmt => {
     open Expln_utils_common
     let level = ref(0)
     let res = []
-    let _ = traverseAllNodes((), stmt, ((), node) => {
+    traverseAllNodes((), stmt, ((), node) => {
         let str = switch node {
             | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
             | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
@@ -310,8 +310,8 @@ let stmtToStr: mmAstNode => array<string> = stmt => {
                 | _ => "..."
             } ++ " $."
         }
-        let _ = res->Js_array2.push(str->Js_string2.replaceByRe(%re("/[\n\r]/g"), " "))
+        res->Js_array2.push(str->Js_string2.replaceByRe(%re("/[\n\r]/g"), " "))->ignore
         None
-    })
+    })->ignore
     res
 }

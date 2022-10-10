@@ -95,7 +95,7 @@ let addConst: (mmContext,string) => unit = (ctx,cName) => {
         raise(MmException({msg:`An attempt to declare a constant '${cName}' in an inner block.`}))
     } else {
         ctx.symToInt->Belt_MutableMapString.set(cName, -(ctx.consts->Js_array2.length))
-        let _ = ctx.consts->Js_array2.push(cName)
+        ctx.consts->Js_array2.push(cName)->ignore
     }
 }
 
@@ -104,7 +104,7 @@ let addVar: (mmContext,string) => unit = (ctx,vName) => {
         raise(MmException({msg:`An attempt to re-declare the math symbol '${vName}' as a variable.`}))
     } else {
         ctx.symToInt->Belt_MutableMapString.set(vName, ctx.vars->Js_array2.length)
-        let _ = ctx.vars->Js_array2.push(vName)
+        ctx.vars->Js_array2.push(vName)->ignore
     }
 }
 
@@ -158,7 +158,7 @@ let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (c
             raise(MmException({msg:`Cannot redefined typecode for the variable '${varName}'`}))
         } else {
             let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
-            let _ = ctx.hyps->Js_array2.push(F(expr))
+            ctx.hyps->Js_array2.push(F(expr))->ignore
             ctx.symToHyp->Belt_MutableMapString.set(label, expr)
         }
     }
@@ -174,7 +174,7 @@ let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
             | Some(sym) => raise(MmException({msg:`The symbol '${sym}' must be either a constant or a variable.`}))
             | None => {
                 let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
-                let _ = ctx.hyps->Js_array2.push(E(expr))
+                ctx.hyps->Js_array2.push(E(expr))->ignore
                 ctx.symToHyp->Belt_MutableMapString.set(label, expr)
             }
         }
@@ -371,7 +371,7 @@ let rec applyStmt = (ctx:mmContext, ast:mmAstNode, ~stopBefore:option<string>=?,
 
 let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext = (ast, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()) => {
     let ctx = createEmptyContext()
-    let _ = applyStmt(ctx, ast, ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())
+    applyStmt(ctx, ast, ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())->ignore
     ctx
 }
 
