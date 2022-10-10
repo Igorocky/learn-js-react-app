@@ -138,6 +138,35 @@ let validateTopOfStackMatchesFrame = (stack:array<proofNode>, stackLength, frame
     })
 }
 
+let charCode = (str,pos) => str->Js.String2.codePointAt(pos)->Belt_Option.getExn
+let charToInt = ch => charCode(ch, 0)
+let zCode = charToInt("Z")
+let aCode = charToInt("A")
+let tCode = charToInt("T")
+let uCode = charToInt("U")
+
+let compressedProofBlockToArray = str => {
+    let len = str->strSize
+    let res = []
+    let b = ref(0)
+    let e = ref(0)
+    while (e.contents < len) {
+        let c = charCode(str,e.contents)
+        if (c == zCode) {
+            res->arrPush("Z")
+            e.contents=e.contents+1
+            b.contents=e.contents
+        } else if (aCode <= c && c <= tCode) {
+            res->arrPush(str->Js_string2.substring(~from=b.contents, ~to_=e.contents+1))
+            e.contents=e.contents+1
+            b.contents=e.contents
+        } else {
+            e.contents=e.contents+1
+        }
+    }
+    res
+}
+
 let applyAsrt = (stack:array<proofNode>, frame):unit => {
     let stackLength = stack->arrSize
     if (stackLength < frame.numOfArgs) {
@@ -171,13 +200,15 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
     })
 }
 
+let applyCompressedProof = (ctx, stack, labels, compressedProofBlock) => {
+    ()
+}
+
 let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     let stack = []
     switch proof {
-        | Compressed(_) => raise(MmException({msg:`Verification of compressed proofs are to be implemented.`}))
-        | Uncompressed({labels}) => {
-            applyUncompressedProof(ctx, stack, labels)
-        }
+        | Compressed({labels, compressedProofBlock}) => applyCompressedProof(ctx, stack, labels, compressedProofBlock)
+        | Uncompressed({labels}) => applyUncompressedProof(ctx, stack, labels)
     }
     if (stack->Js_array2.length != 1) {
         raise(MmException({msg:`stack->Js_array2.length != 1`}))

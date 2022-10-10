@@ -48,3 +48,12 @@ describe("verifyProof", (.) => {
         assertEq(errorMsg.contents, "!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))")
     })
 })
+
+describe("compressedProofBlockToArray", (.) => {
+    it("converts a compressed proof block to array of strings", (.) => {
+        assertEq(
+            compressedProofBlockToArray("YMYRYHUUBCEYMUNZYRZQ"),
+            ["YM","YR","YH","UUB","C","E","YM","UN","Z","YR","Z","Q"]
+        )
+    })
+})
