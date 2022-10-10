@@ -142,8 +142,10 @@ let charCode = (str,pos) => str->Js.String2.codePointAt(pos)->Belt_Option.getExn
 let charToInt = ch => charCode(ch, 0)
 let zCode = charToInt("Z")
 let aCode = charToInt("A")
+let aCodePrev = aCode-1
 let tCode = charToInt("T")
 let uCode = charToInt("U")
+let uCodePrev = uCode-1
 
 let compressedProofBlockToArray = str => {
     let len = str->strSize
@@ -165,6 +167,20 @@ let compressedProofBlockToArray = str => {
         }
     }
     res
+}
+
+let compressedProofCharCodeToInt = code => 
+    if (code <= tCode) { code - aCodePrev } else { code - uCodePrev }
+
+let compressedProofStrToInt = str => {
+    let res = ref(0)
+    let base = ref(1)
+    let len = str->strSize
+    for i in len-2 downto 0 {
+        res.contents = res.contents + base.contents*compressedProofCharCodeToInt(charCode(str,i))
+        base.contents = base.contents*5
+    }
+    res.contents*20 + compressedProofCharCodeToInt(charCode(str, len-1))
 }
 
 let applyAsrt = (stack:array<proofNode>, frame):unit => {

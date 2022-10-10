@@ -9,3 +9,4 @@ let verifyProof: (mmContext, expr, proof) => proofNode
 let getExprFromNode: proofNode => expr
 
 let compressedProofBlockToArray: string => array<string>
+let compressedProofStrToInt: string => int

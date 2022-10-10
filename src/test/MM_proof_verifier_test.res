@@ -57,3 +57,20 @@ describe("compressedProofBlockToArray", (.) => {
         )
     })
 })
+
+describe("compressedProofStrToInt", (.) => {
+    it("converts compressed proof numbers to intigers", (.) => {
+        assertEq(compressedProofStrToInt("A"), 1)
+        assertEq(compressedProofStrToInt("B"), 2)
+        assertEq(compressedProofStrToInt("T"), 20)
+        assertEq(compressedProofStrToInt("UA"), 21)
+        assertEq(compressedProofStrToInt("UB"), 22)
+        assertEq(compressedProofStrToInt("UT"), 40)
+        assertEq(compressedProofStrToInt("VA"), 41)
+        assertEq(compressedProofStrToInt("VB"), 42)
+        assertEq(compressedProofStrToInt("YT"), 120)
+        assertEq(compressedProofStrToInt("UUA"), 121)
+        assertEq(compressedProofStrToInt("YYT"), 620)
+        assertEq(compressedProofStrToInt("UUUA"), 621)
+    })
+})
