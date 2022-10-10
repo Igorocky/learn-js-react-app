@@ -32,8 +32,15 @@ let rndIntSliderParam = (~paramName:string, ~defaultValue:int, ~value:option<int
     ~paramName, ~defaultValue=defaultValue, ~value, ~setValue,
     ~rndValue = () =>
       <Box sx={"width": 300}>
-        <Slider disabled={value->Option.isNone} size=#small defaultValue=i2f(defaultValue) valueLabelDisplay=#auto min=i2f(min) max=i2f(max) step=i2f(step) 
-          onChange={(_, v) => setValue(Some(f2i(v)))} />
+        <Slider 
+          disabled={value->Option.isNone} 
+          size=#small 
+          defaultValue=Js.Int.toFloat(defaultValue) 
+          valueLabelDisplay=#auto 
+          min=Js.Int.toFloat(min) 
+          max=Js.Int.toFloat(max) 
+          step=Js.Int.toFloat(step) 
+          onChange={(_, v) => setValue(Some(Float.toInt(v)))} />
       </Box>
   )
 }
@@ -73,7 +80,7 @@ let rndEnumParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~set
           onChange=evt2Str(str => setValue(Some(strToVal(possibleValues, str, ~paramName))) )
         >
         {React.array(
-          possibleValues->arrMap(((_,s,_)) =>
+          possibleValues->Js_array2.map(((_,s,_)) =>
             <MenuItem key=s value=s>{React.string(s)}</MenuItem>
           )
         )}

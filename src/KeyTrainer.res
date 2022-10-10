@@ -4,9 +4,9 @@ open Expln_React_Mui
 open Belt
 let strOrNull = Option.getWithDefault(_, "")
 
-let firstCharCode = "a"->Js_string2.charCodeAt(0)->f2i
+let firstCharCode = "a"->Js_string2.charCodeAt(0)->Belt_Int.fromFloat
 let lastCharCode = firstCharCode + 25
-let allChars = ints(firstCharCode,lastCharCode)->Array.map(Js.String2.fromCharCode)->Array.concat([
+let allChars = Array.range(firstCharCode,lastCharCode)->Array.map(Js.String2.fromCharCode)->Array.concat([
   "[", "]", "{", "}", ",", "<", ".", ">", "/", "?", ";", ":", "'", "\"", "\\", "|",
   //"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", 
   "`", "~", "1", "!", "2", "@", "3", "#", "4", "$", "5", "%", "6", "^", "7", "&", "8", "*", "9", "(", "0", ")", "-", "_", "=", "+" 

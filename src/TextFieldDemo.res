@@ -8,7 +8,7 @@ open TextLines
 let codeTabWidth = 4
 
 let textToElems = t => React.array(t->tlMap((idx,i,s) => 
-      <div key={i2s(idx)++s} style=ReactDOM.Style.make(~paddingLeft= i2s(i*10) ++ "px", ())>
+      <div key={Int.toString(idx)++s} style=ReactDOM.Style.make(~paddingLeft= Int.toString(i*10) ++ "px", ())>
         {React.string(s)}
       </div>
 ))
@@ -25,7 +25,7 @@ let rndStrAttr = (~name:string, ~value:option<string>) => {
 }
 
 let rndIntAttr = (~name:string, ~value:option<int>) => {
-  rndAttr(~name, ~value, ~renderValue= i =>i2s(i))
+  rndAttr(~name, ~value, ~renderValue= i =>Int.toString(i))
 }
 
 let rndBoolAttr = (~name:string, ~value:option<bool>) => {
@@ -155,7 +155,7 @@ let make = () => {
           tlConcatAll([
             res,
             tlFromStrings(["let textField = React.cloneElement(textField, {"]),
-            tlFromStrings([`"inputProps": {"cols": ${i2s(cols)}}`])->tlShift(codeTabWidth),
+            tlFromStrings([`"inputProps": {"cols": ${Int.toString(cols)}}`])->tlShift(codeTabWidth),
             tlFromStrings(["})"]),
           ])
         | None => res

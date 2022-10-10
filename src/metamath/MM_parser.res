@@ -298,7 +298,7 @@ let stmtToStr: mmAstNode => array<string> = stmt => {
             | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
             | {stmt:Block({level: newLevel})} => {
                 level.contents = newLevel
-                `begin block level=${i2s(newLevel)}`
+                `begin block level=${Belt_Int.toString(newLevel)}`
             }
             | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
             | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."

@@ -148,18 +148,18 @@ let uCode = charToInt("U")
 let uCodePrev = uCode-1
 
 let compressedProofBlockToArray = str => {
-    let len = str->strSize
+    let len = str->Js_string2.length
     let res = []
     let b = ref(0)
     let e = ref(0)
     while (e.contents < len) {
         let c = charCode(str,e.contents)
         if (c == zCode) {
-            res->arrPush("Z")
+            res->Js_array2.push("Z")->ignore
             e.contents=e.contents+1
             b.contents=e.contents
         } else if (aCode <= c && c <= tCode) {
-            res->arrPush(str->Js_string2.substring(~from=b.contents, ~to_=e.contents+1))
+            res->Js_array2.push(str->Js_string2.substring(~from=b.contents, ~to_=e.contents+1))->ignore
             e.contents=e.contents+1
             b.contents=e.contents
         } else {
@@ -175,7 +175,7 @@ let compressedProofCharCodeToInt = code =>
 let compressedProofStrToInt = str => {
     let res = ref(0)
     let base = ref(1)
-    let len = str->strSize
+    let len = str->Js_string2.length
     for i in len-2 downto 0 {
         res.contents = res.contents + base.contents*compressedProofCharCodeToInt(charCode(str,i))
         base.contents = base.contents*5
@@ -184,7 +184,7 @@ let compressedProofStrToInt = str => {
 }
 
 let applyAsrt = (stack:array<proofNode>, frame):unit => {
-    let stackLength = stack->arrSize
+    let stackLength = stack->Js_array2.length
     if (stackLength < frame.numOfArgs) {
         raise(MmException({msg:`stackLength < numOfArgs`}))
     } else {
@@ -196,16 +196,16 @@ let applyAsrt = (stack:array<proofNode>, frame):unit => {
             expr: applySubs(frame.asrt, subs)
         })
         for _ in 1 to frame.numOfArgs {
-            let _ = stack->arrPop
+            stack->Js_array2.pop->ignore
         }
-        stack->arrPush(newNode)
+        stack->Js_array2.push(newNode)->ignore
     }
 }
 
 let applyUncompressedProof = (ctx, stack, proofLabels) => {
     proofLabels->Js_array2.forEach(step => {
         switch ctx->getHypothesisExpr(step) {
-            | Some(expr) => stack->arrPush(Hypothesis({hypLabel:step, expr}))
+            | Some(expr) => stack->Js_array2.push(Hypothesis({hypLabel:step, expr}))->ignore
             | None => {
                 switch ctx->getFrame(step) {
                     | Some(frame) => applyAsrt(stack, frame)
