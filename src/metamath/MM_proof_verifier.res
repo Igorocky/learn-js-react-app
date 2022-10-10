@@ -1,3 +1,4 @@
+open Expln_utils_common
 open MM_parser
 open MM_context
 
@@ -138,7 +139,7 @@ let validateTopOfStackMatchesFrame = (stack:array<proofNode>, stackLength, frame
 }
 
 let applyAsrt = (stack:array<proofNode>, frame):unit => {
-    let stackLength = stack->Js_array2.length
+    let stackLength = stack->arrSize
     if (stackLength < frame.numOfArgs) {
         raise(MmException({msg:`stackLength < numOfArgs`}))
     } else {
@@ -150,10 +151,24 @@ let applyAsrt = (stack:array<proofNode>, frame):unit => {
             expr: applySubs(frame.asrt, subs)
         })
         for _ in 1 to frame.numOfArgs {
-            let _ = stack->Js_array2.pop
+            let _ = stack->arrPop
         }
-        let _ = stack->Js_array2.push(newNode)
+        stack->arrPush(newNode)
     }
+}
+
+let applyUncompressedProof = (ctx, stack, proofLabels) => {
+    proofLabels->Js_array2.forEach(step => {
+        switch ctx->getHypothesisExpr(step) {
+            | Some(expr) => stack->arrPush(Hypothesis({hypLabel:step, expr}))
+            | None => {
+                switch ctx->getFrame(step) {
+                    | Some(frame) => applyAsrt(stack, frame)
+                    | None => raise(MmException({msg:`The proofs step '${step}' doesn't refer to a hypothesis or assertion.`}))
+                }
+            }
+        }
+    })
 }
 
 let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
@@ -161,21 +176,7 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     switch proof {
         | Compressed(_) => raise(MmException({msg:`Verification of compressed proofs are to be implemented.`}))
         | Uncompressed({labels}) => {
-            labels->Js_array2.forEach(step => {
-                switch ctx->getHypothesisExpr(step) {
-                    | Some(expr) => {
-                        let _ = stack->Js_array2.push(Hypothesis({hypLabel:step, expr}))
-                    }
-                    | None => {
-                        switch ctx->getFrame(step) {
-                            | Some(frame) => {
-                                applyAsrt(stack, frame)
-                            }
-                            | None => raise(MmException({msg:`The proofs step '${step}' doesn't refer to a hypothesis or assertion.`}))
-                        }
-                    }
-                }
-            })
+            applyUncompressedProof(ctx, stack, labels)
         }
     }
     if (stack->Js_array2.length != 1) {
@@ -186,4 +187,5 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
         stack[0]
     }
 }
+
 
