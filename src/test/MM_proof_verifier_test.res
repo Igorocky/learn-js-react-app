@@ -4,7 +4,7 @@ open MM_context
 open MM_proof_verifier
 
 describe("verifyProof", (.) => {
-    it("successfully verifies a valid proof", (.) => {
+    it("successfully verifies a valid uncompressed proof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText)
@@ -26,7 +26,7 @@ describe("verifyProof", (.) => {
         )
     })
 
-    it("shows an error for an invalid proof", (.) => {
+    it("shows an error for an invalid uncompressed proof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText)
@@ -46,6 +46,28 @@ describe("verifyProof", (.) => {
             | MmException({msg}) => errorMsg.contents = msg
         }
         assertEq(errorMsg.contents, "!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))")
+    })
+
+    it("successfully verifies a valid compressed proof", (.) => {
+        //given
+        let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/set-reduced.mm")
+        let ast = parseMmFile(mmFileText)
+        let ctx = createContext(ast, ~stopBefore="dfbi1ALT", ())
+        let (exprStr,proof) = traverseAllNodes((), ast, (_,node) => {
+            switch node {
+                | {stmt:Provable({label:"dfbi1ALT",expr,proof})} => Some((expr,proof))
+                | _ => None
+            }
+        })->Belt.Option.getExn
+
+        //when
+        let proof = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
+
+        //then
+        assertEq(
+            proof->getExprFromNode->ctxExprToStr(ctx, _)->Expln_utils_common.strJoin(~sep=" ", ()),
+            "|- ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )"
+        )
     })
 })
 

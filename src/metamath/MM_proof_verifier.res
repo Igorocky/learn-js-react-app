@@ -214,7 +214,7 @@ let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
     let steps = compressedProofBlockToArray(compressedProofBlock)
     let hyps = getMandHyps(ctx, expr)
     let hypLen = hyps->Js_array2.length
-    let hypLenPlusStepsLen = hypLen + steps->Js_array2.length
+    let hypLenPlusLabelsLen = hypLen + labels->Js_array2.length
     let savedNodes = []
     steps->Belt_Array.forEach(step => {
         if (step == "Z") {
@@ -231,13 +231,19 @@ let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
             } else if (i <= hypLen) {
                 let hyp = hyps[i-1]
                 stack->Js_array2.push(Hypothesis({hypLabel:hyp.label, expr:hyp.expr}))->ignore
-            } else if (i <= hypLenPlusStepsLen) {
-                switch ctx->getFrame(steps[i-hypLen-1]) {
-                    | Some(frame) => applyAsrt(stack, frame)
-                    | None => raise(MmException({msg:`The proof step '${step}' doesn't refer to a hypothesis or assertion (in compressed proof).`}))
+            } else if (i <= hypLenPlusLabelsLen) {
+                let labelToApply = labels[i-hypLen-1]
+                switch ctx->getHypothesis(labelToApply) {
+                    | Some(hyp) => stack->Js_array2.push(Hypothesis({hypLabel:hyp.label, expr:hyp.expr}))->ignore
+                    | None => {
+                        switch ctx->getFrame(labelToApply) {
+                            | Some(frame) => applyAsrt(stack, frame)
+                            | None => raise(MmException({msg:`The proof step '${labelToApply}' doesn't refer to a hypothesis or assertion (in compressed proof).`}))
+                        }
+                    }
                 }
             } else {
-                switch savedNodes->Belt_Array.get(i-hypLenPlusStepsLen-1) {
+                switch savedNodes->Belt_Array.get(i-hypLenPlusLabelsLen-1) {
                     | None => raise(MmException({msg:`Compressed proof refers to a saved step by the index which is out of bounds.`}))
                     | Some(node) => stack->Js_array2.push(node)->ignore
                 }
