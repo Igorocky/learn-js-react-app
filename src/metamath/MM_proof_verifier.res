@@ -203,7 +203,7 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
             | None => {
                 switch ctx->getFrame(step) {
                     | Some(frame) => applyAsrt(stack, frame)
-                    | None => raise(MmException({msg:`The proofs step '${step}' doesn't refer to a hypothesis or assertion.`}))
+                    | None => raise(MmException({msg:`The proof step '${step}' doesn't refer to a hypothesis or assertion (in uncompressed proof).`}))
                 }
             }
         }
@@ -211,28 +211,39 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
 }
 
 let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
-    ()
-    //let getHypLabel = (F(label,_) | E(label,_)) => label
-    //let steps = compressedProofBlockToArray(compressedProofBlock)
-    //let hyps = getMandHyps(ctx, expr)
-    //let hypLen = hyps->Js_array2.length
-    //let savedNodes = []
-    //steps->Belt_Array.forEach(step => {
-        //if (step == "Z") {
-            //let stackLen = stack->Js_array2.length
-            //if (stackLen == 0) {
-                //raise(MmException({msg:`Cannot execute 'Z' command because the stack is empty`}))
-            //} else {
-                //savedNodes->Js_array2.push(stack[stackLen-1])->ignore
-            //}
-        //} else {
-            //let i = compressedProofStrToInt(step)
-            //if (1 <= i && i <= hypLen) {
-                //let hyp = hyps[i-1]
-                //stack->Js_array2.push({hypLabel:getHypLabel(hyp), expr:hypToExpr(hyp)})->ignore
-            //} else if ()
-        //}
-    //})
+    let steps = compressedProofBlockToArray(compressedProofBlock)
+    let hyps = getMandHyps(ctx, expr)
+    let hypLen = hyps->Js_array2.length
+    let hypLenPlusStepsLen = hypLen + steps->Js_array2.length
+    let savedNodes = []
+    steps->Belt_Array.forEach(step => {
+        if (step == "Z") {
+            let stackLen = stack->Js_array2.length
+            if (stackLen == 0) {
+                raise(MmException({msg:`Cannot execute 'Z' command because the stack is empty.`}))
+            } else {
+                savedNodes->Js_array2.push(stack[stackLen-1])->ignore
+            }
+        } else {
+            let i = compressedProofStrToInt(step)
+            if (i < 1) {
+                raise(MmException({msg:`Unexpected condition when applying compressed proof: i < 1.`}))
+            } else if (i <= hypLen) {
+                let hyp = hyps[i-1]
+                stack->Js_array2.push(Hypothesis({hypLabel:hyp.label, expr:hyp.expr}))->ignore
+            } else if (i <= hypLenPlusStepsLen) {
+                switch ctx->getFrame(steps[i-hypLen-1]) {
+                    | Some(frame) => applyAsrt(stack, frame)
+                    | None => raise(MmException({msg:`The proof step '${step}' doesn't refer to a hypothesis or assertion (in compressed proof).`}))
+                }
+            } else {
+                switch savedNodes->Belt_Array.get(i-hypLenPlusStepsLen-1) {
+                    | None => raise(MmException({msg:`Compressed proof refers to a saved step by the index which is out of bounds.`}))
+                    | Some(node) => stack->Js_array2.push(node)->ignore
+                }
+            }
+        }
+    })
 }
 
 let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
