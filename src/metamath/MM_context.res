@@ -2,9 +2,13 @@ open MM_parser
 
 type expr = array<int>
 
-type hypothesis =
-    | F(expr)
-    | E(expr)
+type hypothesisType = F | E
+
+type hypothesis = {
+    typ: hypothesisType,
+    label: string,
+    expr: expr
+}
 
 type frame = {
     disj: Belt.Map.Int.t<Belt_SetInt.t>,
@@ -25,7 +29,7 @@ type rec mmContext = {
     mutable symToInt: Belt.MutableMap.String.t<int>,
     mutable disj: Belt.MutableMap.Int.t<Belt_MutableSetInt.t>,
     mutable hyps: array<hypothesis>,
-    mutable symToHyp: Belt.MutableMap.String.t<expr>,
+    mutable symToHyp: Belt.MutableMap.String.t<hypothesis>,
     mutable lastComment: string,
     frames: Belt.MutableMap.String.t<frame>,
 }
@@ -135,6 +139,15 @@ let addDisj: (mmContext,array<string>) => unit = (ctx, vars) => {
     }
 }
 
+let makeExpr: (mmContext,array<string>) => expr = (ctx, symbols) => {
+    symbols->Js_array2.map(sym => {
+        switch ctx.symToInt->Belt_MutableMapString.get(sym) {
+            | None => raise(MmException({msg:`error in makeExpr: cannot find symbol '${sym}'`}))
+            | Some(i) => i
+        }
+    })
+}
+
 let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (ctx, ~label, ~exprStr) => {
     if (exprStr->Js_array2.length != 2) {
         raise(MmException({msg:`Length of a floating expression must be 2.`}))
@@ -147,19 +160,13 @@ let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (c
     } else {
         let varName = exprStr[1]
         let varInt = ctx.symToInt->Belt_MutableMapString.getExn(varName)
-        let existingFloating = ctx.hyps
-            ->Js_array2.filter(hyp => {
-                switch hyp {
-                    | F([_,v]) => v == varInt
-                    | _ => false
-                }
-            })
-        if (existingFloating->Js_array2.length != 0) {
-            raise(MmException({msg:`Cannot redefined typecode for the variable '${varName}'`}))
+        if (ctx.hyps->Js_array2.some(hyp => hyp.typ == F && hyp.expr[1] == varInt)) {
+            raise(MmException({msg:`Cannot redefine typecode for the variable '${varName}'`}))
         } else {
-            let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
-            ctx.hyps->Js_array2.push(F(expr))->ignore
-            ctx.symToHyp->Belt_MutableMapString.set(label, expr)
+            let expr = makeExpr(ctx, exprStr)
+            let hyp = {typ:F, label, expr}
+            ctx.hyps->Js_array2.push(hyp)->ignore
+            ctx.symToHyp->Belt_MutableMapString.set(label, hyp)
         }
     }
 }
@@ -173,9 +180,10 @@ let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
         switch exprStr->Js_array2.find(sym => !(ctx.symToInt->Belt_MutableMapString.has(sym))) {
             | Some(sym) => raise(MmException({msg:`The symbol '${sym}' must be either a constant or a variable.`}))
             | None => {
-                let expr = exprStr->Js_array2.map(ctx.symToInt->Belt_MutableMapString.getExn)
-                ctx.hyps->Js_array2.push(E(expr))->ignore
-                ctx.symToHyp->Belt_MutableMapString.set(label, expr)
+                let expr = makeExpr(ctx, exprStr)
+                let hyp = {typ:E, label, expr}
+                ctx.hyps->Js_array2.push(hyp)->ignore
+                ctx.symToHyp->Belt_MutableMapString.set(label, hyp)
             }
         }
     }
@@ -187,18 +195,8 @@ let extractMandatoryVariables = (ctx,asrt) => {
         Js_array2.concatMany(
             extractVarsFromExpr(asrt),
             ctx.hyps
-                ->Js_array2.filter(hyp => {
-                    switch hyp {
-                        | E(_) => true
-                        | _ => false
-                    }
-                })
-                ->Js_array2.map(hyp => {
-                    switch hyp {
-                        | E(expr) => extractVarsFromExpr(expr)
-                        | _ => []
-                    }
-                })
+                ->Js_array2.filter(hyp => hyp.typ == E)
+                ->Js_array2.map(hyp => extractVarsFromExpr(hyp.expr))
         )
     )
 }
@@ -222,12 +220,7 @@ let extractMandatoryDisj = (ctx, mandatoryVars): Belt_MapInt.t<Belt_SetInt.t> =>
 
 let extractMandatoryHypotheses = (ctx, mandatoryVars) => {
     ctx.hyps
-        ->Js_array2.filter(hyp => {
-            switch hyp {
-                | F([_,v]) => mandatoryVars->Belt_SetInt.has(v)
-                | _ => true
-            }
-        })
+        ->Js_array2.filter(hyp => hyp.typ == E || hyp.typ == F && mandatoryVars->Belt_SetInt.has(hyp.expr[1]))
 }
 
 let renumberVarsInDisj = (disj: Belt_MapInt.t<Belt_SetInt.t>, renumbering: Belt_MapInt.t<int>): Belt_MapInt.t<Belt_SetInt.t> => {
@@ -247,21 +240,13 @@ let renumberVarsInExpr = (expr: expr, renumbering: Belt_MapInt.t<int>): expr => 
 }
 
 let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: Belt_MapInt.t<int>): hypothesis => {
-    switch hyp {
-        | F(expr) => F(renumberVarsInExpr(expr, renumbering))
-        | E(expr) => E(renumberVarsInExpr(expr, renumbering))
-    }
-}
-
-let hypToExpr: hypothesis => expr = hyp => {
-    switch hyp {
-        | F(expr) | E(expr) => expr
-    }
+    ...hyp,
+    expr: renumberVarsInExpr(hyp.expr, renumbering)
 }
 
 let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varRenumbering: Belt_MapInt.t<int>): Belt_MapInt.t<string> => {
     asrt->Js_array2.concatMany(
-        mandatoryHypotheses->Js_array2.map(hypToExpr)
+        mandatoryHypotheses->Js_array2.map(hyp => hyp.expr)
     )
         ->Js_array2.filter(i => i >= 0)
         ->Belt_SetInt.fromArray
@@ -275,13 +260,8 @@ let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt,
 let extractVarTypes = (ctx, mandatoryVars: Belt_SetInt.t, varRenumbering: Belt_MapInt.t<int>): array<int> => {
     let varTypes = Expln_utils_common.createArray(mandatoryVars->Belt_SetInt.size)
     ctx.hyps->Js_array2.forEach(hyp => {
-        switch hyp {
-            | F([t,v]) => {
-                if (mandatoryVars->Belt_SetInt.has(v)) {
-                    varTypes[varRenumbering->Belt_MapInt.getExn(v)] = t
-                }
-            }
-            | _ => ()
+        if (hyp.typ == F && mandatoryVars->Belt_SetInt.has(hyp.expr[1])) {
+            varTypes[varRenumbering->Belt_MapInt.getExn(hyp.expr[1])] = hyp.expr[0]
         }
     })
     varTypes
@@ -376,17 +356,8 @@ let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) =>
     ctx
 }
 
-let getHypothesisExpr: (mmContext,string) => option<expr> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)
+let getHypothesis: (mmContext,string) => option<hypothesis> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)
 let getFrame: (mmContext,string) => option<frame> = (ctx,label) => ctx.frames->Belt_MutableMapString.get(label)
-
-let makeExpr: (mmContext,array<string>) => expr = (ctx, symbols) => {
-    symbols->Js_array2.map(sym => {
-        switch ctx.symToInt->Belt_MutableMapString.get(sym) {
-            | None => raise(MmException({msg:`error in makeExpr: cannot find symbol '${sym}'`}))
-            | Some(i) => i
-        }
-    })
-}
 
 let ctxExprToStr: (mmContext, expr) => array<string> = (ctx, expr) => {
     expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]})

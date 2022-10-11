@@ -98,23 +98,22 @@ let extractSubstitution = (stack:array<proofNode>, stackLength, frame):array<exp
     let subsLock = Expln_utils_common.createArray(frame.numOfVars)->Js_array2.fillInPlace(false)
     let baseIdx = stackLength - frame.numOfArgs
     frame.hyps->Js_array2.forEachi((hyp,i) => {
-        switch hyp {
-            | F([t,v]) => {
-                if (subsLock[v]) {
-                    raise(MmException({msg:`subsLock[v]`}))
+        if (hyp.typ == F) {
+            let t = hyp.expr[0]
+            let v = hyp.expr[1]
+            if (subsLock[v]) {
+                raise(MmException({msg:`subsLock[v]`}))
+            } else {
+                let subsExpr = stack->getExprFromStack(baseIdx+i)
+                if (subsExpr->Js_array2.length < 2) {
+                    raise(MmException({msg:`subsExpr->Js_array2.length < 2`}))
+                } else if (subsExpr[0] != t) {
+                    raise(MmException({msg:`subsExpr[0] != t`}))
                 } else {
-                    let subsExpr = stack->getExprFromStack(baseIdx+i)
-                    if (subsExpr->Js_array2.length < 2) {
-                        raise(MmException({msg:`subsExpr->Js_array2.length < 2`}))
-                    } else if (subsExpr[0] != t) {
-                        raise(MmException({msg:`subsExpr[0] != t`}))
-                    } else {
-                        subsLock[v] = true
-                        subs[v] = subsExpr
-                    }
+                    subsLock[v] = true
+                    subs[v] = subsExpr
                 }
             }
-            | _ => ()
         }
     })
     if (subsLock->Js_array2.some(lock => !lock)) {
@@ -127,13 +126,8 @@ let extractSubstitution = (stack:array<proofNode>, stackLength, frame):array<exp
 let validateTopOfStackMatchesFrame = (stack:array<proofNode>, stackLength, frame, subs:array<expr>):unit => {
     let baseIdx = stackLength - frame.numOfArgs
     frame.hyps->Js_array2.forEachi((hyp,i) => {
-        switch hyp {
-            | E(ess) => {
-                if (!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))) {
-                    raise(MmException({msg:`!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))`}))
-                }
-            }
-            | _ => ()
+        if (hyp.typ == E && !compareExprAfterSubstitution(hyp.expr, subs, stack->getExprFromStack(baseIdx+i))) {
+            raise(MmException({msg:`!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))`}))
         }
     })
 }
@@ -204,8 +198,8 @@ let applyAsrt = (stack:array<proofNode>, frame):unit => {
 
 let applyUncompressedProof = (ctx, stack, proofLabels) => {
     proofLabels->Js_array2.forEach(step => {
-        switch ctx->getHypothesisExpr(step) {
-            | Some(expr) => stack->Js_array2.push(Hypothesis({hypLabel:step, expr}))->ignore
+        switch ctx->getHypothesis(step) {
+            | Some(hyp) => stack->Js_array2.push(Hypothesis({hypLabel:hyp.label, expr:hyp.expr}))->ignore
             | None => {
                 switch ctx->getFrame(step) {
                     | Some(frame) => applyAsrt(stack, frame)
@@ -218,21 +212,24 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
 
 let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
     ()
+    //let getHypLabel = (F(label,_) | E(label,_)) => label
     //let steps = compressedProofBlockToArray(compressedProofBlock)
-    //let hyps = getMandHyps(ctx, expr)->Js_array2.map(hypToExpr)
+    //let hyps = getMandHyps(ctx, expr)
     //let hypLen = hyps->Js_array2.length
     //let savedNodes = []
     //steps->Belt_Array.forEach(step => {
         //if (step == "Z") {
-            //if (stack->Js_array2.length == 0) {
+            //let stackLen = stack->Js_array2.length
+            //if (stackLen == 0) {
                 //raise(MmException({msg:`Cannot execute 'Z' command because the stack is empty`}))
             //} else {
-                //savedNodes->Js_array2.push()->ignore
+                //savedNodes->Js_array2.push(stack[stackLen-1])->ignore
             //}
         //} else {
             //let i = compressedProofStrToInt(step)
             //if (1 <= i && i <= hypLen) {
-                //stack->Js_array2.push(hyps[i-1])->ignore
+                //let hyp = hyps[i-1]
+                //stack->Js_array2.push({hypLabel:getHypLabel(hyp), expr:hypToExpr(hyp)})->ignore
             //} else if ()
         //}
     //})

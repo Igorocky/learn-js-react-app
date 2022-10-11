@@ -4,9 +4,13 @@ type expr = array<int>
 
 type mmContext
 
-type hypothesis =
-    | F(expr)
-    | E(expr)
+type hypothesisType = F | E
+
+type hypothesis = {
+    typ: hypothesisType,
+    label: string,
+    expr: expr
+}
 
 type frame = {
     disj: Belt.Map.Int.t<Belt_SetInt.t>,
@@ -26,10 +30,9 @@ let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
 let applyStmt: (mmContext, mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => bool
 
-let getHypothesisExpr: (mmContext,string) => option<expr>
+let getHypothesis: (mmContext,string) => option<hypothesis>
+let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
 let makeExpr: (mmContext,array<string>) => expr
 let ctxExprToStr: (mmContext, expr) => array<string>
 let frameExprToStr: (mmContext, frame, expr) => array<string>
-let getMandHyps: (mmContext, expr) => array<hypothesis>
-let hypToExpr: hypothesis => expr
