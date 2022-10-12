@@ -288,6 +288,65 @@ let traverseAllNodes = (context:'c, root:mmAstNode, consumer:('c,mmAstNode)=>opt
     res.contents
 }
 
+type nodeToProcess<'n> = {
+    node: 'n,
+    nodesToPostProcess: option<array<'n>>
+}
+
+let traverseNodes = (
+    root:'n, 
+    getChildren: 'n=>option<array<'n>>, 
+    ~context:'c=(), 
+    ~preProcess:('c,'n)=>option<'r>=?, 
+    ~process:('c,'n)=>option<'r>=?, 
+    ~postProcess:('c,'n)=>option<'r>=?,
+    ()
+): option<'r> => {
+    let nodesToProcess = Belt_MutableStack.make()
+    let hasPreProcess = preProcess->Belt_Option.isSome
+    let hasProcess = process->Belt_Option.isSome
+    let hasPostProcess = postProcess->Belt_Option.isSome
+    let res = ref(None)
+    nodesToProcess->Belt_MutableStack.push({node:root, nodesToPostProcess: if hasPostProcess {Some([root])} else {None}})
+    while (!(nodesToProcess->Belt_MutableStack.isEmpty) && res.contents->Belt_Option.isNone) {
+        switch nodesToProcess->Belt_MutableStack.pop {
+            | Some(currNode) => {
+                if (hasPreProcess) {
+                    res.contents = preProcess(context, currNode.node)
+                }
+                if (res.contents->Belt_Option.isNone && hasProcess) {
+                    res.contents = process(context, currNode.node)
+                }
+                switch getChildren(currNode.node) {
+                    | None => ()
+                    | Some(children) => {
+                        for i in children->Js_array2.length - 1 downto 0 {
+                            nodesToProcess->Belt_MutableStack.push({node:children[i], nodesToPostProcess: if hasPostProcess {if i == 0 {Some([root])} else {}} else {None}})
+                        }
+
+                    }
+                }
+                if (res.contents->Belt_Option.isNone) {
+                    res.contents = process(context, currNode)
+                }
+                if (res.contents->Belt_Option.isNone) {
+                    switch currNode {
+                        | {stmt:Block({statements})} => {
+                            for i in statements->Js_array2.length - 1 downto 0 {
+                                nodesToProcess->Belt_MutableStack.push(statements[i])
+                            }
+                        }
+                        | _ => ()
+                    }
+                }
+            }
+            | None => ()
+        }
+    }
+    res.contents
+
+}
+
 let stmtToStr: mmAstNode => array<string> = stmt => {
     open Expln_utils_common
     let level = ref(0)
