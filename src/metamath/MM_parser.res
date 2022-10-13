@@ -286,7 +286,25 @@ let traverseAst: (
         ()
     )
 
-let stmtToStr: mmAstNode => array<string> = stmt => {
+let stmtToStr: mmAstNode => string = node => {
+    open Expln_utils_common
+    switch node {
+        | {stmt:Block({level})} => `block(level=${level->Belt_Int.toString})`
+        | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
+        | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Floating({label, expr})} =>  label ++ " $f " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Essential({label, expr})} =>  label ++ " $e " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Axiom({label, expr})} =>  label ++ " $a " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+        | {stmt:Provable({label, expr, proof})} =>  label ++ " $p " ++ expr->strJoin(~sep=" ", ()) ++ " $= " ++ switch proof {
+            | Uncompressed({labels}) => labels->strJoin(~sep=" ", ())
+            | _ => "..."
+        } ++ " $."
+    }
+}
+
+let stmtToStrRec: mmAstNode => array<string> = stmt => {
     let makePrefix = level => "    "->Js.String2.repeat(level)
     traverseAst(
         (ref(0),[]),
@@ -306,18 +324,8 @@ let stmtToStr: mmAstNode => array<string> = stmt => {
         ~process=((level,arr),node)=>{
             open Expln_utils_common
             let str = switch node {
-                | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
-                | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Floating({label, expr})} =>  label ++ " $f " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Essential({label, expr})} =>  label ++ " $e " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Axiom({label, expr})} =>  label ++ " $a " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-                | {stmt:Provable({label, expr, proof})} =>  label ++ " $p " ++ expr->strJoin(~sep=" ", ()) ++ " $= " ++ switch proof {
-                    | Uncompressed({labels}) => labels->strJoin(~sep=" ", ())
-                    | _ => "..."
-                } ++ " $."
-                | _ => ""
+                | {stmt:Block(_)} => ""
+                | _ =>  stmtToStr(node)
             }
             if (str != "") {
                 arr->Js_array2.push(makePrefix(level.contents) ++ str)->ignore

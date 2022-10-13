@@ -28,4 +28,5 @@ let parseMmFile: string => mmAstNode
 let textAt: (string,int) => string
 let traverseAst: ('c, mmAstNode,
     ~preProcess:('c, mmAstNode)=>option<'res>=?, ~process:('c, mmAstNode)=>option<'res>=?, ~postProcess:('c, mmAstNode)=>option<'res>=?, ()) => option<'res>
-let stmtToStr: mmAstNode => array<string>
+let stmtToStr: mmAstNode => string
+let stmtToStrRec: mmAstNode => array<string>
