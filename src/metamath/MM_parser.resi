@@ -26,5 +26,6 @@ exception MmException(mmException)
 
 let parseMmFile: string => mmAstNode
 let textAt: (string,int) => string
-let traverseAllNodes: ('c, mmAstNode, ('c,mmAstNode)=>option<'res>) => option<'res>
+let traverseAst: ('c, mmAstNode,
+    ~preProcess:('c, mmAstNode)=>option<'res>=?, ~process:('c, mmAstNode)=>option<'res>=?, ~postProcess:('c, mmAstNode)=>option<'res>=?, ()) => option<'res>
 let stmtToStr: mmAstNode => array<string>

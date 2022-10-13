@@ -263,114 +263,83 @@ let parseMmFile = (text:string): mmAstNode => {
     parseBlock(~beginIdx=idx.contents, ~level=0)
 }
 
-let traverseAllNodes = (context:'c, root:mmAstNode, consumer:('c,mmAstNode)=>option<'res>): option<'res> => {
-    let nodesToProcess = Belt_MutableStack.make()
-    nodesToProcess->Belt_MutableStack.push(root)
-    let res = ref(None)
-    while (!(nodesToProcess->Belt_MutableStack.isEmpty) && res.contents->Belt_Option.isNone) {
-        switch nodesToProcess->Belt_MutableStack.pop {
-            | Some(currNode) => {
-                res.contents = consumer(context, currNode)
-                if (res.contents->Belt_Option.isNone) {
-                    switch currNode {
-                        | {stmt:Block({statements})} => {
-                            for i in statements->Js_array2.length - 1 downto 0 {
-                                nodesToProcess->Belt_MutableStack.push(statements[i])
-                            }
-                        }
-                        | _ => ()
-                    }
-                }
-            }
-            | None => ()
-        }
-    }
-    res.contents
-}
-
-type nodeToProcess<'n> = {
-    node: 'n,
-    nodesToPostProcess: option<array<'n>>
-}
-
-let traverseNodes = (
-    root:'n, 
-    getChildren: 'n=>option<array<'n>>, 
-    ~context:'c=(), 
-    ~preProcess:('c,'n)=>option<'r>=?, 
-    ~process:('c,'n)=>option<'r>=?, 
-    ~postProcess:('c,'n)=>option<'r>=?,
+let traverseAst: (
+    'c,
+    mmAstNode,
+    ~preProcess:('c, mmAstNode)=>option<'res>=?,
+    ~process:('c, mmAstNode)=>option<'res>=?,
+    ~postProcess:('c, mmAstNode)=>option<'res>=?,
     ()
-): option<'r> => {
-    let nodesToProcess = Belt_MutableStack.make()
-    let hasPreProcess = preProcess->Belt_Option.isSome
-    let hasProcess = process->Belt_Option.isSome
-    let hasPostProcess = postProcess->Belt_Option.isSome
-    let res = ref(None)
-    nodesToProcess->Belt_MutableStack.push({node:root, nodesToPostProcess: if hasPostProcess {Some([root])} else {None}})
-    while (!(nodesToProcess->Belt_MutableStack.isEmpty) && res.contents->Belt_Option.isNone) {
-        switch nodesToProcess->Belt_MutableStack.pop {
-            | Some(currNode) => {
-                if (hasPreProcess) {
-                    res.contents = preProcess(context, currNode.node)
-                }
-                if (res.contents->Belt_Option.isNone && hasProcess) {
-                    res.contents = process(context, currNode.node)
-                }
-                switch getChildren(currNode.node) {
-                    | None => ()
-                    | Some(children) => {
-                        for i in children->Js_array2.length - 1 downto 0 {
-                            nodesToProcess->Belt_MutableStack.push({node:children[i], nodesToPostProcess: if hasPostProcess {if i == 0 {Some([root])} else {}} else {None}})
-                        }
-
-                    }
-                }
-                if (res.contents->Belt_Option.isNone) {
-                    res.contents = process(context, currNode)
-                }
-                if (res.contents->Belt_Option.isNone) {
-                    switch currNode {
-                        | {stmt:Block({statements})} => {
-                            for i in statements->Js_array2.length - 1 downto 0 {
-                                nodesToProcess->Belt_MutableStack.push(statements[i])
-                            }
-                        }
-                        | _ => ()
-                    }
-                }
+) => option<'res> =
+    (context, root, ~preProcess=?, ~process=?, ~postProcess=?, ()) => Expln_utils_data.traverseTree(
+        context, 
+        root, 
+        node => {
+            switch node {
+                | {stmt:Block({statements})} => Some(statements)
+                | _ => None
             }
-            | None => ()
-        }
-    }
-    res.contents
-
-}
+        },
+        ~preProcess=?preProcess,
+        ~process=?process,
+        ~postProcess=?postProcess,
+        ()
+    )
 
 let stmtToStr: mmAstNode => array<string> = stmt => {
-    open Expln_utils_common
-    let level = ref(0)
-    let res = []
-    traverseAllNodes((), stmt, ((), node) => {
-        let str = switch node {
-            | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
-            | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Block({level: newLevel})} => {
-                level.contents = newLevel
-                `begin block level=${Belt_Int.toString(newLevel)}`
+    let makePrefix = level => "    "->Js.String2.repeat(level)
+    traverseAst(
+        (ref(0),[]),
+        stmt,
+        ~preProcess=((level,arr),node)=>{
+            switch node {
+                | {stmt:Block({level: newLevel})} => {
+                    if (newLevel != 0) {
+                        arr->Js_array2.push(makePrefix(level.contents) ++ "${")->ignore
+                    }
+                    level.contents = newLevel
+                }
+                | _ => ()
             }
-            | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Floating({label, expr})} =>  label ++ " $f " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Essential({label, expr})} =>  label ++ " $e " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Axiom({label, expr})} =>  label ++ " $a " ++ expr->strJoin(~sep=" ", ()) ++ " $."
-            | {stmt:Provable({label, expr, proof})} =>  label ++ " $p " ++ expr->strJoin(~sep=" ", ()) ++ " $= " ++ switch proof {
-                | Uncompressed({labels}) => labels->strJoin(~sep=" ", ())
-                | _ => "..."
-            } ++ " $."
-        }
-        res->Js_array2.push(str->Js_string2.replaceByRe(%re("/[\n\r]/g"), " "))->ignore
-        None
-    })->ignore
-    res
+            None
+        },
+        ~process=((level,arr),node)=>{
+            open Expln_utils_common
+            let str = switch node {
+                | {stmt:Comment({text})} => "$( " ++ text ++ " $)"
+                | {stmt:Const({symbols})} =>  "$c " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Var({symbols})} =>  "$v " ++ symbols->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Disj({vars})} =>  "$d " ++ vars->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Floating({label, expr})} =>  label ++ " $f " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Essential({label, expr})} =>  label ++ " $e " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Axiom({label, expr})} =>  label ++ " $a " ++ expr->strJoin(~sep=" ", ()) ++ " $."
+                | {stmt:Provable({label, expr, proof})} =>  label ++ " $p " ++ expr->strJoin(~sep=" ", ()) ++ " $= " ++ switch proof {
+                    | Uncompressed({labels}) => labels->strJoin(~sep=" ", ())
+                    | _ => "..."
+                } ++ " $."
+                | _ => ""
+            }
+            if (str != "") {
+                arr->Js_array2.push(makePrefix(level.contents) ++ str)->ignore
+            }
+            None
+        },
+        ~postProcess=((level,arr),node)=>{
+            switch node {
+                | {stmt:Block({level: newLevel})} => {
+                    level.contents = newLevel-1
+                    if (newLevel != 0) {
+                        arr->Js_array2.push(makePrefix(level.contents) ++ "$}")->ignore
+                    }
+                    if (newLevel == 0) {
+                        Some(arr)
+                    } else {
+                        None
+                    }
+                }
+                | _ => None
+            }
+        },
+        ()
+    )->Belt_Option.getExn
 }

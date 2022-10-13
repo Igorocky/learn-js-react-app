@@ -12,7 +12,6 @@ describe("parseMmFile", (.) => {
         //then
         let actual = stmtToStr(ast)->Js_array2.filter(s => !(s->Js_string2.trim->Js_string2.startsWith("$(")))
         let expected = [
-                "begin block level=0",
                 "$c 0 + = -> ( ) term wff |- $.",
                 "$v t r s P Q $.",
                 "tt $f term t $.",
@@ -26,10 +25,11 @@ describe("parseMmFile", (.) => {
                 "wim $a wff ( P -> Q ) $.",
                 "a1 $a |- ( t = r -> ( t = s -> r = s ) ) $.",
                 "a2 $a |- ( t + 0 ) = t $.",
-                "begin block level=1",
-                "min $e |- P $.",
-                "maj $e |- ( P -> Q ) $.",
-                "mp $a |- Q $.",
+                "${",
+                "    min $e |- P $.",
+                "    maj $e |- ( P -> Q ) $.",
+                "    mp $a |- Q $.",
+                "$}",
                 "th1 $p |- t = t $= tt tze tpl tt weq tt tt weq tt a2 tt tze tpl tt weq tt tze tpl tt weq tt tt weq wim tt a2 tt tze tpl tt tt a1 mp mp $.",
                 "th2 $p |- t = t $= tt tze tpl tt weq tt tt weq tt a2 tt tze tpl tt weq tze tt tpl tt weq tt tt weq wim tt a2 tt tze tpl tt tt a1 mp mp $.",
             ]
