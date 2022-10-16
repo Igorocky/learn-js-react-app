@@ -363,7 +363,7 @@ let ctxExprToStr: (mmContext, expr) => array<string> = (ctx, expr) => {
     expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]})
 }
 
-let frameExprToStr: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
+let frmExprToStr: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
     expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)})
 }
 
