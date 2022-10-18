@@ -8,7 +8,6 @@ type constParts = {
     length: int,
     begins: array<int>,
     ends: array<int>,
-    parenCnts:array<parenCnt>,
     remainingMinLength: array<int>,
 }
 
@@ -52,7 +51,6 @@ let createConstParts = expr => {
         length: constPartsLength,
         begins: createArray(constPartsLength),
         ends: createArray(constPartsLength),
-        parenCnts: [],
         remainingMinLength: createArray(constPartsLength)
     }
     let exprLength = expr->Js_array2.length
@@ -66,13 +64,11 @@ let createConstParts = expr => {
     result
 }
 
-let createMatchingConstParts = (~constParts:constParts, ~parenCntFactory:()=>parenCnt) => {
+let createMatchingConstParts = constParts => {
     {
         length: constParts.length,
         begins: createArray(constParts.length),
         ends: createArray(constParts.length),
-        //todo: use single parenCounter
-        parenCnts: Belt_Array.range(0,constParts.length)->Js.Array2.map(_=>parenCntFactory()), //parenCnts[i] is for the gap before ith const part
         remainingMinLength: []
     }
 }
@@ -83,6 +79,7 @@ let rec iterateConstParts = (
     ~frmConstParts:constParts, 
     ~constParts:constParts, 
     ~idxToMatch:int, 
+    ~parenCnt:parenCnt,
     ~consumer:(~frmConstParts:constParts,~constParts:constParts) => contunieInstruction
 ):contunieInstruction => {
     let invokeNext = ():contunieInstruction => {
@@ -92,6 +89,7 @@ let rec iterateConstParts = (
             ~frmConstParts, 
             ~constParts, 
             ~idxToMatch=idxToMatch+1, 
+            ~parenCnt,
             ~consumer
         )
     }
@@ -109,12 +107,11 @@ let rec iterateConstParts = (
                 if (remainingGapLength < frmRemainingGapLength) {
                     Continue
                 } else {
-                    let pCnt = constParts.parenCnts[idxToMatch]
-                    pCnt->parenCntReset
+                    parenCnt->parenCntReset
                     let pState = ref(Balanced)
                     let i = ref(constParts.ends[idxToMatch-1]+1)
                     while (i.contents < exprLen && pState.contents != Failed) {
-                        pState.contents = pCnt->parenCntPut(expr[i.contents])
+                        pState.contents = parenCnt->parenCntPut(expr[i.contents])
                         i.contents = i.contents + 1
                     }
                     if (pState.contents == Balanced) {
@@ -152,12 +149,11 @@ let rec iterateConstParts = (
     } else {
         let begin = ref(if (idxToMatch == 0) {0} else {constParts.ends[idxToMatch-1]+1})
         let maxBegin = exprLen - frmConstParts.remainingMinLength[idxToMatch]
-        let pCnt = constParts.parenCnts[idxToMatch]
-        pCnt->parenCntReset
+        parenCnt->parenCntReset
         let pState = ref(Balanced)
         let numOfVars = lengthOfGap2(idxToMatch-1,frmConstParts,frmExprLen)
         for i in 1 to numOfVars {
-            pState.contents = pCnt->parenCntPut(expr[begin.contents])
+            pState.contents = parenCnt->parenCntPut(expr[begin.contents])
             begin.contents = begin.contents + 1
         }
         let partLen = frmConstParts.ends[idxToMatch] - frmConstParts.begins[idxToMatch] + 1
@@ -174,9 +170,10 @@ let rec iterateConstParts = (
                     constParts.begins[idxToMatch] = begin.contents
                     constParts.ends[idxToMatch] = begin.contents+partLen-1
                     instr.contents = invokeNext()
+                    parenCnt->parenCntReset
                 }
             }
-            pState.contents = pCnt->parenCntPut(expr[begin.contents])
+            pState.contents = parenCnt->parenCntPut(expr[begin.contents])
             begin.contents = begin.contents + 1
         }
         instr.contents
