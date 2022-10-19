@@ -11,7 +11,22 @@ type constParts = {
     remainingMinLength: array<int>,
 }
 
-type subs
+type varGroup = {
+    leftConstPartIdx:int,
+    frmExpr:expr,
+    varsBeginIdx:int,
+    numOfVars:int,
+    mutable exprBeginIdx:int,
+    mutable exprEndIdx:int
+}
+
+type subs = {
+    size: int,
+    begins: array<int>,
+    ends: array<int>,
+    exprs: array<expr>,
+    isDefined: array<bool>,
+}
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
     if (leftConstPartIdx < 0) {
@@ -179,5 +194,121 @@ let rec iterateConstParts = (
         instr.contents
     }
 }
+
+let createVarGroups = (~frmExpr:expr, ~frmConstParts:constParts): array<varGroup> => {
+    let frmExprLen = frmExpr->Js_array2.length
+    if (frmConstParts.length == 0) {
+        [{
+            leftConstPartIdx: -1,
+            frmExpr:frmExpr,
+            varsBeginIdx: 0,
+            numOfVars: frmExprLen,
+            exprBeginIdx: 0,
+            exprEndIdx: 0
+        }]
+    } else {
+        let res = []
+        if (frmConstParts.begins[0] != 0) {
+            res->Js_array2.push({
+                leftConstPartIdx: -1,
+                frmExpr:frmExpr,
+                varsBeginIdx:0,
+                numOfVars:frmConstParts.begins[0],
+                exprBeginIdx: 0,
+                exprEndIdx: 0
+            })->ignore
+        }
+        for i in 0 to frmConstParts.length-2 {
+            res->Js_array2.push({
+                leftConstPartIdx: i,
+                frmExpr:frmExpr,
+                varsBeginIdx: frmConstParts.ends[i]+1,
+                numOfVars: lengthOfGap2(i, frmConstParts, frmExprLen),
+                exprBeginIdx: 0,
+                exprEndIdx: 0
+            })->ignore
+        }
+        let lastConstPartIdx = frmConstParts.length-1
+        if (frmConstParts.ends[lastConstPartIdx] != frmExprLen-1) {
+            res->Js_array2.push({
+                leftConstPartIdx: lastConstPartIdx,
+                frmExpr:frmExpr,
+                varsBeginIdx: frmConstParts.ends[lastConstPartIdx]+1,
+                numOfVars: lengthOfGap2(lastConstPartIdx, frmConstParts, frmExprLen),
+                exprBeginIdx: 0,
+                exprEndIdx: 0
+            })->ignore
+        }
+        res
+    }
+}
+
+let initVarGroups = (~varGroups:array<varGroup>, ~constParts:constParts, ~expr:expr) => {
+    let exprLen = expr->Js_array2.length
+    if (constParts.length == 0) {
+        varGroups[0].exprBeginIdx = 0
+        varGroups[0].exprEndIdx = exprLen-1
+    } else {
+        varGroups->Js_array2.forEach(grp => {
+            if (grp.leftConstPartIdx == -1) {
+                grp.exprBeginIdx = 0
+                grp.exprEndIdx = constParts.begins[0] - 1
+            } else if (grp.leftConstPartIdx == constParts.length-1) {
+                grp.exprBeginIdx = constParts.ends[grp.leftConstPartIdx]+1
+                grp.exprEndIdx = exprLen-1
+            } else {
+                grp.exprBeginIdx = constParts.ends[grp.leftConstPartIdx]+1
+                grp.exprEndIdx = constParts.begins[grp.leftConstPartIdx+1]-1
+            }
+        })
+    }
+}
+
+let iterateSubstitutions = (
+    ~frmExpr:expr, 
+    ~expr:expr, 
+    ~frmConstParts:constParts, 
+    ~constParts:constParts, 
+    ~varGroups:array<varGroup>,
+    ~subs:subs,
+    ~parenCnt:parenCnt,
+    ~consumer: subs => contunieInstruction
+) => {
+    if (subs.size == 0) {
+        if (frmExpr == expr) {
+            consumer(subs)->ignore
+        }
+    } else {
+        iterateConstParts(
+            ~frmExpr, 
+            ~expr, 
+            ~frmConstParts, 
+            ~constParts, 
+            ~idxToMatch=0,
+            ~parenCnt,
+            ~consumer = (~frmConstParts, ~constParts) => {
+                Continue
+            }
+        )->ignore
+    }
+}
+
+//let numberOfStates = (numOfVars, subExprLength) => {
+    //let n = subExprLen - 1
+    //let k = numOfVars - 1
+
+    //let res = ref(1)
+    //let rem = ref(2)
+    //let minI = n-k+1
+    //for i in minI to n {
+        //res.contents = Js.Math.imul(res.contents, i)
+    //}
+//}
+
+//let numberOfStates = varGroup => {
+    //let subExprLen = varGroup.exprEndIdx-varGroup.exprBeginIdx+1
+    //let n = subExprLen - 1
+    //let k = 
+//}
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
