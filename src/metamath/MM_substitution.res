@@ -261,6 +261,15 @@ let initVarGroups = (~varGroups:array<varGroup>, ~constParts:constParts, ~expr:e
                 grp.exprEndIdx = constParts.begins[grp.leftConstPartIdx+1]-1
             }
         })
+        varGroups->Js.Array2.sortInPlaceWith((g1,g2) => {
+            if (g1.numOfVars < g2.numOfVars) {
+                -1
+            } else if (g1.numOfVars == g2.numOfVars) {
+                0
+            } else {
+                1
+            }
+        })->ignore
     }
 }
 
@@ -287,10 +296,56 @@ let iterateSubstitutions = (
             ~idxToMatch=0,
             ~parenCnt,
             ~consumer = (~frmConstParts, ~constParts) => {
+                initVarGroups(~varGroups, ~constParts, ~expr)
+                for i in 0 to subs.size-1 {
+                    subs.isDefined[i] = false
+                }
                 Continue
             }
         )->ignore
     }
+}
+
+let rec iterateVarGroups = (
+    ~expr:expr,
+    ~subs:subs,
+    ~varGroups:array<varGroup>,
+    ~curGrpIdx:int,
+    ~curVarIdx:int,
+    ~subExprBeginIdx:int,
+    ~consumer: subs=>contunieInstruction
+): contunieInstruction => {
+    let grp = varGroups[curGrpIdx]
+    let varNum = grp.frmExpr[grp.varsBeginIdx+curVarIdx]
+    let maxSubExprLength = grp.exprEndIdx - subExprBeginIdx + 1 - (grp.numOfVars - curVarIdx - 1)
+    
+    let invokeNext = (subExprLength:int):contunieInstruction => {
+        if (curVarIdx < grp.numOfVars - 1) {
+            iterateVarGroups(
+                ~expr,
+                ~subs,
+                ~varGroups,
+                ~curGrpIdx,
+                ~curVarIdx = curVarIdx+1,
+                ~subExprBeginIdx = subExprBeginIdx+subExprLength,
+                ~consumer
+            )
+        } else if (curGrpIdx < varGroups->Js_array2.length-1) {
+            iterateVarGroups(
+                ~expr,
+                ~subs,
+                ~varGroups,
+                ~curGrpIdx = curGrpIdx+1,
+                ~curVarIdx = 0,
+                ~subExprBeginIdx = varGroups[curGrpIdx+1].exprBeginIdx,
+                ~consumer
+            )
+        } else {
+            consumer(subs)
+        }
+    }
+
+    Continue
 }
 
 //let numberOfStates = (numOfVars, subExprLength) => {
