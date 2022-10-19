@@ -300,7 +300,6 @@ let iterateSubstitutions = (
                 for i in 0 to subs.size-1 {
                     subs.isDefined[i] = false
                 }
-                Continue
             }
         )->ignore
     }
@@ -313,6 +312,7 @@ let rec iterateVarGroups = (
     ~curGrpIdx:int,
     ~curVarIdx:int,
     ~subExprBeginIdx:int,
+    ~parenCnt:parenCnt,
     ~consumer: subs=>contunieInstruction
 ): contunieInstruction => {
     let grp = varGroups[curGrpIdx]
@@ -345,7 +345,35 @@ let rec iterateVarGroups = (
         }
     }
 
-    Continue
+    let continueInstr = ref(Continue)
+    if (!subs.isDefined[varNum]) {
+        subs.isDefined[varNum] = true
+        subs.exprs[varNum] = expr
+        subs.begins[varNum] = subExprBeginIdx
+        if (curVarIdx == grp.numOfVars-1) {
+            subs.ends[varNum] = grp.exprEndIdx
+            continueInstr.contents = invokeNext(maxSubExprLength)
+        } else {
+            let subExprLength = ref(1)
+            let end = ref(subExprBeginIdx)
+            parenCnt->parenCntReset
+            let pStatus = ref(Balanced)
+            while (subExprLength.contents < maxSubExprLength && continueInstr.contents == Continue && pStatus != Failed) {
+                subs.ends[varNum] = end
+                pStatus.contents = parenCnt->parenCntPut(expr[end])
+                if (pStatus == Balanced) {
+                    continueInstr.contents = invokeNext(subExprLength)
+                    parenCnt->parenCntReset
+                }
+                subExprLength.contents = subExprLength.contents + 1
+                end.contents = end.contents + 1
+            }
+        }
+        subs.isDefined[varNum] = false
+    } else {
+        
+    }
+    continueInstr.contents
 }
 
 //let numberOfStates = (numOfVars, subExprLength) => {
