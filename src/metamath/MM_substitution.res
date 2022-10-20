@@ -273,6 +273,91 @@ let initVarGroups = (~varGroups:array<varGroup>, ~constParts:constParts, ~expr:e
     }
 }
 
+let rec iterateVarGroups = (
+    ~expr:expr,
+    ~subs:subs,
+    ~varGroups:array<varGroup>,
+    ~curGrpIdx:int,
+    ~curVarIdx:int,
+    ~subExprBeginIdx:int,
+    ~parenCnt:parenCnt,
+    ~consumer: subs=>contunieInstruction
+): contunieInstruction => {
+    let grp = varGroups[curGrpIdx]
+    let varNum = grp.frmExpr[grp.varsBeginIdx+curVarIdx]
+    let maxSubExprLength = grp.exprEndIdx - subExprBeginIdx + 1 - (grp.numOfVars - curVarIdx - 1)
+    
+    let invokeNext = (subExprLength:int):contunieInstruction => {
+        if (curVarIdx < grp.numOfVars - 1) {
+            iterateVarGroups(
+                ~expr,
+                ~subs,
+                ~varGroups,
+                ~curGrpIdx,
+                ~curVarIdx = curVarIdx+1,
+                ~subExprBeginIdx = subExprBeginIdx+subExprLength,
+                ~parenCnt,
+                ~consumer
+            )
+        } else if (curGrpIdx < varGroups->Js_array2.length-1) {
+            iterateVarGroups(
+                ~expr,
+                ~subs,
+                ~varGroups,
+                ~curGrpIdx = curGrpIdx+1,
+                ~curVarIdx = 0,
+                ~subExprBeginIdx = varGroups[curGrpIdx+1].exprBeginIdx,
+                ~parenCnt,
+                ~consumer
+            )
+        } else {
+            consumer(subs)
+        }
+    }
+
+    let continueInstr = ref(Continue)
+    if (!subs.isDefined[varNum]) {
+        subs.isDefined[varNum] = true
+        subs.exprs[varNum] = expr
+        subs.begins[varNum] = subExprBeginIdx
+        if (curVarIdx == grp.numOfVars-1) {
+            subs.ends[varNum] = grp.exprEndIdx
+            continueInstr.contents = invokeNext(maxSubExprLength)
+        } else {
+            let subExprLength = ref(1)
+            let end = ref(subExprBeginIdx)
+            parenCnt->parenCntReset
+            let pStatus = ref(Balanced)
+            while (subExprLength.contents < maxSubExprLength && continueInstr.contents == Continue && pStatus.contents != Failed) {
+                subs.ends[varNum] = end.contents
+                pStatus.contents = parenCnt->parenCntPut(expr[end.contents])
+                if (pStatus.contents == Balanced) {
+                    continueInstr.contents = invokeNext(subExprLength.contents)
+                    parenCnt->parenCntReset
+                }
+                subExprLength.contents = subExprLength.contents + 1
+                end.contents = end.contents + 1
+            }
+        }
+        subs.isDefined[varNum] = false
+    } else {
+        let existingExpr = subs.exprs[varNum]
+        let existingExprBeginIdx = subs.begins[varNum]
+        let existingExprLen = subs.ends[varNum] - existingExprBeginIdx + 1
+        if (existingExprLen <= maxSubExprLength && (varNum < grp.numOfVars-1 || existingExprLen == maxSubExprLength)) {
+            let checkedLen = ref(0)
+            while (checkedLen.contents < existingExprLen 
+                    && existingExpr[existingExprBeginIdx+checkedLen.contents] == expr[subExprBeginIdx+checkedLen.contents]) {
+                        checkedLen.contents = checkedLen.contents + 1
+            }
+            if (checkedLen.contents == existingExprLen) {
+                continueInstr.contents = invokeNext(existingExprLen)
+            }
+        }
+    }
+    continueInstr.contents
+}
+
 let iterateSubstitutions = (
     ~frmExpr:expr, 
     ~expr:expr, 
@@ -300,80 +385,19 @@ let iterateSubstitutions = (
                 for i in 0 to subs.size-1 {
                     subs.isDefined[i] = false
                 }
+                iterateVarGroups(
+                    ~expr,
+                    ~subs,
+                    ~varGroups,
+                    ~curGrpIdx = 0,
+                    ~curVarIdx = 0,
+                    ~subExprBeginIdx = varGroups[0].exprBeginIdx,
+                    ~parenCnt,
+                    ~consumer
+                )
             }
         )->ignore
     }
-}
-
-let rec iterateVarGroups = (
-    ~expr:expr,
-    ~subs:subs,
-    ~varGroups:array<varGroup>,
-    ~curGrpIdx:int,
-    ~curVarIdx:int,
-    ~subExprBeginIdx:int,
-    ~parenCnt:parenCnt,
-    ~consumer: subs=>contunieInstruction
-): contunieInstruction => {
-    let grp = varGroups[curGrpIdx]
-    let varNum = grp.frmExpr[grp.varsBeginIdx+curVarIdx]
-    let maxSubExprLength = grp.exprEndIdx - subExprBeginIdx + 1 - (grp.numOfVars - curVarIdx - 1)
-    
-    let invokeNext = (subExprLength:int):contunieInstruction => {
-        if (curVarIdx < grp.numOfVars - 1) {
-            iterateVarGroups(
-                ~expr,
-                ~subs,
-                ~varGroups,
-                ~curGrpIdx,
-                ~curVarIdx = curVarIdx+1,
-                ~subExprBeginIdx = subExprBeginIdx+subExprLength,
-                ~consumer
-            )
-        } else if (curGrpIdx < varGroups->Js_array2.length-1) {
-            iterateVarGroups(
-                ~expr,
-                ~subs,
-                ~varGroups,
-                ~curGrpIdx = curGrpIdx+1,
-                ~curVarIdx = 0,
-                ~subExprBeginIdx = varGroups[curGrpIdx+1].exprBeginIdx,
-                ~consumer
-            )
-        } else {
-            consumer(subs)
-        }
-    }
-
-    let continueInstr = ref(Continue)
-    if (!subs.isDefined[varNum]) {
-        subs.isDefined[varNum] = true
-        subs.exprs[varNum] = expr
-        subs.begins[varNum] = subExprBeginIdx
-        if (curVarIdx == grp.numOfVars-1) {
-            subs.ends[varNum] = grp.exprEndIdx
-            continueInstr.contents = invokeNext(maxSubExprLength)
-        } else {
-            let subExprLength = ref(1)
-            let end = ref(subExprBeginIdx)
-            parenCnt->parenCntReset
-            let pStatus = ref(Balanced)
-            while (subExprLength.contents < maxSubExprLength && continueInstr.contents == Continue && pStatus != Failed) {
-                subs.ends[varNum] = end
-                pStatus.contents = parenCnt->parenCntPut(expr[end])
-                if (pStatus == Balanced) {
-                    continueInstr.contents = invokeNext(subExprLength)
-                    parenCnt->parenCntReset
-                }
-                subExprLength.contents = subExprLength.contents + 1
-                end.contents = end.contents + 1
-            }
-        }
-        subs.isDefined[varNum] = false
-    } else {
-        
-    }
-    continueInstr.contents
 }
 
 //let numberOfStates = (numOfVars, subExprLength) => {
