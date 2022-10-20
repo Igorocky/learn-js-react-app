@@ -419,3 +419,31 @@ let iterateSubstitutions = (
 //}
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
+
+let testIterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {
+    let constPartsToArr = (constParts:constParts) => {
+        constParts.begins->Js_array2.mapi((b,i)=>(b,constParts.ends[i]))
+    }
+    let frmConstParts = createConstParts(frmExpr)
+    let constParts = createMatchingConstParts(frmConstParts)
+    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
+    let matchingConstParts = []
+    iterateConstParts(
+        ~frmExpr, 
+        ~expr, 
+        ~frmConstParts, 
+        ~constParts, 
+        ~idxToMatch=0,
+        ~parenCnt,
+        ~consumer = constParts => {
+            matchingConstParts->Js_array2.push(
+                constPartsToArr(constParts)
+            )->ignore
+            Continue
+        }
+    )->ignore
+    (
+        constPartsToArr(frmConstParts),
+        matchingConstParts
+    )
+}
