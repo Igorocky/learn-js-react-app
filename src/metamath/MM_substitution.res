@@ -95,7 +95,7 @@ let rec iterateConstParts = (
     ~constParts:constParts, 
     ~idxToMatch:int, 
     ~parenCnt:parenCnt,
-    ~consumer:(~frmConstParts:constParts,~constParts:constParts) => contunieInstruction
+    ~consumer:constParts => contunieInstruction
 ):contunieInstruction => {
     let invokeNext = ():contunieInstruction => {
         iterateConstParts(
@@ -130,14 +130,14 @@ let rec iterateConstParts = (
                         i.contents = i.contents + 1
                     }
                     if (pState.contents == Balanced) {
-                        consumer(~frmConstParts,~constParts)
+                        consumer(constParts)
                     } else {
                         Continue
                     }
                 }
             }
         } else {
-            consumer(~frmConstParts,~constParts)
+            consumer(constParts)
         }
     } else if (idxToMatch == 0 && frmConstParts.begins[0] == 0) {
         if (exprLen-1 < frmConstParts.ends[0]) {
@@ -380,7 +380,7 @@ let iterateSubstitutions = (
             ~constParts, 
             ~idxToMatch=0,
             ~parenCnt,
-            ~consumer = (~frmConstParts, ~constParts) => {
+            ~consumer = constParts => {
                 initVarGroups(~varGroups, ~constParts, ~expr)
                 for i in 0 to subs.size-1 {
                     subs.isDefined[i] = false
