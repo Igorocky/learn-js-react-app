@@ -268,7 +268,9 @@ let extractVarTypes = (ctx, mandatoryVars: Belt_SetInt.t, varRenumbering: Belt_M
 }
 
 let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (ctx, ~label, ~exprStr) => {
-    if (ctx.frames->Belt_MutableMapString.has(label)) {
+    if (label->Js_string2.trim == "") {
+        raise(MmException({msg:`Cannot use empty string as a label.`}))
+    } else if (ctx.frames->Belt_MutableMapString.has(label)) {
         raise(MmException({msg:`The label '${label}' is already used for another assertion.`}))
     } else if (exprStr->Js_array2.length < 1) {
         raise(MmException({msg:`Length of an assertion expression must be at least 1.`}))
@@ -305,55 +307,62 @@ let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
     ctx.frames->Belt_MutableMapString.set(label, createFrame(ctx, ~label, ~exprStr))
 }
 
-let rec applyStmt = (ctx:mmContext, ast:mmAstNode, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()):bool => {
-    let shouldStop = (expectedAsrtLabel, currentAsrtLabel) => {
-        switch expectedAsrtLabel {
-            | Some(expectedAsrtLabel) => expectedAsrtLabel == currentAsrtLabel
-            | None => false
-        }
-    }
-    try {
-        let continue = ref(true)
-        switch ast {
-            | {stmt:Comment({text})} => addComment(ctx, text)
-            | {stmt:Const({symbols})} => symbols->Js_array2.forEach(addConst(ctx, _))
-            | {stmt:Block({level,statements})} => {
-                if (level > 0) {
-                    openChildContext(ctx)
-                }
-                let i = ref(0)
-                let len = statements->Js_array2.length
-                while (i.contents < len && continue.contents) {
-                    continue.contents = applyStmt(ctx, statements[i.contents], ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())
-                    i.contents = i.contents + 1
-                }
-                if (continue.contents && level > 0) {
-                    closeChildContext(ctx)
-                }
-            }
-            | {stmt:Var({symbols})} => symbols->Js_array2.forEach(addVar(ctx, _))
-            | {stmt:Disj({vars})} => addDisj(ctx, vars)
-            | {stmt:Floating({label, expr})} => addFloating(ctx, ~label, ~exprStr=expr)
-            | {stmt:Essential({label, expr})} => addEssential(ctx, ~label, ~exprStr=expr)
-            | {stmt:Axiom({label, expr})} | {stmt:Provable({label, expr})} => {
-                if (shouldStop(stopBefore, label)) {
-                    continue.contents = false
-                } else {
-                    addAssertion(ctx, ~label, ~exprStr=expr)
-                    continue.contents = !shouldStop(stopAfter, label)
-                }
-            }
-        }
-        continue.contents
-    } catch {
-        | MmException(ex) => raise(MmException({msg:ex.msg, begin:ex.begin->Belt.Option.getWithDefault(ast.begin)}))
+let applySingleStmt = (ctx:mmContext, stmt:stmt):unit => {
+    switch stmt {
+        | Comment({text}) => addComment(ctx, text)
+        | Const({symbols}) => symbols->Js_array2.forEach(addConst(ctx, _))
+        | Block(_) => raise(MmException({msg:`Block statements are not accepted by applySingleStmt().`}))
+        | Var({symbols}) => symbols->Js_array2.forEach(addVar(ctx, _))
+        | Disj({vars}) => addDisj(ctx, vars)
+        | Floating({label, expr}) => addFloating(ctx, ~label, ~exprStr=expr)
+        | Essential({label, expr}) => addEssential(ctx, ~label, ~exprStr=expr)
+        | Axiom({label, expr}) | Provable({label, expr}) => addAssertion(ctx, ~label, ~exprStr=expr)
     }
 }
 
-let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext = (ast, ~stopBefore:option<string>=?, ~stopAfter:option<string>=?, ()) => {
-    let ctx = createEmptyContext()
-    applyStmt(ctx, ast, ~stopBefore=?stopBefore, ~stopAfter=?stopAfter, ())->ignore
-    ctx
+let loadContext: (mmAstNode, ~stopBefore: string=?, ~stopAfter: string=?, ()) => mmContext = (ast,~stopBefore="",~stopAfter="",()) => {
+    let ctxOpt = traverseAst(
+        createEmptyContext(),
+        ast,
+        ~preProcess = (ctx,node) => {
+            switch node {
+                | {stmt:Block({level})} => {
+                    if (level > 0) {
+                        openChildContext(ctx)
+                    }
+                    None
+                }
+                | {stmt:Axiom({label}) | Provable({label})} if stopBefore == label => Some(ctx)
+                | _ => None
+            }
+        },
+        ~process = (ctx,node) => {
+            switch node {
+                | {stmt:Block(_)} => ()
+                | {stmt} => applySingleStmt(ctx,stmt)
+            }
+            None
+        },
+        ~postProcess = (ctx,node) => {
+            switch node {
+                | {stmt:Block({level})} => {
+                    if (level > 0) {
+                        closeChildContext(ctx)
+                        None
+                    } else {
+                        Some(ctx)
+                    }
+                }
+                | {stmt:Axiom({label}) | Provable({label})} if stopAfter == label => Some(ctx)
+                | _ => None
+            }
+        },
+        ()
+    )
+    switch ctxOpt {
+        | None => raise(MmException({msg:`Cannot extract mmContext from None.`}))
+        | Some(ctx) => ctx
+    }
 }
 
 let getHypothesis: (mmContext,string) => option<hypothesis> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)

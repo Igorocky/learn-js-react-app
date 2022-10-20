@@ -26,6 +26,7 @@
     "compile": "rescript",
     "compile-with-deps": "rescript build -with-deps",
     "compile-test": "rescript && mocha src/test/**/*.js",
+    "clean-and-compile-with-deps": "npm run rescript-clean && npm run compile-with-deps",
     "rescript-start": "rescript build -w",
     "rescript-clean": "rescript clean -with-deps",
     "start": "react-scripts start",

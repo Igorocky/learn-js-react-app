@@ -8,7 +8,7 @@ describe("verifyProof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText)
-        let ctx = createContext(ast, ~stopBefore="th1", ())
+        let ctx = loadContext(ast, ~stopBefore="th1", ())
         let (exprStr,proof) = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"th1",expr,proof})} => Some((expr,proof))
@@ -30,7 +30,7 @@ describe("verifyProof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText)
-        let ctx = createContext(ast, ~stopBefore="th2", ())
+        let ctx = loadContext(ast, ~stopBefore="th2", ())
         let (exprStr,proof) = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"th2",expr,proof})} => Some((expr,proof))
@@ -52,7 +52,7 @@ describe("verifyProof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/set-reduced.mm")
         let ast = parseMmFile(mmFileText)
-        let ctx = createContext(ast, ~stopBefore="dfbi1ALT", ())
+        let ctx = loadContext(ast, ~stopBefore="dfbi1ALT", ())
         let (exprStr,proof) = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"dfbi1ALT",expr,proof})} => Some((expr,proof))

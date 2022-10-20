@@ -274,7 +274,7 @@ let traverseAst: (
     (context, root, ~preProcess=?, ~process=?, ~postProcess=?, ()) => Expln_utils_data.traverseTree(
         context, 
         root, 
-        node => {
+        (_, node) => {
             switch node {
                 | {stmt:Block({statements})} => Some(statements)
                 | _ => None
@@ -322,7 +322,6 @@ let stmtToStrRec: mmAstNode => array<string> = stmt => {
             None
         },
         ~process=((level,arr),node)=>{
-            open Expln_utils_common
             let str = switch node {
                 | {stmt:Block(_)} => ""
                 | _ =>  stmtToStr(node)

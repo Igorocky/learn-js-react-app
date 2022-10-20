@@ -52,6 +52,7 @@ let parenCntPut: (parenCnt,int) => state = (cnt,i) => {
                     }
                 }
             }
+            | None => ()
         }
     }
     if (cnt.failed) {

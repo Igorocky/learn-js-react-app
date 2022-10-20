@@ -6,7 +6,7 @@ open MM_context
 let make = (~mmFileContent:string, ~ast:mmAstNode) => {
     React.useEffect0(() => {
         try {
-            createContext(ast, ())->ignore
+            loadContext(ast, ())->ignore
             Js.log(`MM context was created successfully.`)
         } catch {
             | MmException(ex) =>

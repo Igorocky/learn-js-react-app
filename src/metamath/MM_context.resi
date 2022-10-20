@@ -25,10 +25,10 @@ type frame = {
 }
 
 let createEmptyContext: unit => mmContext
-let createContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
+let applySingleStmt: (mmContext, stmt) => unit
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
-let applyStmt: (mmContext, mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => bool
+let loadContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
 
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>

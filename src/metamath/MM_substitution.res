@@ -167,7 +167,7 @@ let rec iterateConstParts = (
         parenCnt->parenCntReset
         let pState = ref(Balanced)
         let numOfVars = lengthOfGap2(idxToMatch-1,frmConstParts,frmExprLen)
-        for i in 1 to numOfVars {
+        for _ in 1 to numOfVars {
             pState.contents = parenCnt->parenCntPut(expr[begin.contents])
             begin.contents = begin.contents + 1
         }
