@@ -52,8 +52,10 @@ let createConstParts = expr => {
     let constParts = []
     for i in 0 to expr->Js_array2.length-1 {
         let constPartsLength = constParts->Js_array2.length
-        if (constPartsLength == 0 || constParts[constPartsLength-1][1] >= 0) {
-            constParts->Js_array2.push([i,-1])->ignore
+        if (expr[i] < 0) {
+            if (constPartsLength == 0 || constParts[constPartsLength-1][1] >= 0) {
+                constParts->Js_array2.push([i,-1])->ignore
+            }
         } else if (constPartsLength > 0 && constParts[constPartsLength-1][1] < 0) {
             constParts[constPartsLength-1][1] = i-1
         }
@@ -178,7 +180,7 @@ let rec iterateConstParts = (
                 let matchedLen = ref(0)
                 let cmpRes = ref(true)
                 while (matchedLen.contents < partLen && cmpRes.contents) {
-                    cmpRes.contents = frmExpr[frmConstParts.begins[idxToMatch]+matchedLen.contents] != expr[begin.contents+matchedLen.contents]
+                    cmpRes.contents = frmExpr[frmConstParts.begins[idxToMatch]+matchedLen.contents] == expr[begin.contents+matchedLen.contents]
                     matchedLen.contents = matchedLen.contents + 1
                 }
                 if (matchedLen.contents == partLen && cmpRes.contents) {
@@ -420,7 +422,7 @@ let iterateSubstitutions = (
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
 
-let testIterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {
+let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {
     let constPartsToArr = (constParts:constParts) => {
         constParts.begins->Js_array2.mapi((b,i)=>(b,constParts.ends[i]))
     }

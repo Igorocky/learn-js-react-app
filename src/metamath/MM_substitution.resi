@@ -17,4 +17,4 @@ type subs = {
 
 //------------------------- TEST ---------------------------
 
-let testIterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>)
+let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>)
