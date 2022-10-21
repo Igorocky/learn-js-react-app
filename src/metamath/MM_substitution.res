@@ -61,8 +61,9 @@ let createConstParts = expr => {
         }
     }
     let constPartsLength = constParts->Js_array2.length
+    let exprLength = expr->Js_array2.length
     if (constPartsLength > 0 && constParts[constPartsLength-1][1] < 0) {
-        constParts[constPartsLength-1][1] = constPartsLength-1
+        constParts[constPartsLength-1][1] = exprLength-1
     }
     let result = {
         length: constPartsLength,
@@ -70,7 +71,6 @@ let createConstParts = expr => {
         ends: createArray(constPartsLength),
         remainingMinLength: createArray(constPartsLength)
     }
-    let exprLength = expr->Js_array2.length
     let remainingMinLength = ref(0)
     for i in constPartsLength-1 downto 0 {
         result.begins[i] = constParts[i][0]
