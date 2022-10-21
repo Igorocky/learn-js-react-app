@@ -12,7 +12,7 @@ let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConst
     ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->Js_string2.split(" ")}))
     let frm = switch ctx->getFrame("test") {
         | Some(frm) => frm
-        | None => failMsg("Cannot find 'test' frame.")
+        | None => failMsg("Cannot find 'test' frame in testIterateConstParts.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
@@ -23,6 +23,35 @@ let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConst
     //then
     assertEqMsg(actualConstParts, expectedConstParts, "expectedConstParts")
     assertEqMsg(actualMatchingConstParts, expectedMatchingConstParts, "expectedMatchingConstParts")
+}
+
+let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSubstitutions:array<array<string>>) => {
+    //given
+    let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/substitutions-test.mm")
+    let ast = parseMmFile(mmFileText)
+    let ctx = loadContext(ast, ())
+    ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->Js_string2.split(" ")}))
+    let frm = switch ctx->getFrame("test") {
+        | Some(frm) => frm
+        | None => failMsg("Cannot find 'test' frame in testIterateSubstitutions.")
+    }
+    let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
+    let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
+
+    //when
+    let actualSubs = test_iterateSubstitutions(~ctx, ~frmExpr, ~expr)
+
+    //then
+    let actualSubsStr = actualSubs
+        ->Js_array2.map(exprs => {
+            exprs->Js_array2.mapi((s,i) => {
+                open Expln_utils_common
+                frm.frameVarToSymb->Belt_MapInt.getExn(i)
+                    ++ ": "
+                    ++ ctxExprToStr(ctx,s)->strJoin(~sep=" ", ())
+            })
+        })
+    assertEq(actualSubsStr, expectedSubstitutions)
 }
 
 describe("iterateConstParts", (.) => {
@@ -153,5 +182,115 @@ describe("iterateConstParts", (.) => {
                 [] 
             ]
         )
+    })
+})
+
+describe("iterateSubstitutions", (.) => {
+    it("one_option", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- a -> b",
+            ~exprStr = "|- A -> B",
+            ~expectedSubstitutions = [
+                [
+                    "a: A",
+                    "b: B",
+                ],
+            ]
+        )
+    })
+    it("two_options", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- a -> b",
+            ~exprStr = "|- A -> B -> C",
+            ~expectedSubstitutions = [
+                ["a: A", "b: B -> C"],
+                ["a: A -> B", "b: C"],
+            ]
+        )
+    })
+    it("zero_options", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- a -> b",
+            ~exprStr = "|- A = B",
+            ~expectedSubstitutions = [ ]
+        )
+    })
+    it("there_are_no_constants_in_assertion", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "a b",
+            ~exprStr = "A = B",
+            ~expectedSubstitutions = [
+                ["a: A",   "b: = B"],
+                ["a: A =", "b: B"],
+            ]
+        )
+    })
+    it("there_are_no_variables_in_assertion_and_assertion_matches_the_statement", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "A = B",
+            ~exprStr = "A = B",
+            ~expectedSubstitutions = [
+                []
+            ]
+        )
+    })
+    it("there_are_no_variables_in_assertion_and_assertion_doesnt_match_the_statement", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "A -> B",
+            ~exprStr = "A = B",
+            ~expectedSubstitutions = [ ]
+        )
+    })
+    it("one_variable_repeats", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- a -> b",
+            ~exprStr = "|- A -> B -> A -> B",
+            ~expectedSubstitutions = [
+                ["a: A",            "b: B -> A -> B"],
+                ["a: A -> B",       "b: A -> B"],
+                ["a: A -> B -> A",  "b: B"],
+            ]
+        )
+        testIterateSubstitutions(
+            ~frmExprStr = "|- a -> a",
+            ~exprStr = "|- A -> B -> A -> B",
+            ~expectedSubstitutions = [
+                ["a: A -> B"],
+            ]
+        )
+    })
+    it("case1_from_set_mm", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- ( ( a e. f /\\ b e. f /\\ c e. f ) -> ( ( a e b ) d c ) = ( ( a d c ) + ( b d c ) ) )",
+            ~exprStr = "|- ( ( A e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) /\\ B e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) /\\ C e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) ) -> ( ( A ( +v ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) B ) ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) = ( ( A ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) + ( B ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) ) )",
+            ~expectedSubstitutions = [
+                [
+                    "a: A",
+                    "b: B",
+                    "c: C",
+                    "d: ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) )",
+                    "e: ( +v ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) )",
+                    "f: ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) )"
+                ],
+            ]
+        )
+    })
+    it("case2_from_set_mm", (.) => {
+        testIterateSubstitutions(
+            ~frmExprStr = "|- ( ph -> ( ( ps -> ch ) -> ( ( ( th -> ps ) -> ( ch -> ta ) ) -> ( ps -> ta ) ) ) )",
+            ~exprStr = "|- ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) -> ( ( ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) -> ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) ) -> ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) ) ) )",
+            ~expectedSubstitutions = [
+                [
+                    "ph: ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) )",
+                    "ps: ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) )",
+                    "ch: ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) )",
+                    "th: ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) )",
+                    "ta: ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) )",
+                ],
+            ]
+        )
+    })
+    it_skip("finds_all_substitutions_in_set_mm", (.) => {
+        ()
     })
 })

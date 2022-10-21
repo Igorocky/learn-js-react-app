@@ -330,7 +330,7 @@ let rec iterateVarGroups = (
             let end = ref(subExprBeginIdx)
             parenCnt->parenCntReset
             let pStatus = ref(Balanced)
-            while (subExprLength.contents < maxSubExprLength && continueInstr.contents == Continue && pStatus.contents != Failed) {
+            while (subExprLength.contents <= maxSubExprLength && continueInstr.contents == Continue && pStatus.contents != Failed) {
                 subs.ends[varNum] = end.contents
                 pStatus.contents = parenCnt->parenCntPut(expr[end.contents])
                 if (pStatus.contents == Balanced) {
@@ -448,4 +448,43 @@ let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (arra
         constPartsToArr(frmConstParts),
         matchingConstParts
     )
+}
+
+let test_iterateSubstitutions: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => array<array<expr>> = (~ctx, ~frmExpr, ~expr) => {
+    let frmConstParts = createConstParts(frmExpr)
+    let constParts = createMatchingConstParts(frmConstParts)
+    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
+    let varGroups = createVarGroups(~frmExpr, ~frmConstParts)
+    let numOfVars = frmExpr
+        ->Js_array2.filter(i => i >= 0)
+        ->Expln_utils_common.arrIntDistinct
+        ->Js_array2.length
+    let subs = {
+        size: numOfVars,
+        begins: Belt_Array.make(numOfVars, 0),
+        ends: Belt_Array.make(numOfVars, 0),
+        exprs: Belt_Array.make(numOfVars, []),
+        isDefined: Belt_Array.make(numOfVars, false),
+    }
+    let result = []
+    iterateSubstitutions(
+        ~frmExpr, 
+        ~expr, 
+        ~frmConstParts, 
+        ~constParts, 
+        ~varGroups,
+        ~subs,
+        ~parenCnt,
+        ~consumer = subs => {
+            let res = []
+            for i in 0 to numOfVars-1 {
+                res->Js_array2.push(
+                    subs.exprs[i]->Js_array2.slice(~start=subs.begins[i], ~end_=subs.ends[i]+1)
+                )->ignore
+            }
+            result->Js_array2.push(res)->ignore
+            Continue
+        }
+    )
+    result
 }
