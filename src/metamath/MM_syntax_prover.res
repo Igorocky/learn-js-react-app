@@ -1,7 +1,6 @@
 open MM_context
 open MM_substitution
-open MM_parser
-open MM_syntax_proof_table
+open MM_proof_table
 open MM_parenCounter
 
 type proofPrecalcData = {

@@ -1,7 +1,6 @@
 open Expln_test
 open MM_parser
 open MM_context
-open MM_proof_verifier
 open MM_substitution
 
 let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConstParts:array<(int,int)>, ~expectedMatchingConstParts:array<array<(int,int)>>) => {
