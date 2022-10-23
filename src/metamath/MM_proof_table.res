@@ -1,4 +1,5 @@
 open MM_context
+open MM_parser
 
 type exprSource =
     | Hypothesis({label:string})
@@ -119,4 +120,121 @@ let updateDist: proofTable => unit = tbl => {
             }
         }
     }
+}
+
+module ExprCmp = Belt.Id.MakeComparable({
+    type t = expr
+    let cmp = (e1,e2) => {
+        let len1 = e1->Js_array2.length
+        let len2 = e2->Js_array2.length
+        switch Expln_utils_common.intCmp(len1, len2) {
+            | 0 => {
+                let res = ref(0)
+                let i = ref(0)
+                while (i.contents < len1 && res.contents == 0) {
+                    res.contents = Expln_utils_common.intCmp(e1[i.contents], e2[i.contents])
+                    i.contents = i.contents + 1
+                }
+                res.contents
+            }
+            | r => r
+        }
+    }
+})
+
+let getChildren = src => {
+    switch r.src {
+        | None => raise(MmException({msg: `All records in a proofTable must have non empty source.`}))
+        | Some([Assertion({args})]) => Some(args->Js_array2.map(a=>tbl[a]))
+        | Some([Hypothesis(_)]) => None
+        | _ => raise(MmException({
+            msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(r.src)}`
+        }))
+    }
+}
+
+let traverseRecords = (ctx,tbl,~onProcess,~onReprocess) => {
+    let passedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
+    let repeatedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
+    let repeatedExprs = []
+    Expln_utils_data.traverseTree(
+        (),
+        tbl[0],
+        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(r.src) } ,
+        ~process = (_, r) => {
+            if (passedExprs->Belt_MutableSet.has(r.expr)) {
+                let reprocessFirstTime = !(repeatedExprsSet->Belt_MutableSet.has(r.expr))
+                if (reprocessFirstTime) {
+                    repeatedExprsSet->Belt_MutableSet.add(r.expr)
+                }
+                onReprocess(r,reprocessFirstTime)
+            } else {
+                passedExprs->Belt_MutableSet.add(r.expr)
+                onProcess(r)
+            }
+            None
+        },
+        ()
+    )->ignore
+}
+
+let findReusedExprs = (ctx,tbl):array<expr> => {
+    let reusedExprs = []
+    traverseRecords(ctx,tbl,
+        ~onProcess = _ => (),
+        ~onReprocess = (r,first) => {
+            if (first) {
+                reusedExprs->Js_array2.push(r.expr)->ignore
+            }
+        }
+    )
+    reusedExprs
+}
+
+let createProof = (ctx:mmContext, label:string, tbl:proofTable):proof => {
+    let tblLen = tbl->Js_array2.length
+    if (tblLen == 0) {
+        raise(MmException({msg:`Cannot extract a proof from empty proofTable.`}))
+    }
+    let frame = createFrame(ctx, label, ctx->ctxExprToStr(tbl[0].expr))
+    let mandHypLabelToInt = Belt_MapString.fromArray(
+        frame.hyps->Js_array2.mapi(({label}, i) => (label, i+1))
+    )
+    let manHypLen = mandHypLabelToInt->Belt_MapString.size
+    let labels = []
+    let reusedExprs = findReusedExprs(ctx,tbl)
+    let reusedExprToInt = reusedExprs
+        ->Js_array2.mapi((expr,i) => (expr,manHypLen+i+1))
+        ->Belt_Map.fromArray(~id=module(ExprCmp))
+    let proofSteps = []
+    let passedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
+    traverseRecords(ctx,tbl,
+        ~onProcess = r => {
+            switch r.src {
+                | Some([Hypothesis({label})]) => None
+                | Some([Assertion({args})]) => Some(args->Js_array2.map(a=>tbl[a]))
+                | _ => ()
+            }
+        },
+        ~onReprocess = (r,first) => {
+            if (first) {
+                reusedExprs->Js_array2.push(r.expr)->ignore
+            }
+        }
+    )
+    Expln_utils_data.traverseTree(
+        (),
+        tbl[0],
+        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(r.src) } ,
+        ~process = (_, r) => {
+            if (passedExprs->Belt_MutableSet.has(r.expr)) {
+                proofSteps->Js_array2.push(reusedExprToInt->Belt_Map.getExn(r.expr))
+            } else {
+                passedExprs->Belt_MutableSet.add(r.expr)
+            }
+            None
+        },
+        ()
+    )->ignore
+
 }

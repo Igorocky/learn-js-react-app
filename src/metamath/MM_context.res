@@ -267,7 +267,7 @@ let extractVarTypes = (ctx, mandatoryVars: Belt_SetInt.t, varRenumbering: Belt_M
     varTypes
 }
 
-let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (ctx, ~label, ~exprStr) => {
+let createFrame: (mmContext, string, array<string>) => frame = (ctx, label, exprStr) => {
     if (label->Js_string2.trim == "") {
         raise(MmException({msg:`Cannot use empty string as a label.`}))
     } else if (ctx.frames->Belt_MutableMapString.has(label)) {
@@ -304,7 +304,7 @@ let createFrame: (mmContext, ~label:string, ~exprStr:array<string>) => frame = (
 }
 
 let addAssertion: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (ctx, ~label, ~exprStr) => {
-    ctx.frames->Belt_MutableMapString.set(label, createFrame(ctx, ~label, ~exprStr))
+    ctx.frames->Belt_MutableMapString.set(label, createFrame(ctx, label, exprStr))
 }
 
 let applySingleStmt = (ctx:mmContext, stmt:stmt):unit => {
