@@ -2,6 +2,7 @@ open MM_context
 open MM_substitution
 open MM_parser
 open MM_syntax_proof_table
+open MM_parenCounter
 
 type proofPrecalcData = {
     frame: frame,
@@ -9,17 +10,6 @@ type proofPrecalcData = {
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
-}
-
-type exprSource =
-    | Hypothesis({label:string})
-    | Assertion({args:array<int>, label:string})
-
-type proofRecord = {
-    expr:expr,
-    proved:bool,
-    dist:int,
-    src: option<array<exprSource>>
 }
 
 let isDirectFrame = frm => {
@@ -30,7 +20,7 @@ let isDirectFrame = frm => {
     numOfVarsInAsrt == frm.numOfVars
 }
 
-let prepareFrames = ctx => {
+let prepareFrameData = ctx => {
     let frames = []
     ctx->forEachFrame(frm => {
         if (isDirectFrame(frm)) {
@@ -52,20 +42,84 @@ let prepareFrames = ctx => {
                 subs
             })->ignore
         }
+        None
+    })->ignore
+    frames
+}
+
+let applySubs = (expr, subs): expr => {
+    let resultSize = ref(0)
+    expr->Js_array2.forEach(s => {
+        if (s < 0) {
+            resultSize.contents = resultSize.contents + 1
+        } else {
+            resultSize.contents = resultSize.contents + (subs.ends[s]-subs.begins[s]+1)
+        }
     })
+    let res = Expln_utils_common.createArray(resultSize.contents)
+    let e = ref(0)
+    let r = ref(0)
+    while (r.contents < resultSize.contents) {
+        let s = expr[e.contents]
+        if (s < 0) {
+            res[r.contents] = s
+            r.contents = r.contents + 1
+        } else {
+            let subExpr = subs.exprs[s]
+            let len = subExpr->Js_array2.length
+            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=0, ~dst=res, ~dstFromIdx=r.contents, ~len)
+            r.contents = r.contents + len
+        }
+        e.contents = e.contents + 1
+    }
+    res
+}
+
+let suggestPossibleProfs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
+    let exprToProve = recToProve.expr
+    let foundHyp = ctx->forEachHypothesis(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
+    switch foundHyp {
+        | Some(hyp) => recToProve.src = Some([Hypothesis({label:hyp.label})])
+        | None => {
+            let proofs = []
+            frameData->Js_array2.forEach(frmData => {
+                iterateSubstitutions(
+                    ~frmExpr = frmData.frame.asrt, 
+                    ~expr = exprToProve, 
+                    ~frmConstParts = frmData.frmConstParts, 
+                    ~constParts = frmData.constParts, 
+                    ~varGroups = frmData.varGroups,
+                    ~subs = frmData.subs,
+                    ~parenCnt,
+                    ~consumer = subs => {
+                        if (subs.isDefined->Js_array2.every(b=>b)) {
+                            let args: array<int> = frmData.frame.hyps
+                                ->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
+                            proofs->Js_array2.push(Assertion({
+                                args,
+                                label: frmData.frame.label
+                            }))->ignore
+                        }
+                        Continue
+                    }
+                )
+            })
+            recToProve.src = Some(proofs)
+        }
+    }
 }
 
 let findProof = (ctx, expr) => {
-    let frames = prepareFrames(ctx)
+    let frameData = prepareFrameData(ctx)
+    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
     let tbl = createSyntaxProofTable(expr)
-    let exprToProve = ref(tbl->getExprToProve)
-    while (!tbl[0].proved && exprToProve.contents->Belt_Option.isSome) {
-        switch exprToProve.contents {
-            | Some(exprToProve) => {
-                ()
-            }
-            | None => ()
-        }
-        exprToProve.contents = tbl->getExprToProve
+    let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
+    while (!tbl[0].proved && exprToProveIdx.contents->Belt_Option.isSome) {
+        suggestPossibleProfs(~tbl, ~ctx, ~frameData, ~parenCnt,
+            ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
+        )
+        tbl->markProved
+        tbl->updateDist
+        exprToProveIdx.contents = tbl->getNextExprToProveIdx
     }
 }

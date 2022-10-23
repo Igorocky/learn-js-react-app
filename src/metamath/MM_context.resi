@@ -36,4 +36,7 @@ let getFrame: (mmContext,string) => option<frame>
 let makeExpr: (mmContext,array<string>) => expr
 let ctxExprToStr: (mmContext, expr) => array<string>
 let frmExprToStr: (mmContext, frame, expr) => array<string>
-let forEachFrame: (mmContext, frame => unit) => unit
+let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
+let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a>
+
+let exprEq: (expr,expr) => bool

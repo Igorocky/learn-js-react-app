@@ -31,6 +31,16 @@ let createConstParts: expr => constParts
 let createMatchingConstParts: constParts => constParts
 let createVarGroups: (~frmExpr:expr, ~frmConstParts:constParts) => array<varGroup>
 let createSubs: (~numOfVars:int) => subs
+let iterateSubstitutions: (
+    ~frmExpr:expr, 
+    ~expr:expr, 
+    ~frmConstParts:constParts, 
+    ~constParts:constParts, 
+    ~varGroups:array<varGroup>,
+    ~subs:subs,
+    ~parenCnt:parenCnt,
+    ~consumer: subs => contunieInstruction
+) => unit
 
 //------------------------- TEST ---------------------------
 

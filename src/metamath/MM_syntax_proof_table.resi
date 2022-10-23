@@ -8,12 +8,15 @@ type exprSource =
 
 type proofRecord = {
     expr:expr,
-    proved:bool,
-    dist:int,
-    src: option<array<exprSource>>
+    mutable proved:bool,
+    mutable dist:int,
+    mutable src: option<array<exprSource>>
 }
 
 type proofTable = array<proofRecord>
 
 let createSyntaxProofTable: expr => proofTable
-let getExprToProve: proofTable => option<int>
+let getNextExprToProveIdx: proofTable => option<int>
+let addExprToProve: (proofTable, expr) => int
+let markProved: proofTable => unit
+let updateDist: proofTable => unit

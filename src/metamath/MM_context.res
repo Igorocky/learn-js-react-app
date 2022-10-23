@@ -381,10 +381,43 @@ let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
     extractMandatoryHypotheses(ctx, mandatoryVars)
 }
 
-let rec forEachFrame: (mmContext, frame => unit) => unit = (ctx, consumer) => {
-    switch ctx.parent {
+let rec forEachFrame: (mmContext, frame => option<'a>) => option<'a> = (ctx, consumer) => {
+    let result = switch ctx.parent {
         | Some(pCtx) => pCtx->forEachFrame(consumer)
-        | None => ()
+        | None => None
     }
-    ctx.frames->Belt_MutableMapString.forEach((_,frm) => consumer(frm))
+    switch result {
+        | Some(_) => result
+        | None => {
+            let result = ref(None)
+            ctx.frames->Belt_MutableMapString.forEach((_,frm) => {
+                if (result.contents->Belt_Option.isNone) {
+                    result.contents = consumer(frm)
+                }
+            })
+            result.contents
+        }
+    }
+}
+
+let rec forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a> = (ctx, consumer) => {
+    let result = switch ctx.parent {
+        | Some(pCtx) => pCtx->forEachHypothesis(consumer)
+        | None => None
+    }
+    switch result {
+        | Some(_) => result
+        | None => ctx.hyps->Expln_utils_common.arrForEach(consumer)
+    }
+}
+
+let exprEq: (expr,expr) => bool = (a,b) => {
+    let len = a->Js_array2.length
+    let eq = ref(len == b->Js_array2.length)
+    let i = ref(0)
+    while (eq.contents && i.contents < len) {
+        eq.contents = a[i.contents] == b[i.contents]
+        i.contents = i.contents + 1
+    }
+    eq.contents
 }

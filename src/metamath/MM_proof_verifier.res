@@ -51,19 +51,6 @@ let compareExprAfterSubstitution = (expr:expr, subs, eqTo:expr): bool => {
     eq.contents && e.contents == eLen && t.contents == tLen
 }
 
-let copySubArray = (~src:array<'t>, ~srcFromIdx:int, ~dst:array<'t>, ~dstFromIdx:int, ~len:int): unit => {
-    let s = ref(srcFromIdx)
-    let d = ref(dstFromIdx)
-    let srcLen = src->Js_array2.length
-    let dstLen = dst->Js_array2.length
-    let sMax = Js_math.min_int(srcLen - 1, srcFromIdx + len - 1) 
-    while (s.contents <= sMax && d.contents < dstLen) {
-        dst[d.contents] = src[s.contents]
-        d.contents = d.contents + 1
-        s.contents = s.contents + 1
-    }
-}
-
 let applySubs = (expr, subs): expr => {
     let resultSize = ref(0)
     expr->Js_array2.forEach(s => {
@@ -84,7 +71,7 @@ let applySubs = (expr, subs): expr => {
         } else {
             let subExpr = subs[s]
             let len = subExpr->Js_array2.length-1
-            copySubArray(~src=subExpr, ~srcFromIdx=1, ~dst=res, ~dstFromIdx=r.contents, ~len)
+            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=1, ~dst=res, ~dstFromIdx=r.contents, ~len)
             r.contents = r.contents + len
         }
         e.contents = e.contents + 1
