@@ -14,7 +14,7 @@ $( This file is the introductory formal system example described
    in Chapter 2 of the Meamath book. $)
 
 $( Declare the constant symbols we will use $)
-    $c 0 + = -> ( ) term wff |- $.
+    $c 0 + = -> ( ) term wff |- [ ] { } $.
 $( Declare the metavariables we will use $)
     $v t r s P Q $.
 $( Specify properties of the metavariables $)

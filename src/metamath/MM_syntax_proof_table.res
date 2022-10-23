@@ -115,6 +115,7 @@ let updateDist: proofTable => unit = tbl => {
                                 queue->Belt_MutableQueue.add(child)
                             })
                         }
+                        | _ => ()
                     }
                 })
             }

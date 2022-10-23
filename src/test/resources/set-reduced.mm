@@ -12071,6 +12071,7 @@ $)
   $( Declare the primitive constant symbols for propositional calculus. $)
   $c ( $.  $( Left parenthesis $)
   $c ) $.  $( Right parenthesis $)
+  $c [ ] { } $.
   $c -> $. $( Right arrow (read:  "implies") $)
   $c -. $. $( Right handle (read:  "not") $)
   $c wff $. $( Well-formed formula symbol (read:  "the following symbol

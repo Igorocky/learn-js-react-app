@@ -67,7 +67,7 @@ let applySubs = (expr, subs): expr => {
         } else {
             let subExpr = subs.exprs[s]
             let len = subExpr->Js_array2.length
-            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=0, ~dst=res, ~dstFromIdx=r.contents, ~len)
+            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=subs.begins[s], ~dst=res, ~dstFromIdx=r.contents, ~len)
             r.contents = r.contents + len
         }
         e.contents = e.contents + 1
@@ -75,7 +75,7 @@ let applySubs = (expr, subs): expr => {
     res
 }
 
-let suggestPossibleProfs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
+let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
     let exprToProve = recToProve.expr
     let foundHyp = ctx->forEachHypothesis(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
     switch foundHyp {
@@ -93,8 +93,7 @@ let suggestPossibleProfs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
                     ~parenCnt,
                     ~consumer = subs => {
                         if (subs.isDefined->Js_array2.every(b=>b)) {
-                            let args: array<int> = frmData.frame.hyps
-                                ->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
+                            let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
                             proofs->Js_array2.push(Assertion({
                                 args,
                                 label: frmData.frame.label
@@ -109,17 +108,36 @@ let suggestPossibleProfs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
     }
 }
 
-let findProof = (ctx, expr) => {
+let printProofRec = (ctx,r) => {
+    let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
+    let proofs = switch r.src {
+        | None => "no-proofs"
+        | Some(proofs) => Belt_Int.toString(proofs->Js_array2.length) ++ "-proofs"
+    }
+    let proved = if r.proved { "proved" } else { "not-proved" }
+    `${proved} | ${proofs} | ${exprStr}`
+}
+
+let printTbl = (ctx,tbl) => {
+    Js.Console.log("--- TBL ---------------------------------------------------------------------------")
+    tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
+        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
+    })
+    Js.Console.log("-----------------------------------------------------------------------------------")
+}
+
+let findProof = (~ctx, ~expr) => {
     let frameData = prepareFrameData(ctx)
     let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
     let tbl = createSyntaxProofTable(expr)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
     while (!tbl[0].proved && exprToProveIdx.contents->Belt_Option.isSome) {
-        suggestPossibleProfs(~tbl, ~ctx, ~frameData, ~parenCnt,
+        suggestPossibleProofs(~tbl, ~ctx, ~frameData, ~parenCnt,
             ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
         )
         tbl->markProved
         tbl->updateDist
         exprToProveIdx.contents = tbl->getNextExprToProveIdx
     }
+    tbl
 }
