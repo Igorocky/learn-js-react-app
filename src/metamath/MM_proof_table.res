@@ -1,5 +1,6 @@
 open MM_context
 open MM_parser
+open MM_proof_verifier
 
 type exprSource =
     | Hypothesis({label:string})
@@ -142,35 +143,47 @@ module ExprCmp = Belt.Id.MakeComparable({
     }
 })
 
-let getChildren = src => {
-    switch r.src {
+let getChildren = (tbl,src) => {
+    switch src {
         | None => raise(MmException({msg: `All records in a proofTable must have non empty source.`}))
         | Some([Assertion({args})]) => Some(args->Js_array2.map(a=>tbl[a]))
         | Some([Hypothesis(_)]) => None
         | _ => raise(MmException({
-            msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(r.src)}`
+            msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(src)}`
         }))
     }
 }
 
-let traverseRecords = (ctx,tbl,~onProcess,~onReprocess) => {
+let traverseRecordsInRpnOrder = (ctx,tbl,~onProcess,~onReprocess) => {
     let passedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
     let repeatedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
     let repeatedExprs = []
     Expln_utils_data.traverseTree(
         (),
         tbl[0],
-        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(r.src) } ,
+        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(tbl,r.src) } ,
         ~process = (_, r) => {
-            if (passedExprs->Belt_MutableSet.has(r.expr)) {
-                let reprocessFirstTime = !(repeatedExprsSet->Belt_MutableSet.has(r.expr))
-                if (reprocessFirstTime) {
-                    repeatedExprsSet->Belt_MutableSet.add(r.expr)
+            switch r.src {
+                | Some([Hypothesis(_)]) => onProcess(r)
+                | _ => ()
+            }
+            None
+        },
+        ~postProcess = (_, r) => {
+            switch r.src {
+                | Some([Assertion(_)]) => {
+                    if (passedExprs->Belt_MutableSet.has(r.expr)) {
+                        let reprocessFirstTime = !(repeatedExprsSet->Belt_MutableSet.has(r.expr))
+                        if (reprocessFirstTime) {
+                            repeatedExprsSet->Belt_MutableSet.add(r.expr)
+                        }
+                        onReprocess(r,reprocessFirstTime)
+                    } else {
+                        passedExprs->Belt_MutableSet.add(r.expr)
+                        onProcess(r)
+                    }
                 }
-                onReprocess(r,reprocessFirstTime)
-            } else {
-                passedExprs->Belt_MutableSet.add(r.expr)
-                onProcess(r)
+                | _ => ()
             }
             None
         },
@@ -180,7 +193,7 @@ let traverseRecords = (ctx,tbl,~onProcess,~onReprocess) => {
 
 let findReusedExprs = (ctx,tbl):array<expr> => {
     let reusedExprs = []
-    traverseRecords(ctx,tbl,
+    traverseRecordsInRpnOrder(ctx,tbl,
         ~onProcess = _ => (),
         ~onReprocess = (r,first) => {
             if (first) {
@@ -191,7 +204,7 @@ let findReusedExprs = (ctx,tbl):array<expr> => {
     reusedExprs
 }
 
-let createProof = (ctx:mmContext, label:string, tbl:proofTable):proof => {
+let createProof = (ctx:mmContext, label:string, tbl:proofTable):(frame,proof) => {
     let tblLen = tbl->Js_array2.length
     if (tblLen == 0) {
         raise(MmException({msg:`Cannot extract a proof from empty proofTable.`}))
@@ -200,41 +213,55 @@ let createProof = (ctx:mmContext, label:string, tbl:proofTable):proof => {
     let mandHypLabelToInt = Belt_MapString.fromArray(
         frame.hyps->Js_array2.mapi(({label}, i) => (label, i+1))
     )
-    let manHypLen = mandHypLabelToInt->Belt_MapString.size
+    let mandHypLen = mandHypLabelToInt->Belt_MapString.size
     let labels = []
+    let labelToInt = label => {
+        mandHypLen + switch labels->Js_array2.indexOf(label) {
+            | -1 => labels->Js_array2.push(label)
+            | i => i+1
+        }
+    }
     let reusedExprs = findReusedExprs(ctx,tbl)
     let reusedExprToInt = reusedExprs
-        ->Js_array2.mapi((expr,i) => (expr,manHypLen+i+1))
+        ->Js_array2.mapi((expr,i) => (expr,i+1))
         ->Belt_Map.fromArray(~id=module(ExprCmp))
     let proofSteps = []
-    let passedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
-    traverseRecords(ctx,tbl,
+    traverseRecordsInRpnOrder(ctx,tbl,
         ~onProcess = r => {
-            switch r.src {
-                | Some([Hypothesis({label})]) => None
-                | Some([Assertion({args})]) => Some(args->Js_array2.map(a=>tbl[a]))
-                | _ => ()
+            let idx = switch r.src {
+                | Some([Hypothesis({label})]) => {
+                    switch mandHypLabelToInt->Belt_MapString.get(label) {
+                        | Some(i) => i
+                        | None => labelToInt(label)
+                    }
+                }
+                | Some([Assertion({label})]) => labelToInt(label)
+                | _ => raise(MmException({msg:`Cannot determine index of a proof step.`}))
+            }
+            proofSteps->Js_array2.push(idx)->ignore
+            if (reusedExprToInt->Belt_Map.has(r.expr)) {
+                proofSteps->Js_array2.push(0)->ignore
             }
         },
-        ~onReprocess = (r,first) => {
-            if (first) {
-                reusedExprs->Js_array2.push(r.expr)->ignore
-            }
+        ~onReprocess = (r,_) => {
+            proofSteps->Js_array2.push(-(reusedExprToInt->Belt_Map.getExn(r.expr)))->ignore
         }
     )
-    Expln_utils_data.traverseTree(
-        (),
-        tbl[0],
-        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(r.src) } ,
-        ~process = (_, r) => {
-            if (passedExprs->Belt_MutableSet.has(r.expr)) {
-                proofSteps->Js_array2.push(reusedExprToInt->Belt_Map.getExn(r.expr))
-            } else {
-                passedExprs->Belt_MutableSet.add(r.expr)
-            }
-            None
-        },
-        ()
-    )->ignore
+    let labelsLastIdx = mandHypLen + labels->Js.Array2.length
+    (
+        frame,
+        Compressed({
+            labels,
+            compressedProofBlock: proofSteps->Js_array2.map(i => {
+                if (i == 0) {
+                    "Z"
+                } else if (i < 0) {
+                    intToCompressedProofStr(labelsLastIdx - i)
+                } else {
+                    intToCompressedProofStr(i)
+                }
+            })->Expln_utils_common.strJoin(~sep="", ())
+        })
+    )
 
 }

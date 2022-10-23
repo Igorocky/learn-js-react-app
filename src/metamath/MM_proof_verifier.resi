@@ -10,3 +10,4 @@ let getExprFromNode: proofNode => expr
 
 let compressedProofBlockToArray: string => array<string>
 let compressedProofStrToInt: string => int
+let intToCompressedProofStr: int => string

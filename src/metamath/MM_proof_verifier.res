@@ -163,6 +163,20 @@ let compressedProofStrToInt = str => {
     res.contents*20 + compressedProofCharCodeToInt(charCode(str, len-1))
 }
 
+let intToCompressedProofStr: int => string = i => {
+    if (i < 1) {
+        raise(MmException({msg:`intToCompressedProofStr: i < 1`}))
+    } else {
+        let res = [Js_string2.fromCharCode(aCode + mod(i-1,20))]
+        let i = ref((i-1)/20)
+        while (i.contents > 0) {
+            res->Js_array2.push(Js_string2.fromCharCode(uCode + mod(i.contents-1, 5)))->ignore
+            i.contents = (i.contents-1) / 5
+        }
+        res->Js_array2.reverseInPlace->Expln_utils_common.strJoin(~sep="", ())
+    }
+}
+
 let applyAsrt = (stack:array<proofNode>, frame):unit => {
     let stackLength = stack->Js_array2.length
     if (stackLength < frame.numOfArgs) {
