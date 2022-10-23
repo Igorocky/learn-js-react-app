@@ -380,3 +380,11 @@ let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
     let mandatoryVars: Belt_SetInt.t = extractMandatoryVariables(ctx, expr)
     extractMandatoryHypotheses(ctx, mandatoryVars)
 }
+
+let rec forEachFrame: (mmContext, frame => unit) => unit = (ctx, consumer) => {
+    switch ctx.parent {
+        | Some(pCtx) => pCtx->forEachFrame(consumer)
+        | None => ()
+    }
+    ctx.frames->Belt_MutableMapString.forEach((_,frm) => consumer(frm))
+}

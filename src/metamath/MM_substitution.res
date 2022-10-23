@@ -402,6 +402,16 @@ let iterateSubstitutions = (
     }
 }
 
+let createSubs: (~numOfVars:int) => subs = (~numOfVars) => {
+    {
+        size: numOfVars,
+        begins: Belt_Array.make(numOfVars, 0),
+        ends: Belt_Array.make(numOfVars, 0),
+        exprs: Belt_Array.make(numOfVars, []),
+        isDefined: Belt_Array.make(numOfVars, false),
+    }
+}
+
 //let numberOfStates = (numOfVars, subExprLength) => {
     //let n = subExprLen - 1
     //let k = numOfVars - 1
@@ -459,13 +469,7 @@ let test_iterateSubstitutions: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => ar
         ->Js_array2.filter(i => i >= 0)
         ->Expln_utils_common.arrIntDistinct
         ->Js_array2.length
-    let subs = {
-        size: numOfVars,
-        begins: Belt_Array.make(numOfVars, 0),
-        ends: Belt_Array.make(numOfVars, 0),
-        exprs: Belt_Array.make(numOfVars, []),
-        isDefined: Belt_Array.make(numOfVars, false),
-    }
+    let subs = createSubs(~numOfVars)
     let result = []
     iterateSubstitutions(
         ~frmExpr, 

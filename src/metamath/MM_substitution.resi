@@ -3,6 +3,22 @@ open MM_context
 
 type contunieInstruction = Continue | Stop
 
+type constParts = {
+    length: int,
+    begins: array<int>,
+    ends: array<int>,
+    remainingMinLength: array<int>,
+}
+
+type varGroup = {
+    leftConstPartIdx:int,
+    frmExpr:expr,
+    varsBeginIdx:int,
+    numOfVars:int,
+    mutable exprBeginIdx:int,
+    mutable exprEndIdx:int
+}
+
 type subs = {
     size: int,
     begins: array<int>,
@@ -11,9 +27,10 @@ type subs = {
     isDefined: array<bool>,
 }
 
-//let createParenCounter: (mmContext,array<(string,string)>) => parentCnt
-
-//let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
+let createConstParts: expr => constParts
+let createMatchingConstParts: constParts => constParts
+let createVarGroups: (~frmExpr:expr, ~frmConstParts:constParts) => array<varGroup>
+let createSubs: (~numOfVars:int) => subs
 
 //------------------------- TEST ---------------------------
 
