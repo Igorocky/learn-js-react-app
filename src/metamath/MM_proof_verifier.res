@@ -259,9 +259,13 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
         | Uncompressed({labels}) => applyUncompressedProof(ctx, stack, labels)
     }
     if (stack->Js_array2.length != 1) {
-        raise(MmException({msg:`stack->Js_array2.length != 1`}))
+        raise(MmException({msg:`stack->Js_array2.length is ${stack->Js_array2.length->Belt_Int.toString} but must be 1.`}))
     } else if (stack->getExprFromStack(0) != expr) {
-        raise(MmException({msg:`stack[0] != expr`}))
+        raise(MmException({msg:
+            `stack[0] != expr` 
+                ++ `\nstack[0] is '${stack->getExprFromStack(0)->ctxExprToStr(ctx,_)->Expln_utils_common.strJoin(~sep=" ", ())}'`
+                ++ `\nexpr is     '${expr->ctxExprToStr(ctx,_)->Expln_utils_common.strJoin(~sep=" ", ())}'`
+        }))
     } else {
         stack[0]
     }
