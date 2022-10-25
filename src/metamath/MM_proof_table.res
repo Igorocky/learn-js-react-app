@@ -204,14 +204,17 @@ let findReusedExprs = (ctx,tbl):array<expr> => {
     reusedExprs
 }
 
-let createProof = (ctx:mmContext, label:string, tbl:proofTable):(frame,proof) => {
+let createProof = (ctx:mmContext, tbl:proofTable):proof => {
     let tblLen = tbl->Js_array2.length
     if (tblLen == 0) {
         raise(MmException({msg:`Cannot extract a proof from empty proofTable.`}))
     }
-    let frame = createFrame(ctx, label, ctx->ctxExprToStr(tbl[0].expr))
+    if (!tbl[0].proved) {
+        raise(MmException({msg:`The first record in a proofTable must be proved.`}))
+    }
+    let mandHyps = getMandHyps(ctx, tbl[0].expr)
     let mandHypLabelToInt = Belt_MapString.fromArray(
-        frame.hyps->Js_array2.mapi(({label}, i) => (label, i+1))
+        mandHyps->Js_array2.mapi(({label}, i) => (label, i+1))
     )
     let mandHypLen = mandHypLabelToInt->Belt_MapString.size
     let labels = []
@@ -248,20 +251,17 @@ let createProof = (ctx:mmContext, label:string, tbl:proofTable):(frame,proof) =>
         }
     )
     let labelsLastIdx = mandHypLen + labels->Js.Array2.length
-    (
-        frame,
-        Compressed({
-            labels,
-            compressedProofBlock: proofSteps->Js_array2.map(i => {
-                if (i == 0) {
-                    "Z"
-                } else if (i < 0) {
-                    intToCompressedProofStr(labelsLastIdx - i)
-                } else {
-                    intToCompressedProofStr(i)
-                }
-            })->Expln_utils_common.strJoin(~sep="", ())
-        })
-    )
+    Compressed({
+        labels,
+        compressedProofBlock: proofSteps->Js_array2.map(i => {
+            if (i == 0) {
+                "Z"
+            } else if (i < 0) {
+                intToCompressedProofStr(labelsLastIdx - i)
+            } else {
+                intToCompressedProofStr(i)
+            }
+        })->Expln_utils_common.strJoin(~sep="", ())
+    })
 
 }

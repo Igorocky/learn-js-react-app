@@ -19,4 +19,4 @@ let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int
 let markProved: proofTable => unit
 let updateDist: proofTable => unit
-let createProof: (mmContext, string, proofTable) => (frame,proof)
+let createProof: (mmContext, proofTable) => proof

@@ -3,6 +3,7 @@ open MM_parser
 open MM_context
 open MM_syntax_prover
 open MM_proof_table
+open MM_proof_verifier
 
 let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     //given
@@ -13,15 +14,22 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let proofTable = findProof(~ctx, ~expr)
 
     //when
-    let actualProof = switch createProof(ctx, "test", proofTable) {
-        | (_, Compressed({labels, compressedProofBlock})) => {
+    let actualProof = createProof(ctx, proofTable)
+
+    //then
+    try {
+        verifyProof(ctx, expr, actualProof)
+    } catch {
+        | MmException({msg}) => failMsg("Proof verification failed for '" ++ exprStr ++ "'\nwith msg: '" ++ msg ++ "'")
+        | _ => failMsg("Proof verification failed for '" ++ exprStr ++ "'")
+    }->ignore
+    let actualProofStr = switch actualProof {
+        | Compressed({labels, compressedProofBlock}) => {
             "( " ++ (labels->Expln_utils_common.strJoin(~sep=" ", ())) ++ " ) " ++ compressedProofBlock
         }
         | p => failMsg(`Unexpected form of proof: ${Expln_utils_common.stringify(p)}`)
     }
-
-    //then
-    assertEqMsg(actualProof, expectedProof, `testCreateProof for: ${exprStr}`)
+    assertEqMsg(actualProofStr, expectedProof, `testCreateProof for: ${exprStr}`)
 }
 
 describe("createProof", (.) => {
