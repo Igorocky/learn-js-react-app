@@ -12,16 +12,13 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
     let proofTable = findProof(~ctx, ~expr)
-    proofTablePrint(ctx,proofTable,"proofTable")
 
     //when
     let actualProof = createProof(ctx, proofTable)
 
     //then
     try {
-        let proofNode = verifyProof(ctx, expr, actualProof)
-        let tbl2 = createOrderedProofTableFromProof(ctx,proofNode)
-        proofTablePrint(ctx,tbl2,"tbl2")
+        verifyProof(ctx, expr, actualProof)
     } catch {
         | MmException({msg}) => failMsg("Proof verification failed for '" ++ exprStr ++ "'\nwith msg: '" ++ msg ++ "'")
         | _ => failMsg("Proof verification failed for '" ++ exprStr ++ "'")
@@ -48,6 +45,6 @@ describe("createProof", (.) => {
         testCreateProof(~mmFile=setReduced, ~exprStr="wff ph", ~expectedProof="(  ) A")
         testCreateProof(~mmFile=setReduced, ~exprStr="wff ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )", ~expectedProof="( wb wi wn ) ABCABDBADEDEC")
 
-        testCreateProof(~mmFile=setReduced, ~exprStr="wff -. ( ( ( ph <-> ps ) -> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) ) -> -. ( -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) -> ( ph <-> ps ) ) )", ~expectedProof="---------")
+        testCreateProof(~mmFile=setReduced, ~exprStr="wff -. ( ( ( ph <-> ps ) -> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) ) -> -. ( -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) -> ( ph <-> ps ) ) )", ~expectedProof="( wb wi wn ) ABCZABDBADEDEZDGFDEDE")
     })
 })

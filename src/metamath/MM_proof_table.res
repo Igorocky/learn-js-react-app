@@ -15,6 +15,34 @@ type proofRecord = {
 
 type proofTable = array<proofRecord>
 
+let printProofRec = (ctx,r) => {
+    let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
+    let proofs = switch r.src {
+        | None => "no-proofs"
+        | Some(proofs) => {
+            let proofsLen = proofs->Js_array2.length
+            if (r.proved && proofsLen == 1) {
+                switch proofs[0] {
+                    | Hypothesis({label}) => "hyp: " ++ label
+                    | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
+                }
+            } else {
+                Belt_Int.toString(proofsLen) ++ "-proofs"
+            }
+        }
+    }
+    let proved = if r.proved { "proved" } else { "not-proved" }
+    `${proved} | ${proofs} | ${exprStr}`
+}
+
+let proofTablePrint = (ctx,tbl,title) => {
+    Js.Console.log(`--- TBL ${title} ---------------------------------------------------------------------------`)
+    tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
+        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
+    })
+    Js.Console.log("-----------------------------------------------------------------------------------")
+}
+
 let createProofTable: expr => array<proofRecord> = exprToProve => {
     [{
         expr:exprToProve,
@@ -143,28 +171,35 @@ module ExprCmp = Belt.Id.MakeComparable({
     }
 })
 
-let getChildren = (tbl,src) => {
-    switch src {
-        | None => raise(MmException({msg: `All records in a proofTable must have non empty source.`}))
-        | Some([Assertion({args})]) => Some(args->Js_array2.map(a=>tbl[a]))
-        | Some([Hypothesis(_)]) => None
-        | _ => raise(MmException({
-            msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(src)}`
-        }))
-    }
-}
 
-let traverseRecordsInRpnOrder = (ctx,tbl,~onProcess,~onReprocess) => {
-    let passedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
-    let repeatedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
-    let repeatedExprs = []
+let traverseRecordsInRpnOrder = (ctx,tbl,~onUse,~onReuse) => {
+    let savedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
+    let reusedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
     Expln_utils_data.traverseTree(
         (),
         tbl[0],
-        (_, r) => if (passedExprs->Belt_MutableSet.has(r.expr)) { None } else { getChildren(tbl,r.src) } ,
+        (_, r) => {
+            switch r.src {
+                | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for proof generation doesn't have a source.`}))
+                | Some([Hypothesis(_)]) => None
+                | Some([Assertion({args})]) => if (savedExprs->Belt_MutableSet.has(r.expr)) { None } else { Some(args->Js_array2.map(a=>tbl[a])) }
+                | _ => raise(MmException({
+                    msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(r.src)}`
+                }))
+            }
+        },
         ~process = (_, r) => {
             switch r.src {
-                | Some([Hypothesis(_)]) => onProcess(r)
+                | Some([Hypothesis(_)]) => onUse(r)
+                | Some([Assertion(_)]) => {
+                    if (savedExprs->Belt_MutableSet.has(r.expr)) {
+                        let firstReusage = !(reusedExprsSet->Belt_MutableSet.has(r.expr))
+                        if (firstReusage) {
+                            reusedExprsSet->Belt_MutableSet.add(r.expr)
+                        }
+                        onReuse(r,firstReusage)
+                    }
+                }
                 | _ => ()
             }
             None
@@ -172,15 +207,9 @@ let traverseRecordsInRpnOrder = (ctx,tbl,~onProcess,~onReprocess) => {
         ~postProcess = (_, r) => {
             switch r.src {
                 | Some([Assertion(_)]) => {
-                    if (passedExprs->Belt_MutableSet.has(r.expr)) {
-                        let reprocessFirstTime = !(repeatedExprsSet->Belt_MutableSet.has(r.expr))
-                        if (reprocessFirstTime) {
-                            repeatedExprsSet->Belt_MutableSet.add(r.expr)
-                        }
-                        onReprocess(r,reprocessFirstTime)
-                    } else {
-                        passedExprs->Belt_MutableSet.add(r.expr)
-                        onProcess(r)
+                    if (!(savedExprs->Belt_MutableSet.has(r.expr))) {
+                        savedExprs->Belt_MutableSet.add(r.expr)
+                        onUse(r)
                     }
                 }
                 | _ => ()
@@ -191,17 +220,17 @@ let traverseRecordsInRpnOrder = (ctx,tbl,~onProcess,~onReprocess) => {
     )->ignore
 }
 
-let findReusedExprs = (ctx,tbl):array<expr> => {
+let collectReusedExprs = (ctx,tbl):Belt_Set.t<expr, ExprCmp.identity> => {
     let reusedExprs = []
     traverseRecordsInRpnOrder(ctx,tbl,
-        ~onProcess = _ => (),
-        ~onReprocess = (r,first) => {
-            if (first) {
+        ~onUse = _ => (),
+        ~onReuse = (r,firstReusage) => {
+            if (firstReusage) {
                 reusedExprs->Js_array2.push(r.expr)->ignore
             }
         }
     )
-    reusedExprs
+    Belt_Set.fromArray(reusedExprs, ~id=module(ExprCmp))
 }
 
 let createProof = (ctx:mmContext, tbl:proofTable):proof => {
@@ -224,13 +253,11 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
             | i => i+1
         }
     }
-    let reusedExprs = findReusedExprs(ctx,tbl)
-    let reusedExprToInt = reusedExprs
-        ->Js_array2.mapi((expr,i) => (expr,i+1))
-        ->Belt_Map.fromArray(~id=module(ExprCmp))
+    let reusedExprs = collectReusedExprs(ctx,tbl)
+    let reusedExprToInt = Belt_MutableMap.make(~id=module(ExprCmp))
     let proofSteps = []
     traverseRecordsInRpnOrder(ctx,tbl,
-        ~onProcess = r => {
+        ~onUse = r => {
             let idx = switch r.src {
                 | Some([Hypothesis({label})]) => {
                     switch mandHypLabelToInt->Belt_MapString.get(label) {
@@ -242,12 +269,13 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
                 | _ => raise(MmException({msg:`Cannot determine index of a proof step.`}))
             }
             proofSteps->Js_array2.push(idx)->ignore
-            if (reusedExprToInt->Belt_Map.has(r.expr)) {
+            if (reusedExprs->Belt_Set.has(r.expr)) {
                 proofSteps->Js_array2.push(0)->ignore
+                reusedExprToInt->Belt_MutableMap.set(r.expr, reusedExprToInt->Belt_MutableMap.size + 1)
             }
         },
-        ~onReprocess = (r,_) => {
-            proofSteps->Js_array2.push(-(reusedExprToInt->Belt_Map.getExn(r.expr)))->ignore
+        ~onReuse = (r,_) => {
+            proofSteps->Js_array2.push(-(reusedExprToInt->Belt_MutableMap.getExn(r.expr)))->ignore
         }
     )
     let labelsLastIdx = mandHypLen + labels->Js.Array2.length
@@ -282,28 +310,6 @@ let createProofTableFromProof: (mmContext, proofNode) => proofTable = (ctx,proof
             switch n {
                 | Hypothesis(_) => None
                 | Calculated({args}) => Some(args)
-                //| Calculated({args, asrtLabel, expr}) => {
-                    //switch tbl->Js.Array2.find(r => r.expr->exprEq(expr)) {
-                        //| None => Some(args)
-                        //| Some(existingRecord) => {
-                            //if (!existingRecord.proved) {
-                                //raise(MmException({msg:`!existingRecord.proved`}))
-                            //}
-                            //switch existingRecord.src {
-                                //| Some([Assertion({args:existingArgs, label:existingLabel})]) => {
-                                    //let existingArgsExpr = existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr)
-                                    //let newArgsExpr = args->Js_array2.map(getExprFromNode)
-                                    //if (existingArgsExpr == newArgsExpr && existingLabel == asrtLabel) {
-                                        //None
-                                    //} else {
-                                        //raise(MmException({msg:`Unexpected condition in getChildNodes in Calculated: ${printAsrtApplication(ctx, existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr), existingLabel)} vs ${printAsrtApplication(ctx,args->Js_array2.map(getExprFromNode), asrtLabel)}`}))
-                                    //}
-                                //}
-                                //| _ => raise(MmException({msg:`Unexpected condition in getChildNodes in Calculated.`}))
-                            //}
-                        //}
-                    //}
-                //}
             }
         },
         ~process = (_,n) => {
@@ -352,34 +358,6 @@ let createProofTableFromProof: (mmContext, proofNode) => proofTable = (ctx,proof
         ()
     )->ignore
     tbl
-}
-
-let printProofRec = (ctx,r) => {
-    let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
-    let proofs = switch r.src {
-        | None => "no-proofs"
-        | Some(proofs) => {
-            let proofsLen = proofs->Js_array2.length
-            if (r.proved && proofsLen == 1) {
-                switch proofs[0] {
-                    | Hypothesis({label}) => "hyp: " ++ label
-                    | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
-                }
-            } else {
-                Belt_Int.toString(proofsLen) ++ "-proofs"
-            }
-        }
-    }
-    let proved = if r.proved { "proved" } else { "not-proved" }
-    `${proved} | ${proofs} | ${exprStr}`
-}
-
-let proofTablePrint = (ctx,tbl,title) => {
-    Js.Console.log(`--- TBL ${title} ---------------------------------------------------------------------------`)
-    tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
-        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
-    })
-    Js.Console.log("-----------------------------------------------------------------------------------")
 }
 
 let createOrderedProofTableFromProof: (mmContext, proofNode) => proofTable  = (ctx,proofNode) => {
