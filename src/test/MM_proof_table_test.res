@@ -12,13 +12,16 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
     let proofTable = findProof(~ctx, ~expr)
+    proofTablePrint(ctx,proofTable,"proofTable")
 
     //when
     let actualProof = createProof(ctx, proofTable)
 
     //then
     try {
-        verifyProof(ctx, expr, actualProof)
+        let proofNode = verifyProof(ctx, expr, actualProof)
+        let tbl2 = createProofTableFromProof(ctx,proofNode)
+        proofTablePrint(ctx,tbl2,"tbl2")
     } catch {
         | MmException({msg}) => failMsg("Proof verification failed for '" ++ exprStr ++ "'\nwith msg: '" ++ msg ++ "'")
         | _ => failMsg("Proof verification failed for '" ++ exprStr ++ "'")

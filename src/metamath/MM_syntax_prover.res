@@ -107,38 +107,10 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
     }
 }
 
-let printProofRec = (ctx,r) => {
-    let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
-    let proofs = switch r.src {
-        | None => "no-proofs"
-        | Some(proofs) => {
-            let proofsLen = proofs->Js_array2.length
-            if (r.proved && proofsLen == 1) {
-                switch proofs[0] {
-                    | Hypothesis({label}) => "hyp: " ++ label
-                    | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
-                }
-            } else {
-                Belt_Int.toString(proofsLen) ++ "-proofs"
-            }
-        }
-    }
-    let proved = if r.proved { "proved" } else { "not-proved" }
-    `${proved} | ${proofs} | ${exprStr}`
-}
-
-let printTbl = (ctx,tbl) => {
-    Js.Console.log("--- TBL ---------------------------------------------------------------------------")
-    tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
-        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
-    })
-    Js.Console.log("-----------------------------------------------------------------------------------")
-}
-
 let findProof = (~ctx, ~expr) => {
     let frameData = prepareFrameData(ctx)
     let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
-    let tbl = createSyntaxProofTable(expr)
+    let tbl = createProofTable(expr)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
     while (!tbl[0].proved && exprToProveIdx.contents->Belt_Option.isSome) {
         suggestPossibleProofs(~tbl, ~ctx, ~frameData, ~parenCnt,

@@ -1,5 +1,6 @@
 open MM_context
 open MM_parser
+open MM_proof_verifier
 
 type exprSource =
     | Hypothesis({label:string})
@@ -14,9 +15,11 @@ type proofRecord = {
 
 type proofTable = array<proofRecord>
 
-let createSyntaxProofTable: expr => proofTable
+let createProofTable: expr => proofTable
+let createProofTableFromProof: (mmContext, proofNode) => proofTable 
 let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int
 let markProved: proofTable => unit
 let updateDist: proofTable => unit
 let createProof: (mmContext, proofTable) => proof
+let proofTablePrint: (mmContext, proofTable, string) => unit

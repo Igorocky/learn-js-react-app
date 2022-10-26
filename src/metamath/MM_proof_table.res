@@ -15,7 +15,7 @@ type proofRecord = {
 
 type proofTable = array<proofRecord>
 
-let createSyntaxProofTable: expr => array<proofRecord> = exprToProve => {
+let createProofTable: expr => array<proofRecord> = exprToProve => {
     [{
         expr:exprToProve,
         proved:false,
@@ -264,4 +264,120 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
         })->Expln_utils_common.strJoin(~sep="", ())
     })
 
+}
+
+let printAsrtApplication = (ctx,args,label) => {
+    args
+        ->Js_array2.map(e=>ctxExprToStr(ctx,e)->Expln_utils_common.strJoin(~sep=" ", ()))
+        -> Expln_utils_common.strJoin(~sep=", ", ())
+        ++ " : " ++ label
+}
+
+let createProofTableFromProof: (mmContext, proofNode) => proofTable = (ctx,proofNode) => {
+    let tbl = []
+    Expln_utils_data.traverseTree(
+        (),
+        proofNode,
+        (_, n) => {
+            switch n {
+                | Hypothesis(_) => None
+                | Calculated({args}) => Some(args)
+                //| Calculated({args, asrtLabel, expr}) => {
+                    //switch tbl->Js.Array2.find(r => r.expr->exprEq(expr)) {
+                        //| None => Some(args)
+                        //| Some(existingRecord) => {
+                            //if (!existingRecord.proved) {
+                                //raise(MmException({msg:`!existingRecord.proved`}))
+                            //}
+                            //switch existingRecord.src {
+                                //| Some([Assertion({args:existingArgs, label:existingLabel})]) => {
+                                    //let existingArgsExpr = existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr)
+                                    //let newArgsExpr = args->Js_array2.map(getExprFromNode)
+                                    //if (existingArgsExpr == newArgsExpr && existingLabel == asrtLabel) {
+                                        //None
+                                    //} else {
+                                        //raise(MmException({msg:`Unexpected condition in getChildNodes in Calculated: ${printAsrtApplication(ctx, existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr), existingLabel)} vs ${printAsrtApplication(ctx,args->Js_array2.map(getExprFromNode), asrtLabel)}`}))
+                                    //}
+                                //}
+                                //| _ => raise(MmException({msg:`Unexpected condition in getChildNodes in Calculated.`}))
+                            //}
+                        //}
+                    //}
+                //}
+            }
+        },
+        ~process = (_,n) => {
+            switch n {
+                | Hypothesis({hypLabel,expr}) => {
+                    let i = tbl->addExprToProve(expr)
+                    if (tbl[i].proved) {
+                        switch tbl[i].src {
+                            | Some([Hypothesis({label:existingHypLabel})]) => {
+                                if (hypLabel != existingHypLabel) {
+                                    raise(MmException({msg:`tbl[i].proved: ${existingHypLabel} vs Hypothesis({${hypLabel},${ctxExprToStr(ctx,expr)->Expln_utils_common.strJoin(~sep=" ", ())}})`}))
+                                }
+                            }
+                            | _ => raise(MmException({msg:`tbl[i].proved in Hypothesis.`}))
+                        }
+                    } else {
+                        tbl[i].proved = true
+                        tbl[i].src = Some([Hypothesis({label:hypLabel})])
+                    }
+                }
+                | Calculated({args, asrtLabel, expr}) => {
+                    let i = tbl->addExprToProve(expr)
+                    if (tbl[i].proved) {
+                        //raise(MmException({msg:`tbl[i].proved in Calculated.`}))
+                        switch tbl[i].src {
+                            | Some([Assertion({args:existingArgs, label:existingLabel})]) => {
+                                let existingArgsExpr = existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr)
+                                let newArgsExpr = args->Js_array2.map(getExprFromNode)
+                                if (existingArgsExpr != newArgsExpr || existingLabel != asrtLabel) {
+                                    raise(MmException({msg:`tbl[i].proved in Calculated: ${printAsrtApplication(ctx,existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr), existingLabel)} vs ${printAsrtApplication(ctx, args->Js_array2.map(getExprFromNode), asrtLabel)}`}))
+                                }
+                            }
+                            | _ => raise(MmException({msg:`tbl[i].proved in Calculated.`}))
+                        }
+                    } else {
+                        tbl[i].proved = true
+                        tbl[i].src = Some([Assertion({
+                            label:asrtLabel,
+                            args: args->Js_array2.map(n => tbl->addExprToProve(n->getExprFromNode))
+                        })])
+                    }
+                }
+            }
+            None
+        },
+        ()
+    )->ignore
+    tbl
+}
+
+let printProofRec = (ctx,r) => {
+    let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
+    let proofs = switch r.src {
+        | None => "no-proofs"
+        | Some(proofs) => {
+            let proofsLen = proofs->Js_array2.length
+            if (r.proved && proofsLen == 1) {
+                switch proofs[0] {
+                    | Hypothesis({label}) => "hyp: " ++ label
+                    | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
+                }
+            } else {
+                Belt_Int.toString(proofsLen) ++ "-proofs"
+            }
+        }
+    }
+    let proved = if r.proved { "proved" } else { "not-proved" }
+    `${proved} | ${proofs} | ${exprStr}`
+}
+
+let proofTablePrint = (ctx,tbl,title) => {
+    Js.Console.log(`--- TBL ${title} ---------------------------------------------------------------------------`)
+    tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
+        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
+    })
+    Js.Console.log("-----------------------------------------------------------------------------------")
 }
