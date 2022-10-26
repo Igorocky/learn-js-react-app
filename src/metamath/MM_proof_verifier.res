@@ -210,7 +210,7 @@ let applyUncompressedProof = (ctx, stack, proofLabels) => {
     })
 }
 
-let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock) => {
+let applyCompressedProof = (ctx, expr, stack, labels, compressedProofBlock):unit => {
     let steps = compressedProofBlockToArray(compressedProofBlock)
     let hyps = getMandHyps(ctx, expr)
     let hypLen = hyps->Js_array2.length

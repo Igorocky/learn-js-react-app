@@ -381,3 +381,62 @@ let proofTablePrint = (ctx,tbl,title) => {
     })
     Js.Console.log("-----------------------------------------------------------------------------------")
 }
+
+let createOrderedProofTableFromProof: (mmContext, proofNode) => proofTable  = (ctx,proofNode) => {
+    let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
+    let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
+    let tbl = []
+    Expln_utils_data.traverseTree(
+        (),
+        proofNode,
+        (_,n) => {
+            switch n {
+                | Hypothesis(_) => None
+                | Calculated({args,expr}) => {
+                    if (processedExprs->Belt_MutableSet.has(expr)) {
+                        None
+                    } else {
+                        Some(args)
+                    }
+                }
+            }
+        },
+        ~process = (_, n) => {
+            switch n {
+                | Hypothesis({hypLabel,expr}) => {
+                    if (exprToIdx->Belt_MutableMap.get(expr)->Belt_Option.isNone) {
+                        let idx = tbl->Js_array2.push({dist:-1, proved:true, src:Some([Hypothesis({label:hypLabel})]), expr})-1
+                        exprToIdx->Belt_MutableMap.set(expr,idx)
+                    }
+                }
+                | _ => ()
+            }
+            None
+        },
+        ~postProcess = (_, n) => {
+            switch n {
+                | Calculated({args,asrtLabel,expr}) => {
+                    if (exprToIdx->Belt_MutableMap.get(expr)->Belt_Option.isNone) {
+                        let idx = tbl->Js_array2.push({
+                            dist:-1,
+                            proved:true,
+                            src:Some([Assertion({
+                                label:asrtLabel,
+                                args: args->Js_array2.map(n => {
+                                    let nExpr = getExprFromNode(n)
+                                    exprToIdx->Belt_MutableMap.get(nExpr)->Belt_Option.getWithDefault(-1)
+                                })
+                            })]), 
+                            expr
+                        })-1
+                        exprToIdx->Belt_MutableMap.set(expr,idx)
+                    }
+                }
+                | _ => ()
+            }
+            None
+        },
+        ()
+    )->ignore
+    tbl
+}

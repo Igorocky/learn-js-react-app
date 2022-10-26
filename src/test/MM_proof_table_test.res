@@ -20,7 +20,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     //then
     try {
         let proofNode = verifyProof(ctx, expr, actualProof)
-        let tbl2 = createProofTableFromProof(ctx,proofNode)
+        let tbl2 = createOrderedProofTableFromProof(ctx,proofNode)
         proofTablePrint(ctx,tbl2,"tbl2")
     } catch {
         | MmException({msg}) => failMsg("Proof verification failed for '" ++ exprStr ++ "'\nwith msg: '" ++ msg ++ "'")
