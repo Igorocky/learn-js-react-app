@@ -172,7 +172,7 @@ module ExprCmp = Belt.Id.MakeComparable({
 })
 
 
-let traverseRecordsInRpnOrder = (ctx,tbl,~onUse,~onReuse) => {
+let traverseRecordsInRpnOrder = (tbl,~onUse,~onReuse) => {
     let savedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
     let reusedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
     Expln_utils_data.traverseTree(
@@ -191,8 +191,17 @@ let traverseRecordsInRpnOrder = (ctx,tbl,~onUse,~onReuse) => {
         ~process = (_, r) => {
             switch r.src {
                 | Some([Hypothesis(_)]) => onUse(r)
+                | _ => ()
+            }
+            None
+        },
+        ~postProcess = (_, r) => {
+            switch r.src {
                 | Some([Assertion(_)]) => {
-                    if (savedExprs->Belt_MutableSet.has(r.expr)) {
+                    if (!(savedExprs->Belt_MutableSet.has(r.expr))) {
+                        savedExprs->Belt_MutableSet.add(r.expr)
+                        onUse(r)
+                    } else {
                         let firstReusage = !(reusedExprsSet->Belt_MutableSet.has(r.expr))
                         if (firstReusage) {
                             reusedExprsSet->Belt_MutableSet.add(r.expr)
@@ -204,25 +213,13 @@ let traverseRecordsInRpnOrder = (ctx,tbl,~onUse,~onReuse) => {
             }
             None
         },
-        ~postProcess = (_, r) => {
-            switch r.src {
-                | Some([Assertion(_)]) => {
-                    if (!(savedExprs->Belt_MutableSet.has(r.expr))) {
-                        savedExprs->Belt_MutableSet.add(r.expr)
-                        onUse(r)
-                    }
-                }
-                | _ => ()
-            }
-            None
-        },
         ()
     )->ignore
 }
 
-let collectReusedExprs = (ctx,tbl):Belt_Set.t<expr, ExprCmp.identity> => {
+let collectReusedExprs = (tbl):Belt_Set.t<expr, ExprCmp.identity> => {
     let reusedExprs = []
-    traverseRecordsInRpnOrder(ctx,tbl,
+    traverseRecordsInRpnOrder(tbl,
         ~onUse = _ => (),
         ~onReuse = (r,firstReusage) => {
             if (firstReusage) {
@@ -253,10 +250,10 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
             | i => i+1
         }
     }
-    let reusedExprs = collectReusedExprs(ctx,tbl)
+    let reusedExprs = collectReusedExprs(tbl)
     let reusedExprToInt = Belt_MutableMap.make(~id=module(ExprCmp))
     let proofSteps = []
-    traverseRecordsInRpnOrder(ctx,tbl,
+    traverseRecordsInRpnOrder(tbl,
         ~onUse = r => {
             let idx = switch r.src {
                 | Some([Hypothesis({label})]) => {
@@ -360,7 +357,7 @@ let createProofTableFromProof: (mmContext, proofNode) => proofTable = (ctx,proof
     tbl
 }
 
-let createOrderedProofTableFromProof: (mmContext, proofNode) => proofTable  = (ctx,proofNode) => {
+let createOrderedProofTableFromProof: proofNode => proofTable  = proofNode => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
     let tbl = []

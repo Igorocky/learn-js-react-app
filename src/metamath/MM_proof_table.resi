@@ -17,7 +17,7 @@ type proofTable = array<proofRecord>
 
 let createProofTable: expr => proofTable
 let createProofTableFromProof: (mmContext, proofNode) => proofTable 
-let createOrderedProofTableFromProof: (mmContext, proofNode) => proofTable 
+let createOrderedProofTableFromProof: proofNode => proofTable
 let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int
 let markProved: proofTable => unit
