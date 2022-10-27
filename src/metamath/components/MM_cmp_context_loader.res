@@ -39,7 +39,7 @@ let make = () => {
     }
 
     let rndCtxSettings = () => {
-        React.string("Ctx Settings")
+        <MM_cmp_context_settings />
     }
 
     let rndTabs = () => {
