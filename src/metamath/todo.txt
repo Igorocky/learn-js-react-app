@@ -1,2 +1,3 @@
+- validate distinct variables
 - use uncurried functions everywhere
 - replace a[i] with a->Js_array2.unsafe_get(i), or open Belt and replace with Option.getExn

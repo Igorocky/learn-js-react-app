@@ -19,6 +19,9 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     //then
     try {
         verifyProof(ctx, expr, actualProof)
+        //let proof = verifyProof(ctx, expr, actualProof)
+        //let tbl = createOrderedProofTableFromProof(proof)
+        //proofTablePrint(ctx,tbl,exprStr)
     } catch {
         | MmException({msg}) => failMsg("Proof verification failed for '" ++ exprStr ++ "'\nwith msg: '" ++ msg ++ "'")
         | _ => failMsg("Proof verification failed for '" ++ exprStr ++ "'")
