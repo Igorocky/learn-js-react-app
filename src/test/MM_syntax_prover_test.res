@@ -14,7 +14,7 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let proofTable = findProof(~ctx, ~expr)
 
     //then
-    assertEq(true, proofTable[0].proved)
+    assertEq(true, proofTable[0].proof->Belt_Option.isSome)
 }
 
 describe("findProof", (.) => {

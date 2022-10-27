@@ -8,15 +8,14 @@ type exprSource =
 
 type proofRecord = {
     expr:expr,
-    mutable proved:bool,
+    mutable proof:option<exprSource>,
     mutable dist:int,
-    mutable src: option<array<exprSource>>
+    mutable branches: option<array<exprSource>>
 }
 
 type proofTable = array<proofRecord>
 
 let createProofTable: expr => proofTable
-let createProofTableFromProof: (mmContext, proofNode) => proofTable 
 let createOrderedProofTableFromProof: proofNode => proofTable
 let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int

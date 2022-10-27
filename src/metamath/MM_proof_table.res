@@ -8,30 +8,30 @@ type exprSource =
 
 type proofRecord = {
     expr:expr,
-    mutable proved:bool,
+    mutable proof:option<exprSource>,
     mutable dist:int,
-    mutable src: option<array<exprSource>>
+    mutable branches: option<array<exprSource>>
 }
 
 type proofTable = array<proofRecord>
 
 let printProofRec = (ctx,r) => {
     let exprStr = ctx->ctxExprToStr(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
-    let proofs = switch r.src {
-        | None => "no-proofs"
-        | Some(proofs) => {
-            let proofsLen = proofs->Js_array2.length
-            if (r.proved && proofsLen == 1) {
-                switch proofs[0] {
-                    | Hypothesis({label}) => "hyp: " ++ label
-                    | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
-                }
-            } else {
-                Belt_Int.toString(proofsLen) ++ "-proofs"
+    let proofs = switch r.proof {
+        | Some(proof) => {
+            switch proof {
+                | Hypothesis({label}) => "hyp: " ++ label
+                | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
+            }
+        }
+        | None => {
+            switch r.branches {
+                | None => "no-branches"
+                | Some(branches) => Belt_Int.toString(branches->Js_array2.length) ++ "-branches"
             }
         }
     }
-    let proved = if r.proved { "proved" } else { "not-proved" }
+    let proved = if r.proof->Belt_Option.isSome { "proved" } else { "not-proved" }
     `${proved} | ${proofs} | ${exprStr}`
 }
 
@@ -46,9 +46,9 @@ let proofTablePrint = (ctx,tbl,title) => {
 let createProofTable: expr => array<proofRecord> = exprToProve => {
     [{
         expr:exprToProve,
-        proved:false,
+        proof:None,
         dist:0,
-        src: None
+        branches: None
     }]
 }
 
@@ -58,7 +58,7 @@ let getNextExprToProveIdx: proofTable => option<int> = tbl => {
     let maxI = tbl->Js_array2.length-1
     for i in 0 to maxI {
         let r = tbl[i]
-        if (!r.proved && r.src->Belt.Option.isNone && r.dist < minDist.contents) {
+        if (r.proof->Belt_Option.isNone && r.branches->Belt.Option.isNone && r.dist < minDist.contents) {
             minDist.contents = r.dist
             res.contents = i
         }
@@ -81,9 +81,9 @@ let addExprToProve: (proofTable, expr) => int = (tbl,expr) => {
         | None => {
             tbl->Js_array2.push({
                 expr,
-                proved: false,
+                proof: None,
                 dist: -1,
-                src: None
+                branches: None
             })->ignore
             len
         }
@@ -92,20 +92,20 @@ let addExprToProve: (proofTable, expr) => int = (tbl,expr) => {
 
 let markProved: proofTable => unit = tbl => {
     let provedIdxs = Belt_MutableSetInt.make()
-    tbl->Js_array2.forEachi(({proved},i) => if proved {provedIdxs->Belt_MutableSetInt.add(i)})
+    tbl->Js_array2.forEachi(({proof},i) => if proof->Belt_Option.isSome {provedIdxs->Belt_MutableSetInt.add(i)})
 
     let thereIsNewProvedExpr = ref(true)
     while (thereIsNewProvedExpr.contents) {
         thereIsNewProvedExpr.contents = false
         tbl->Js_array2.forEachi((proofRec,proofRecIdx) => {
-            if (!proofRec.proved && proofRec.src->Belt_Option.isSome) {
-                let validProof = switch proofRec.src {
+            if (proofRec.proof->Belt_Option.isNone && proofRec.branches->Belt_Option.isSome) {
+                let validProof = switch proofRec.branches {
                     | None => None
-                    | Some(proofs) => {
-                        proofs->Expln_utils_common.arrForEach(proof => {
-                            switch proof {
-                                | Hypothesis(_) => Some(proof)
-                                | Assertion({args}) if args->Js_array2.every(provedIdxs->Belt_MutableSetInt.has) => Some(proof)
+                    | Some(branches) => {
+                        branches->Expln_utils_common.arrForEach(branch => {
+                            switch branch {
+                                | Hypothesis(_) => Some(branch)
+                                | Assertion({args}) if args->Js_array2.every(provedIdxs->Belt_MutableSetInt.has) => Some(branch)
                                 | _ => None
                             }
                         })
@@ -113,9 +113,9 @@ let markProved: proofTable => unit = tbl => {
                 }
                 switch validProof {
                     | None => ()
-                    | Some(proof) => {
-                        proofRec.src = Some([proof])
-                        proofRec.proved = true
+                    | Some(_) => {
+                        proofRec.branches = None
+                        proofRec.proof = validProof
                         thereIsNewProvedExpr.contents = true
                         provedIdxs->Belt_MutableSetInt.add(proofRecIdx)
                     }
@@ -126,16 +126,19 @@ let markProved: proofTable => unit = tbl => {
 }
 
 let updateDist: proofTable => unit = tbl => {
+    let tblLen = tbl->Js_array2.length
+    tbl->Js_array2.forEach(r => r.dist=tblLen)
+    tbl[0].dist = 0
     let queue = Belt_MutableQueue.make()
     queue->Belt_MutableQueue.add(tbl[0])
     while (!(queue->Belt_MutableQueue.isEmpty)) {
         let parent = queue->Belt_MutableQueue.pop->Belt_Option.getExn
-        let childDist = parent.dist
-        switch parent.src {
+        let childDist = parent.dist+1
+        switch parent.branches {
             | None => ()
-            | Some(proofs) => {
-                proofs->Js_array2.forEach(proof => {
-                    switch proof {
+            | Some(branches) => {
+                branches->Js_array2.forEach(branch => {
+                    switch branch {
                         | Assertion({args}) => {
                             args->Js_array2.forEach(argIdx => {
                                 let child = tbl[argIdx]
@@ -179,25 +182,22 @@ let traverseRecordsInRpnOrder = (tbl,~onUse,~onReuse) => {
         (),
         tbl[0],
         (_, r) => {
-            switch r.src {
-                | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for proof generation doesn't have a source.`}))
-                | Some([Hypothesis(_)]) => None
-                | Some([Assertion({args})]) => if (savedExprs->Belt_MutableSet.has(r.expr)) { None } else { Some(args->Js_array2.map(a=>tbl[a])) }
-                | _ => raise(MmException({
-                    msg: `Unexpected source of a record in a proofTable: ${Expln_utils_common.stringify(r.src)}`
-                }))
+            switch r.proof {
+                | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for proof generation doesn't have a proof.`}))
+                | Some(Hypothesis(_)) => None
+                | Some(Assertion({args})) => if (savedExprs->Belt_MutableSet.has(r.expr)) { None } else { Some(args->Js_array2.map(a=>tbl[a])) }
             }
         },
         ~process = (_, r) => {
-            switch r.src {
-                | Some([Hypothesis(_)]) => onUse(r)
+            switch r.proof {
+                | Some(Hypothesis(_)) => onUse(r)
                 | _ => ()
             }
             None
         },
         ~postProcess = (_, r) => {
-            switch r.src {
-                | Some([Assertion(_)]) => {
+            switch r.proof {
+                | Some(Assertion(_)) => {
                     if (!(savedExprs->Belt_MutableSet.has(r.expr))) {
                         savedExprs->Belt_MutableSet.add(r.expr)
                         onUse(r)
@@ -235,8 +235,8 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
     if (tblLen == 0) {
         raise(MmException({msg:`Cannot extract a proof from empty proofTable.`}))
     }
-    if (!tbl[0].proved) {
-        raise(MmException({msg:`The first record in a proofTable must be proved.`}))
+    if (tbl[0].proof->Belt_Option.isNone) {
+        raise(MmException({msg:`The first record in a proofTable must have a proof.`}))
     }
     let mandHyps = getMandHyps(ctx, tbl[0].expr)
     let mandHypLabelToInt = Belt_MapString.fromArray(
@@ -255,14 +255,14 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
     let proofSteps = []
     traverseRecordsInRpnOrder(tbl,
         ~onUse = r => {
-            let idx = switch r.src {
-                | Some([Hypothesis({label})]) => {
+            let idx = switch r.proof {
+                | Some(Hypothesis({label})) => {
                     switch mandHypLabelToInt->Belt_MapString.get(label) {
                         | Some(i) => i
                         | None => labelToInt(label)
                     }
                 }
-                | Some([Assertion({label})]) => labelToInt(label)
+                | Some(Assertion({label})) => labelToInt(label)
                 | _ => raise(MmException({msg:`Cannot determine index of a proof step.`}))
             }
             proofSteps->Js_array2.push(idx)->ignore
@@ -291,72 +291,6 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
 
 }
 
-let printAsrtApplication = (ctx,args,label) => {
-    args
-        ->Js_array2.map(e=>ctxExprToStr(ctx,e)->Expln_utils_common.strJoin(~sep=" ", ()))
-        -> Expln_utils_common.strJoin(~sep=", ", ())
-        ++ " : " ++ label
-}
-
-let createProofTableFromProof: (mmContext, proofNode) => proofTable = (ctx,proofNode) => {
-    let tbl = []
-    Expln_utils_data.traverseTree(
-        (),
-        proofNode,
-        (_, n) => {
-            switch n {
-                | Hypothesis(_) => None
-                | Calculated({args}) => Some(args)
-            }
-        },
-        ~process = (_,n) => {
-            switch n {
-                | Hypothesis({hypLabel,expr}) => {
-                    let i = tbl->addExprToProve(expr)
-                    if (tbl[i].proved) {
-                        switch tbl[i].src {
-                            | Some([Hypothesis({label:existingHypLabel})]) => {
-                                if (hypLabel != existingHypLabel) {
-                                    raise(MmException({msg:`tbl[i].proved: ${existingHypLabel} vs Hypothesis({${hypLabel},${ctxExprToStr(ctx,expr)->Expln_utils_common.strJoin(~sep=" ", ())}})`}))
-                                }
-                            }
-                            | _ => raise(MmException({msg:`tbl[i].proved in Hypothesis.`}))
-                        }
-                    } else {
-                        tbl[i].proved = true
-                        tbl[i].src = Some([Hypothesis({label:hypLabel})])
-                    }
-                }
-                | Calculated({args, asrtLabel, expr}) => {
-                    let i = tbl->addExprToProve(expr)
-                    if (tbl[i].proved) {
-                        //raise(MmException({msg:`tbl[i].proved in Calculated.`}))
-                        switch tbl[i].src {
-                            | Some([Assertion({args:existingArgs, label:existingLabel})]) => {
-                                let existingArgsExpr = existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr)
-                                let newArgsExpr = args->Js_array2.map(getExprFromNode)
-                                if (existingArgsExpr != newArgsExpr || existingLabel != asrtLabel) {
-                                    raise(MmException({msg:`tbl[i].proved in Calculated: ${printAsrtApplication(ctx,existingArgs->Js_array2.map(i=>tbl[i])->Js_array2.map(r=>r.expr), existingLabel)} vs ${printAsrtApplication(ctx, args->Js_array2.map(getExprFromNode), asrtLabel)}`}))
-                                }
-                            }
-                            | _ => raise(MmException({msg:`tbl[i].proved in Calculated.`}))
-                        }
-                    } else {
-                        tbl[i].proved = true
-                        tbl[i].src = Some([Assertion({
-                            label:asrtLabel,
-                            args: args->Js_array2.map(n => tbl->addExprToProve(n->getExprFromNode))
-                        })])
-                    }
-                }
-            }
-            None
-        },
-        ()
-    )->ignore
-    tbl
-}
-
 let createOrderedProofTableFromProof: proofNode => proofTable  = proofNode => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
@@ -380,7 +314,7 @@ let createOrderedProofTableFromProof: proofNode => proofTable  = proofNode => {
             switch n {
                 | Hypothesis({hypLabel,expr}) => {
                     if (exprToIdx->Belt_MutableMap.get(expr)->Belt_Option.isNone) {
-                        let idx = tbl->Js_array2.push({dist:-1, proved:true, src:Some([Hypothesis({label:hypLabel})]), expr})-1
+                        let idx = tbl->Js_array2.push({dist:-1, proof:Some(Hypothesis({label:hypLabel})), branches:None, expr})-1
                         exprToIdx->Belt_MutableMap.set(expr,idx)
                     }
                 }
@@ -394,14 +328,14 @@ let createOrderedProofTableFromProof: proofNode => proofTable  = proofNode => {
                     if (exprToIdx->Belt_MutableMap.get(expr)->Belt_Option.isNone) {
                         let idx = tbl->Js_array2.push({
                             dist:-1,
-                            proved:true,
-                            src:Some([Assertion({
+                            proof:Some(Assertion({
                                 label:asrtLabel,
                                 args: args->Js_array2.map(n => {
                                     let nExpr = getExprFromNode(n)
                                     exprToIdx->Belt_MutableMap.get(nExpr)->Belt_Option.getWithDefault(-1)
                                 })
-                            })]), 
+                            })),
+                            branches:None, 
                             expr
                         })-1
                         exprToIdx->Belt_MutableMap.set(expr,idx)

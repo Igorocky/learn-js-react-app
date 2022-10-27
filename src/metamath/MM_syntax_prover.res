@@ -78,9 +78,9 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
     let exprToProve = recToProve.expr
     let foundHyp = ctx->forEachHypothesis(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
     switch foundHyp {
-        | Some(hyp) => recToProve.src = Some([Hypothesis({label:hyp.label})])
+        | Some(hyp) => recToProve.branches = Some([Hypothesis({label:hyp.label})])
         | None => {
-            let proofs = []
+            let branches = []
             frameData->Js_array2.forEach(frmData => {
                 iterateSubstitutions(
                     ~frmExpr = frmData.frame.asrt, 
@@ -93,7 +93,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                     ~consumer = subs => {
                         if (subs.isDefined->Js_array2.every(b=>b)) {
                             let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
-                            proofs->Js_array2.push(Assertion({
+                            branches->Js_array2.push(Assertion({
                                 args,
                                 label: frmData.frame.label
                             }))->ignore
@@ -102,7 +102,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                     }
                 )
             })
-            recToProve.src = Some(proofs)
+            recToProve.branches = Some(branches)
         }
     }
 }
@@ -112,7 +112,7 @@ let findProof = (~ctx, ~expr) => {
     let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
     let tbl = createProofTable(expr)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
-    while (!tbl[0].proved && exprToProveIdx.contents->Belt_Option.isSome) {
+    while (tbl[0].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {
         suggestPossibleProofs(~tbl, ~ctx, ~frameData, ~parenCnt,
             ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
         )
