@@ -11,7 +11,6 @@ let make = (~onChange:(string,string)=>unit) => {
             fr["onload"] = () => {
                 let fileText = fr["result"]
                 onChange(fileName, fileText)
-                Js.Console.log2("fileName", fileName)
             }
             fr["readAsBinaryString"](. file )
         }}  

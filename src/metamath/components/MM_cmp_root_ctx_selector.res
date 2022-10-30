@@ -19,7 +19,8 @@ let createEmptySingleScope = () => {
         fileText:None,
         ast:None,
         allLabels:[],
-        readInstr:All
+        readInstr:All,
+        label:None
     }
 }
 

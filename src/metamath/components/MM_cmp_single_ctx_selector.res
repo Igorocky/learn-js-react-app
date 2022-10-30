@@ -4,8 +4,8 @@ open MM_parser
 
 type readInstr =
     | All
-    | StopBefore(string)
-    | StopAfter(string)
+    | StopBefore
+    | StopAfter
 
 let riAll = "all"
 let riStopBefore = "stopBefore"
@@ -14,17 +14,17 @@ let riStopAfter = "stopAfter"
 let readInstrToStr = ri => {
     switch ri {
         | All => riAll
-        | StopBefore(_) => riStopBefore
-        | StopAfter(_) => riStopAfter
+        | StopBefore => riStopBefore
+        | StopAfter => riStopAfter
     }
 }
-let readInstrFromStr = (ri,label) => {
+let readInstrFromStr = ri => {
     if (ri == riAll) {
         All
     } else if (ri == riStopBefore) {
-        StopBefore(label)
+        StopBefore
     } else if (ri == riStopAfter) {
-        StopAfter(label)
+        StopAfter
     } else {
         raise(MmException({msg:`Unexpected read instruction: ${ri}`}))
     }
@@ -37,6 +37,7 @@ type mmSingleScope = {
     ast: option<result<mmAstNode,string>>,
     allLabels: array<string>,
     readInstr: readInstr,
+    label: option<string>,
 }
 
 @react.component
@@ -46,13 +47,15 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
     let (ast, setAst) = useState(initialScope.ast)
     let (allLabels, setAllLabels) = useState(initialScope.allLabels)
     let (readInstr, setReadInstr) = useState(initialScope.readInstr)
+    let (label, setLabel) = useState(initialScope.label)
 
-    let setScope = (~fileName, ~fileText, ~ast, ~allLabels, ~readInstr) => {
+    let setScope = (~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label) => {
         setFileName(fileName)
         setFileText(fileText)
         setAst(ast)
         setAllLabels(allLabels)
         setReadInstr(readInstr)
+        setLabel(label)
         onChange({
             id:initialScope.id,
             fileName,
@@ -60,6 +63,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
             ast,
             allLabels,
             readInstr,
+            label,
         })
     }
 
@@ -83,13 +87,15 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
             let ast = Some(Ok(astRootNode))
             let allLabels:array<string> = extractAllLabels(astRootNode)->Js_array2.sortInPlace
             let readInstr = All
-            setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr)
+            let label = None
+            setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
         } catch {
             | MmException({msg}) => {
                 let ast = Some(Error(msg))
                 let allLabels = []
                 let readInstr = All
-                setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr)
+                let label = None
+                setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
             }
         }
     }
@@ -102,7 +108,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
                 value=readInstrToStr(readInstr)
                 label="Scope"
                 onChange=evt2Str(newReadInstrType => {
-                    setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr=readInstrFromStr(newReadInstrType, ""))
+                    setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr=readInstrFromStr(newReadInstrType), ~label)
                 })
             >
                 <MenuItem value=riAll>{React.string("Read all")}</MenuItem>
@@ -113,14 +119,8 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
     }
 
     let rndLabelSelector = () => {
-        <AutocompleteVirtualized options=allLabels size=#small
-            onChange={newLabelOpt => {
-                let newLabelStr = switch newLabelOpt {
-                    | Some(newLabel) => newLabel
-                    | None => ""
-                }
-                setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr=readInstrFromStr(readInstrToStr(readInstr), newLabelStr))
-            }}
+        <AutocompleteVirtualized value=label options=allLabels size=#small
+            onChange={newLabel => setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label=newLabel)}
         />
     }
 
