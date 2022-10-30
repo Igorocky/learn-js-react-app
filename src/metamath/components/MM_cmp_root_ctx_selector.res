@@ -28,6 +28,8 @@ let createEmptySingleScope = () => {
 let make = (~onChange:mmContext=>unit) => {
     let (thereAreChanges, setThereAreChanges) = useState(false)
     let (scope, setScope) = useStateF([createEmptySingleScope()])
+    let (loadedScope, setLoadedScope) = useState([createEmptySingleScope()])
+    let (ctx, setCtx) = useState(Ok(createEmptyContext()))
 
     let rndSingleScopeSelectors = () => {
         let renderDeleteButton = scope->Js.Array2.length > 1 || scope[0].fileName->Belt_Option.isSome
@@ -73,6 +75,51 @@ let make = (~onChange:mmContext=>unit) => {
         }
     }
 
+    let updateContext = () => {
+        let ctx = ref(Ok(createEmptyContext()))
+        scope->Js.Array2.forEachi((ss,i) => {
+            if (ctx.contents->Belt_Result.isOk) {
+                switch ss.ast {
+                    | Some(Ok(ast)) => {
+                        try {
+                            let updatedCtx = ref(loadContext(
+                                ast,
+                                ~initialContext=ctx.contents->Belt.Result.getExn,
+                                ~stopBefore = ?(if (ss.readInstr == StopBefore) {ss.label} else {None}),
+                                ~stopAfter = ?(if (ss.readInstr == StopAfter) {ss.label} else {None}),
+                                ()
+                            ))
+                            while (getNestingLevel(updatedCtx.contents) > 0) {
+                                closeChildContext(updatedCtx.contents)
+                            }
+                            ctx.contents = Ok(updatedCtx.contents)
+                        } catch {
+                            | MmException({msg}) => 
+                                ctx.contents = Error(`Error loading MM context from the file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
+                        }
+                    }
+                    | Some(Error(msg)) => {
+                        ctx.contents = Error(`Error parsing file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
+                    }
+                    | _ => {
+                        if (scope->Js.Array2.length == 1 && i == 0) {
+                            ()
+                        } else {
+                            ctx.contents = Error(`Error loading MM context: got an empty AST.`)
+                        }
+                    }
+                }
+            }
+        })
+        setCtx(ctx.contents)
+        setLoadedScope(scope)
+        setThereAreChanges(false)
+        switch ctx.contents {
+            | Ok(ctx) => onChange(ctx)
+            | Error(_) => onChange(createEmptyContext())
+        }
+    }
+
     let rndSaveButtons = () => {
         if (thereAreChanges) {
             let scopeIsCorrect = scope->Js.Array2.every(ss => {
@@ -93,7 +140,7 @@ let make = (~onChange:mmContext=>unit) => {
             })
             let scopeIsEmpty = scope->Js.Array2.length == 1 && scope[0].fileName->Belt_Option.isNone
             <Row>
-                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect}>
+                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect} onClick={_=>updateContext()} >
                     {React.string("Apply changes")}
                 </Button>
             </Row>
@@ -102,9 +149,35 @@ let make = (~onChange:mmContext=>unit) => {
         }
     }
 
+    let getPreloadedContextInfo = () => {
+        switch ctx {
+            | Error(msg) => {
+                <pre style=ReactDOM.Style.make(~color="red", ())>
+                    {React.string(msg)}
+                </pre>
+            }
+            | Ok(_) => {
+                if (loadedScope->Js.Array2.length == 1 && loadedScope[0].fileName->Belt_Option.isNone) {
+                    React.string("No MM context is loaded.")
+                } else {
+                    let filesInfo = loadedScope->Js_array2.map(ss => {
+                        let fileName = ss.fileName->Belt_Option.getWithDefault("")
+                        let readInstr = switch ss.readInstr {
+                            | All => ""
+                            | StopBefore => `, stoped before '${ss.label->Belt_Option.getWithDefault("")}'`
+                            | StopAfter => `, stoped after '${ss.label->Belt_Option.getWithDefault("")}'`
+                        }
+                        fileName ++ readInstr
+                    })
+                    React.string("Loaded: " ++ filesInfo->Expln_utils_common.strJoin(~sep="; ", ()))
+                }
+            }
+        }
+    }
+
     <Accordion>
         <AccordionSummary>
-            {React.string("Preloaded context: ")}
+            {getPreloadedContextInfo()}
         </AccordionSummary>
         <AccordionDetails>
             <Col spacing=2.>

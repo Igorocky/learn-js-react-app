@@ -28,7 +28,7 @@ let createEmptyContext: unit => mmContext
 let applySingleStmt: (mmContext, stmt) => unit
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
-let loadContext: (mmAstNode, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
+let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
 
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
@@ -39,5 +39,6 @@ let frmExprToStr: (mmContext, frame, expr) => array<string>
 let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
 let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a>
 let createFrame: (mmContext, string, array<string>) => frame
+let getNestingLevel: mmContext => int
 
 let exprEq: (expr,expr) => bool

@@ -320,9 +320,10 @@ let applySingleStmt = (ctx:mmContext, stmt:stmt):unit => {
     }
 }
 
-let loadContext: (mmAstNode, ~stopBefore: string=?, ~stopAfter: string=?, ()) => mmContext = (ast,~stopBefore="",~stopAfter="",()) => {
+let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?, ~stopAfter: string=?, ()) => mmContext = 
+                                                (ast, ~initialContext=?,~stopBefore="",~stopAfter="",()) => {
     let ctxOpt = traverseAst(
-        createEmptyContext(),
+        initialContext->Belt_Option.getWithDefault(createEmptyContext()),
         ast,
         ~preProcess = (ctx,node) => {
             switch node {
@@ -420,4 +421,11 @@ let exprEq: (expr,expr) => bool = (a,b) => {
         i.contents = i.contents + 1
     }
     eq.contents
+}
+
+let rec getNestingLevel: mmContext => int = ctx => {
+    switch ctx.parent {
+        | None => 0
+        | Some(pCtx) => 1 + getNestingLevel(pCtx)
+    }
 }
