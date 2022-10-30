@@ -6,7 +6,7 @@ let make = () => {
       {id: "2", title: "TestSvg", render: _ => <TestSvg/>},
       {id: "3", title: "MuiDemo", render: _ => <TextFieldDemo/>},
       {id: "4", title: "KeyTrainer", render: _ => <KeyTrainer/>},
-      {id: "5", title: "MM_cmp_context_loader", render: _ => <MM_cmp_context_loader/>},
+      {id: "5", title: "MM_cmp_context_loader", render: _ => <MM_cmp_root/>},
     ]
     defaultViewId="5"
   />
