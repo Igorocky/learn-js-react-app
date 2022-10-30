@@ -1,3 +1,5 @@
 - validate distinct variables
+- introduce new type of proof: SyntaxAuto
+- precalculate number of combinations (store in an array)
 - use uncurried functions everywhere
 - replace a[i] with a->Js_array2.unsafe_get(i), or open Belt and replace with Option.getExn
