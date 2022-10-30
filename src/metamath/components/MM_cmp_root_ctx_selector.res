@@ -75,8 +75,24 @@ let make = (~onChange:mmContext=>unit) => {
 
     let rndSaveButtons = () => {
         if (thereAreChanges) {
+            let scopeIsCorrect = scope->Js.Array2.every(ss => {
+                switch ss.ast {
+                    | Some(Ok(_)) => {
+                        switch ss.readInstr {
+                            | All => true
+                            | StopBefore | StopAfter => {
+                                switch ss.label {
+                                    | Some(_) => true
+                                    | None => false
+                                }
+                            }
+                        }
+                    }
+                    | _ => false
+                }
+            })
             <Row>
-                <Button variant=#contained>
+                <Button variant=#contained disabled={!scopeIsCorrect}>
                     {React.string("Apply changes")}
                 </Button>
             </Row>
