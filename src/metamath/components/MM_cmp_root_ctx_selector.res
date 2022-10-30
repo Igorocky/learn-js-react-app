@@ -91,8 +91,9 @@ let make = (~onChange:mmContext=>unit) => {
                     | _ => false
                 }
             })
+            let scopeIsEmpty = scope->Js.Array2.length == 1 && scope[0].fileName->Belt_Option.isNone
             <Row>
-                <Button variant=#contained disabled={!scopeIsCorrect}>
+                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect}>
                     {React.string("Apply changes")}
                 </Button>
             </Row>

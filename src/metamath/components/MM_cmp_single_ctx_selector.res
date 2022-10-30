@@ -79,23 +79,30 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
         result
     }
 
-    let loadMmFileText = (name, text) => {
-        let fileName = Some(name)
-        let fileText = Some(text)
-        try {
-            let astRootNode = parseMmFile(text)
-            let ast = Some(Ok(astRootNode))
-            let allLabels:array<string> = extractAllLabels(astRootNode)->Js_array2.sortInPlace
-            let readInstr = All
-            let label = None
-            setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
-        } catch {
-            | MmException({msg}) => {
-                let ast = Some(Error(msg))
-                let allLabels = []
-                let readInstr = All
-                let label = None
-                setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
+    let loadMmFileText = (nameAndTextOpt) => {
+        switch nameAndTextOpt {
+            | None => {
+                setScope(~fileName=None, ~fileText=None, ~ast=None, ~allLabels=[], ~readInstr=All, ~label=None)
+            }
+            | Some((name,text)) => {
+                let fileName = Some(name)
+                let fileText = Some(text)
+                try {
+                    let astRootNode = parseMmFile(text)
+                    let ast = Some(Ok(astRootNode))
+                    let allLabels:array<string> = extractAllLabels(astRootNode)->Js_array2.sortInPlace
+                    let readInstr = All
+                    let label = None
+                    setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
+                } catch {
+                    | MmException({msg}) => {
+                        let ast = Some(Error(msg))
+                        let allLabels = []
+                        let readInstr = All
+                        let label = None
+                        setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label)
+                    }
+                }
             }
         }
     }
