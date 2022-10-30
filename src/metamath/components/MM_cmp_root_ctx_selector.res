@@ -26,10 +26,19 @@ let createEmptySingleScope = () => {
 
 @react.component
 let make = (~onChange:mmContext=>unit) => {
+    let (expanded, setExpanded) = useStateF(false)
     let (thereAreChanges, setThereAreChanges) = useState(false)
     let (scope, setScope) = useStateF([createEmptySingleScope()])
     let (loadedScope, setLoadedScope) = useState([createEmptySingleScope()])
     let (ctx, setCtx) = useState(Ok(createEmptyContext()))
+
+    let toggleAccordion = () => {
+        setExpanded(prev => !prev)
+    }
+    
+    let closeAccordion = () => {
+        setExpanded(_ => false)
+    }
 
     let rndSingleScopeSelectors = () => {
         let renderDeleteButton = scope->Js.Array2.length > 1 || scope[0].fileName->Belt_Option.isSome
@@ -75,7 +84,7 @@ let make = (~onChange:mmContext=>unit) => {
         }
     }
 
-    let updateContext = () => {
+    let applyChanges = () => {
         let ctx = ref(Ok(createEmptyContext()))
         scope->Js.Array2.forEachi((ss,i) => {
             if (ctx.contents->Belt_Result.isOk) {
@@ -114,6 +123,7 @@ let make = (~onChange:mmContext=>unit) => {
         setCtx(ctx.contents)
         setLoadedScope(scope)
         setThereAreChanges(false)
+        closeAccordion()
         switch ctx.contents {
             | Ok(ctx) => onChange(ctx)
             | Error(_) => onChange(createEmptyContext())
@@ -140,7 +150,7 @@ let make = (~onChange:mmContext=>unit) => {
             })
             let scopeIsEmpty = scope->Js.Array2.length == 1 && scope[0].fileName->Belt_Option.isNone
             <Row>
-                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect} onClick={_=>updateContext()} >
+                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect} onClick={_=>applyChanges()} >
                     {React.string("Apply changes")}
                 </Button>
             </Row>
@@ -175,8 +185,8 @@ let make = (~onChange:mmContext=>unit) => {
         }
     }
 
-    <Accordion>
-        <AccordionSummaryStyled expandIcon={<Icons2.ExpandMore/>}>
+    <Accordion expanded >
+        <AccordionSummaryStyled expandIcon={<Icons2.ExpandMore/>} onClick=toggleAccordion >
             {getPreloadedContextInfo()}
         </AccordionSummaryStyled>
         <AccordionDetails>
