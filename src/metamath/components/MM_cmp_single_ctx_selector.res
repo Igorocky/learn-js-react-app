@@ -31,6 +31,7 @@ let readInstrFromStr = (ri,label) => {
 }
 
 type mmSingleScope = {
+    id:string,
     fileName: option<string>,
     fileText: option<string>,
     ast: option<result<mmAstNode,string>>,
@@ -39,7 +40,7 @@ type mmSingleScope = {
 }
 
 @react.component
-let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit) => {
+let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelete:unit=>unit, ~renderDeleteButton:bool) => {
     let (fileName, setFileName) = useState(initialScope.fileName)
     let (fileText, setFileText) = useState(initialScope.fileText)
     let (ast, setAst) = useState(initialScope.ast)
@@ -53,6 +54,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit) => {
         setAllLabels(allLabels)
         setReadInstr(readInstr)
         onChange({
+            id:initialScope.id,
             fileName,
             fileText,
             ast,
@@ -122,36 +124,39 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit) => {
         />
     }
 
-    let rndFileSelector = () => {
-        <Row alignItems=#center >
-            <TextFileReader2 onChange=loadMmFileText />
-            {
-                switch ast {
-                    | None => React.null
-                    | Some(Error(msg)) => {
-                        <pre style=ReactDOM.Style.make(~color="red", ())>
-                            {React.string("Error: " ++ msg)}
-                        </pre>
-                    }
-                    | Some(Ok(ast)) => {
-                        <Row>
-                            {rndReadInstrTypeSelector()}
-                            {
-                                switch readInstr {
-                                    | StopBefore(_) | StopAfter(_) => {
-                                        rndLabelSelector()
-                                    }
-                                    | _ => React.null
+    <Row alignItems=#center spacing=1. >
+        {
+            if (renderDeleteButton) {
+                <IconButton onClick={_ => onDelete()} >
+                    <Icons.Delete/>
+                </IconButton>
+            } else {
+                React.null
+            }
+        }
+        <TextFileReader2 onChange=loadMmFileText />
+        {
+            switch ast {
+                | None => React.null
+                | Some(Error(msg)) => {
+                    <pre style=ReactDOM.Style.make(~color="red", ())>
+                        {React.string("Error: " ++ msg)}
+                    </pre>
+                }
+                | Some(Ok(ast)) => {
+                    <Row>
+                        {rndReadInstrTypeSelector()}
+                        {
+                            switch readInstr {
+                                | StopBefore(_) | StopAfter(_) => {
+                                    rndLabelSelector()
                                 }
+                                | _ => React.null
                             }
-                        </Row>
-                    }
+                        }
+                    </Row>
                 }
             }
-        </Row>
-    }
-
-    <Col>
-        {rndFileSelector()}
-    </Col>
+        }
+    </Row>
 }
