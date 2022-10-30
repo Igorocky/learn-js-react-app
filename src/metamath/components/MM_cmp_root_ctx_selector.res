@@ -41,7 +41,7 @@ let make = (~onChange:mmContext=>unit) => {
                     onChange={newScope => {
                         setScope(prev => prev->Js_array2.map(s => if s.id == singleScope.id {newScope} else {s}))
                         setThereAreChanges(true)
-                    }} 
+                    }}
                     onDelete={() => {
                         setScope(prev => {
                             let newScope = prev->Js_array2.filter(s => s.id != singleScope.id)
@@ -176,9 +176,9 @@ let make = (~onChange:mmContext=>unit) => {
     }
 
     <Accordion>
-        <AccordionSummary>
+        <AccordionSummaryStyled expandIcon={<Icons2.ExpandMore/>}>
             {getPreloadedContextInfo()}
-        </AccordionSummary>
+        </AccordionSummaryStyled>
         <AccordionDetails>
             <Col spacing=2.>
                 {rndSingleScopeSelectors()}
