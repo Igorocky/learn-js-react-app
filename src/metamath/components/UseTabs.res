@@ -13,22 +13,23 @@ type tab<'a> = {
     data: 'a
 }
 
-type tabMethods<'a> = {
-    addTab: (~label:string, ~closable:bool, ~data:'a) => promise<tabId>,
-    openTab: tabId => unit,
-    removeTab: tabId => unit,
-    tabs: array<tab<'a>>,
-    renderTabs: unit => reElem
-}
-
-type st<'a> = {
+type state<'a> = {
     nextId: int,
     tabs: array<tab<'a>>,
     activeTabId: tabId
 }
 
+type tabMethods<'a> = {
+    addTab: (~label:string, ~closable:bool, ~data:'a) => promise<tabId>,
+    openTab: tabId => unit,
+    removeTab: tabId => unit,
+    tabs: array<tab<'a>>,
+    renderTabs: unit => reElem,
+
+    updateTabs: (state<'a> => state<'a>) => unit
+}
+
 let createEmptyState = () => {
-    Js.Console.log("createEmptyState")
     {
         nextId: 0,
         tabs: [],
@@ -39,6 +40,8 @@ let createEmptyState = () => {
 let getNextId = st => {
     ({...st, nextId: st.nextId+1}, st.nextId->Belt_Int.toString)
 }
+
+let getTabs = (st:state<'a>) => st.tabs
 
 let addTab = (st, ~label:string, ~closable:bool, ~data:'a) => {
     Js.Console.log2("addTab:", label)
@@ -54,7 +57,7 @@ let addTab = (st, ~label:string, ~closable:bool, ~data:'a) => {
     )
 }
 
-let openTab = (st, tabId) => {
+let openTab = (st:state<'a>, tabId):state<'a> => {
     if (st.tabs->Js_array2.some(t => t.id == tabId)) {
         {...st, activeTabId:tabId}
     } else {
@@ -62,7 +65,7 @@ let openTab = (st, tabId) => {
     }
 }
 
-let removeTab = (st, tabId) => {
+let removeTab = (st:state<'a>, tabId):state<'a> => {
     let newTabs = st.tabs->Js_array2.filter(t => t.id != tabId)
     {
         ...st, 
@@ -136,6 +139,8 @@ let useTabs = ():tabMethods<'a> => {
         openTab,
         removeTab,
         tabs: state.tabs->Js.Array2.copy,
-        renderTabs
+        renderTabs,
+
+        updateTabs: modifier => setState(modifier)
     }
 }

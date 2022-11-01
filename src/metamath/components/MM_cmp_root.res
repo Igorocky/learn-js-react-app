@@ -7,13 +7,19 @@ open MM_context
 let make = () => {
     Js_console.log("render")
     let (rootCtx, setRootCtx) = useState(createEmptyContext())
-    let {addTab, openTab, tabs, renderTabs} = UseTabs.useTabs()
+    let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs} = UseTabs.useTabs()
 
     React.useEffect0(()=>{
-        Js_console.log("use effect 0")
-        addTab(~label="Settings", ~closable=true, ~data="")->ignore
-        addTab(~label="Editor", ~closable=true, ~data="")->ignore
-        addTab(~label="Search", ~closable=true, ~data="")->ignore
+        updateTabs(st => {
+            if (st->UseTabs.getTabs->Js_array2.length == 0) {
+                let (st, _) = st->UseTabs.addTab(~label="Settings", ~closable=true, ~data="")
+                let (st, _) = st->UseTabs.addTab(~label="Editor", ~closable=true, ~data="")
+                let (st, _) = st->UseTabs.addTab(~label="Search", ~closable=true, ~data="")
+                st
+            } else {
+                st
+            }
+        })
         None
     })
 
