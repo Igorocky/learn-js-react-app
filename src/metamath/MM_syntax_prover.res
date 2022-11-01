@@ -109,7 +109,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
 
 let findProof = (~ctx, ~expr) => {
     let frameData = prepareFrameData(ctx)
-    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
+    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
     let tbl = createProofTable(expr)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
     while (tbl[0].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {

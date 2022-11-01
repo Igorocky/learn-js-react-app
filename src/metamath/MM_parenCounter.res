@@ -14,16 +14,21 @@ type parenCnt = {
     mutable failed: bool
 }
 
-let parenCntMake: (~begin:array<int>, ~end:array<int>) => parenCnt = (~begin:array<int>, ~end:array<int>) => {
-    if (begin->Js_array2.length != end->Js_array2.length) {
-        raise(MmException({msg:`begin->Js_array2.length != end->Js_array2.length`}))
+let parenCntMake = parentheses => {
+    let parenLen = parentheses->Js_array2.length
+    if (mod(parenLen, 2)  != 0) {
+        raise(MmException({msg:`mod(parenLen, 2)  != 0`}))
     } else {
+        let parens = []
+        let maxI = parenLen / 2 - 1
+        for i in 0 to maxI {
+            let openCode = parentheses[i*2]
+            let closeCode = parentheses[i*2+1]
+            parens->Js_array2.push({code: openCode, isOpen: true, opposite: closeCode})->ignore
+            parens->Js_array2.push({code: closeCode, isOpen: false, opposite: openCode})->ignore
+        }
         {
-            parens:
-                begin->Js_array2.mapi((code,i) => {code, isOpen:true, opposite:end[i]})
-                    ->Js_array2.concat(
-                        end->Js_array2.mapi((code,i) => {code, isOpen:false, opposite:begin[i]})
-                    ),
+            parens,
             parentStack: [],
             failed: false,
         }

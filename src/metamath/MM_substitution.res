@@ -438,7 +438,7 @@ let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (arra
     }
     let frmConstParts = createConstParts(frmExpr)
     let constParts = createMatchingConstParts(frmConstParts)
-    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
+    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
     let matchingConstParts = []
     iterateConstParts(
         ~frmExpr, 
@@ -463,7 +463,7 @@ let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (arra
 let test_iterateSubstitutions: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => array<array<expr>> = (~ctx, ~frmExpr, ~expr) => {
     let frmConstParts = createConstParts(frmExpr)
     let constParts = createMatchingConstParts(frmConstParts)
-    let parenCnt = parenCntMake(~begin=ctx->makeExpr(["(", "[", "{"]), ~end=ctx->makeExpr([")", "]", "}"]))
+    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
     let varGroups = createVarGroups(~frmExpr, ~frmConstParts)
     let numOfVars = frmExpr
         ->Js_array2.filter(i => i >= 0)
