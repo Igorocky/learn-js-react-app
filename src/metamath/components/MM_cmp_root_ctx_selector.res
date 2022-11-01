@@ -26,9 +26,9 @@ let createEmptySingleScope = () => {
 
 @react.component
 let make = (~onChange:mmContext=>unit) => {
-    let (expanded, setExpanded) = useStateF(false)
+    let (expanded, setExpanded) = useStateF(_ => false)
     let (thereAreChanges, setThereAreChanges) = useState(false)
-    let (scope, setScope) = useStateF([createEmptySingleScope()])
+    let (scope, setScope) = useStateF(_ => [createEmptySingleScope()])
     let (loadedScope, setLoadedScope) = useState([createEmptySingleScope()])
     let (ctx, setCtx) = useState(Ok(createEmptyContext()))
 

@@ -1,66 +1,106 @@
 open Expln_React_common
 open Expln_React_Mui
+open Expln_utils_promise
+
+type promise<'a> = Js.Promise.t<'a>
 
 type tabId = string
 
-let tabId = ref(0)
-let getNewId = () => {
-    tabId.contents = tabId.contents + 1
-    Belt_Int.toString(tabId.contents-1)
-}
-
-type tab = {
+type tab<'a> = {
     id:tabId,
     label: string,
     closable: bool,
-    render: bool => reElem
+    data: 'a
 }
 
-type useTabs = {
-    addTab: (~label:string, ~closable:bool, ~render:bool=>reElem) => tabId,
+type tabMethods<'a> = {
+    addTab: (~label:string, ~closable:bool, ~data:'a) => promise<tabId>,
     openTab: tabId => unit,
     removeTab: tabId => unit,
+    tabs: array<tab<'a>>,
     renderTabs: unit => reElem
 }
 
-let useTabs = ():useTabs => {
-    let (tabs, setTabs) = useStateF([])
-    let (activeTabId, setActiveTabId) = useState("")
+type st<'a> = {
+    nextId: int,
+    tabs: array<tab<'a>>,
+    activeTabId: tabId
+}
 
-    Js.Console.log2("tabs", tabs)
-    Js.Console.log2("activeTabId", activeTabId)
-
-    let addTab = (~label, ~closable, ~render) => {
-        let newId = getNewId()
-        setTabs(prev => {
-            let newTabs = prev->Js_array2.concat([{id:newId, label, closable, render}])
-            if (newTabs->Js_array2.length == 1) {
-                setActiveTabId(newTabs[0].id)
-            }
-            newTabs
-        })
-        newId
+let createEmptyState = () => {
+    Js.Console.log("createEmptyState")
+    {
+        nextId: 0,
+        tabs: [],
+        activeTabId: "",
     }
+}
+
+let getNextId = st => {
+    ({...st, nextId: st.nextId+1}, st.nextId->Belt_Int.toString)
+}
+
+let addTab = (st, ~label:string, ~closable:bool, ~data:'a) => {
+    Js.Console.log2("addTab:", label)
+    let (st, newId) = st->getNextId
+    let newTabs = st.tabs->Js_array2.concat([{id:newId, label, closable, data}])
+    (
+        {
+            ...st,
+            tabs: newTabs,
+            activeTabId: if (newTabs->Js_array2.length == 1) {newId} else {st.activeTabId}
+        },
+        newId
+    )
+}
+
+let openTab = (st, tabId) => {
+    if (st.tabs->Js_array2.some(t => t.id == tabId)) {
+        {...st, activeTabId:tabId}
+    } else {
+        st
+    }
+}
+
+let removeTab = (st, tabId) => {
+    let newTabs = st.tabs->Js_array2.filter(t => t.id != tabId)
+    {
+        ...st, 
+        tabs: newTabs,
+        activeTabId:
+            if (newTabs->Js_array2.length == 0) {
+                ""
+            } else if (st.activeTabId == tabId) {
+                newTabs[0].id
+            } else {
+                st.activeTabId
+            }
+    }
+}
+
+let useTabs = ():tabMethods<'a> => {
+    let (state, setState) = useStateF(createEmptyState)
+
+    Js.Console.log2("state.tabs", state.tabs)
+
+    let addTab = (~label:string, ~closable:bool, ~data:'a):promise<tabId> => promise(rlv => {
+        setState(prev => {
+            let (st, tabId) = prev->addTab(~label, ~closable, ~data)
+            rlv(tabId)
+            st
+        })
+    })
 
     let openTab = id => {
-        if (tabs->Js_array2.some(tab => tab.id == id)) {
-            setActiveTabId(id)
-        }
+        setState(prev => prev->openTab(id))
     }
 
     let removeTab = id => {
-        setTabs(prev => {
-            let newTabs = prev->Js_array2.filter(tab => tab.id != id)
-            if (newTabs->Js_array2.length == 0) {
-                setActiveTabId("")
-            } else if (activeTabId == id) {
-                setActiveTabId(newTabs[0].id)
-            }
-            newTabs
-        })
+        setState(prev => prev->removeTab(id))
     }
 
     let renderTabs = () => {
+        let {tabs, activeTabId} = state
         if (tabs->Js_array2.length == 0) {
             React.null
         } else {
@@ -72,10 +112,11 @@ let useTabs = ():useTabs => {
                                 if (tab.closable) {
                                     <span>
                                         {React.string(tab.label)}
-                                        <IconButton component="div" onClick={evt => {
-                                            ReactEvent.Synthetic.stopPropagation(evt)
-                                            removeTab(tab.id)
-                                        }} >
+                                        <IconButton component="div" 
+                                                    onClick={evt => {
+                                                        ReactEvent.Synthetic.stopPropagation(evt)
+                                                        removeTab(tab.id)
+                                                    }} >
                                             <Icons.Clear />
                                         </IconButton>
                                     </span>
@@ -90,5 +131,11 @@ let useTabs = ():useTabs => {
         }
     }
 
-    {addTab, openTab, removeTab, renderTabs}
+    {
+        addTab,
+        openTab,
+        removeTab,
+        tabs: state.tabs->Js.Array2.copy,
+        renderTabs
+    }
 }

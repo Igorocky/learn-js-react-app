@@ -1,14 +1,22 @@
+open Expln_React_common
+
+type promise<'a> = Js.Promise.t<'a>
+
 type tabId = string
-type tab = {
-    id: tabId, 
-    label: string, 
-    closable: bool, 
-    render: bool => Expln_React_common.reElem
+
+type tab<'a> = {
+    id:tabId,
+    label: string,
+    closable: bool,
+    data: 'a
 }
-type useTabs = {
-    addTab: (~label: string, ~closable: bool, ~render: bool => Expln_React_common.reElem) => tabId,
+
+type tabMethods<'a> = {
+    addTab: (~label:string, ~closable:bool, ~data:'a) => promise<tabId>,
     openTab: tabId => unit,
     removeTab: tabId => unit,
-    renderTabs: unit => Expln_React_common.reElem
+    tabs: array<tab<'a>>,
+    renderTabs: unit => reElem
 }
-let useTabs: unit => useTabs
+
+let useTabs: unit => tabMethods<'a>
