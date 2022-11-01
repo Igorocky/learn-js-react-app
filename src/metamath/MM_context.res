@@ -436,12 +436,16 @@ let findParentheses: mmContext => array<int> = ctx => {
         while (rootCtx.contents.parent->Belt_Option.isSome) {
             rootCtx.contents = rootCtx.contents.parent->Belt_Option.getExn
         }
-        rootCtx.contents.consts->Js_array2.map(cStr => {
-            switch rootCtx.contents.symToInt->Belt_MutableMapString.get(cStr) {
-                | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
-                | Some(i) => i
+        let allConsts = []
+        rootCtx.contents.consts->Js_array2.forEach(cStr => {
+            if (cStr != "") {
+                switch rootCtx.contents.symToInt->Belt_MutableMapString.get(cStr) {
+                    | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
+                    | Some(i) => allConsts->Js_array2.push(i)->ignore
+                }
             }
         })
+        allConsts
     }
 
     let getAllExprs = ctx => {
@@ -461,6 +465,8 @@ let findParentheses: mmContext => array<int> = ctx => {
     let checkValidParens = (allExprs, openSym, closeSym) => {
         open MM_parenCounter
         let res = ref(true)
+        let openUsed = ref(false)
+        let closeUsed = ref(false)
         let parenCnt = parenCntMake([openSym, closeSym])
         let parenState = ref(Balanced)
         let allExprsLen = allExprs->Js_array2.length
@@ -470,14 +476,21 @@ let findParentheses: mmContext => array<int> = ctx => {
             let exprLen = expr->Js_array2.length
             let s = ref(0)
             while (s.contents < exprLen && res.contents) {
-                parenState.contents = parenCnt->parenCntPut(expr[s.contents])
+                let sym = expr[s.contents]
+                if (!openUsed.contents && sym == openSym) {
+                    openUsed.contents = true
+                }
+                if (!closeUsed.contents && sym == closeSym) {
+                    closeUsed.contents = true
+                }
+                parenState.contents = parenCnt->parenCntPut(sym)
                 res.contents = parenState.contents != Failed
                 s.contents = s.contents + 1
             }
             res.contents = parenState.contents == Balanced
             e.contents = e.contents + 1
         }
-        res.contents
+        res.contents && openUsed.contents && closeUsed.contents
     }
 
     let allConsts = getAllConsts(ctx)

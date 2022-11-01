@@ -57,3 +57,6 @@ $( A theorem with invalid proof (two proof steps were swapped in comparison to t
        tt tze tpl tt tt a1 mp mp
      $.
 
+$( To test findParentheses() $)
+paren1 $a |- [ t ] = [ t ] $.
+paren2 $a |- { t } = { t } $.
