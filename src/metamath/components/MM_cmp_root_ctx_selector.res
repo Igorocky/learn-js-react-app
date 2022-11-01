@@ -43,7 +43,7 @@ let make = (~onChange:mmContext=>unit) => {
     let rndSingleScopeSelectors = () => {
         let renderDeleteButton = scope->Js.Array2.length > 1 || scope[0].fileName->Belt_Option.isSome
         React.array(
-            scope->Js_array2.mapi((singleScope,idx) => {
+            scope->Js_array2.map(singleScope => {
                 <MM_cmp_single_ctx_selector 
                     key=singleScope.id
                     initialScope=singleScope 

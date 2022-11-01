@@ -150,12 +150,12 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
                         {React.string("Error: " ++ msg)}
                     </pre>
                 }
-                | Some(Ok(ast)) => {
+                | Some(Ok(_)) => {
                     <Row>
                         {rndReadInstrTypeSelector()}
                         {
                             switch readInstr {
-                                | StopBefore(_) | StopAfter(_) => {
+                                | StopBefore | StopAfter => {
                                     rndLabelSelector()
                                 }
                                 | _ => React.null

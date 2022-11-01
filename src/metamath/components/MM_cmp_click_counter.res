@@ -1,7 +1,5 @@
 open Expln_React_common
 open Expln_React_Mui
-open MM_parser
-open MM_context
 
 
 @react.component

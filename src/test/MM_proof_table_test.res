@@ -4,6 +4,7 @@ open MM_context
 open MM_syntax_prover
 open MM_proof_table
 open MM_proof_verifier
+open MM_parenCounter
 
 let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     //given
@@ -11,10 +12,13 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let ast = parseMmFile(mmFileText)
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
-    let proofTable = findProof(~ctx, ~expr)
+    let frameProofData = prepareFrameProofData(ctx)
+    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
+    let proofTbl = []
+    let targetIdx = findProof(~ctx, ~frameProofData, ~parenCnt, ~expr, ~proofTbl)
 
     //when
-    let actualProof = createProof(ctx, proofTable)
+    let actualProof = createProof(ctx, proofTbl, targetIdx)
 
     //then
     try {

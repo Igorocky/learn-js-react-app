@@ -2,6 +2,7 @@ open Expln_test
 open MM_parser
 open MM_context
 open MM_syntax_prover
+open MM_parenCounter
 
 let testCanFindProof = (~mmFile, ~exprStr) => {
     //given
@@ -9,12 +10,15 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let ast = parseMmFile(mmFileText)
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
+    let frameProofData = prepareFrameProofData(ctx)
+    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
+    let proofTbl = []
 
     //when
-    let proofTable = findProof(~ctx, ~expr)
+    let targetIdx = findProof(~ctx, ~frameProofData, ~parenCnt, ~expr, ~proofTbl)
 
     //then
-    assertEq(true, proofTable[0].proof->Belt_Option.isSome)
+    assertEq(true, proofTbl[targetIdx].proof->Belt_Option.isSome)
 }
 
 describe("findProof", (.) => {

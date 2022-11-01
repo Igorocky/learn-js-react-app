@@ -15,11 +15,11 @@ type proofRecord = {
 
 type proofTable = array<proofRecord>
 
-let createProofTable: expr => proofTable
-let createOrderedProofTableFromProof: proofNode => proofTable
 let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int
 let markProved: proofTable => unit
-let updateDist: proofTable => unit
-let createProof: (mmContext, proofTable) => proof
+let updateDist: (proofTable, int) => unit
+let createProof: (mmContext, proofTable, int) => proof
+let createOrderedProofTableFromProof: proofNode => proofTable
+
 let proofTablePrint: (mmContext, proofTable, string) => unit

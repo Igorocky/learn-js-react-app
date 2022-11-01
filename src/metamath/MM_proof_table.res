@@ -43,15 +43,6 @@ let proofTablePrint = (ctx,tbl,title) => {
     Js.Console.log("-----------------------------------------------------------------------------------")
 }
 
-let createProofTable: expr => array<proofRecord> = exprToProve => {
-    [{
-        expr:exprToProve,
-        proof:None,
-        dist:0,
-        branches: None
-    }]
-}
-
 let getNextExprToProveIdx: proofTable => option<int> = tbl => {
     let minDist = ref(tbl->Js_array2.length)
     let res = ref(-1)
@@ -125,12 +116,12 @@ let markProved: proofTable => unit = tbl => {
     }
 }
 
-let updateDist: proofTable => unit = tbl => {
+let updateDist: (proofTable,int) => unit = (tbl,targetIdx) => {
     let tblLen = tbl->Js_array2.length
     tbl->Js_array2.forEach(r => r.dist=tblLen)
-    tbl[0].dist = 0
+    tbl[targetIdx].dist = 0
     let queue = Belt_MutableQueue.make()
-    queue->Belt_MutableQueue.add(tbl[0])
+    queue->Belt_MutableQueue.add(tbl[targetIdx])
     while (!(queue->Belt_MutableQueue.isEmpty)) {
         let parent = queue->Belt_MutableQueue.pop->Belt_Option.getExn
         let childDist = parent.dist+1
@@ -174,13 +165,12 @@ module ExprCmp = Belt.Id.MakeComparable({
     }
 })
 
-
-let traverseRecordsInRpnOrder = (tbl,~onUse,~onReuse) => {
+let traverseRecordsInRpnOrder = (tbl,targetIdx,~onUse,~onReuse) => {
     let savedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
     let reusedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))
     Expln_utils_data.traverseTree(
         (),
-        tbl[0],
+        tbl[targetIdx],
         (_, r) => {
             switch r.proof {
                 | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for proof generation doesn't have a proof.`}))
@@ -217,9 +207,9 @@ let traverseRecordsInRpnOrder = (tbl,~onUse,~onReuse) => {
     )->ignore
 }
 
-let collectReusedExprs = (tbl):Belt_Set.t<expr, ExprCmp.identity> => {
+let collectReusedExprs = (tbl,targetIdx):Belt_Set.t<expr, ExprCmp.identity> => {
     let reusedExprs = []
-    traverseRecordsInRpnOrder(tbl,
+    traverseRecordsInRpnOrder(tbl,targetIdx,
         ~onUse = _ => (),
         ~onReuse = (r,firstReusage) => {
             if (firstReusage) {
@@ -230,15 +220,15 @@ let collectReusedExprs = (tbl):Belt_Set.t<expr, ExprCmp.identity> => {
     Belt_Set.fromArray(reusedExprs, ~id=module(ExprCmp))
 }
 
-let createProof = (ctx:mmContext, tbl:proofTable):proof => {
+let createProof = (ctx:mmContext, tbl:proofTable, targetIdx:int):proof => {
     let tblLen = tbl->Js_array2.length
-    if (tblLen == 0) {
-        raise(MmException({msg:`Cannot extract a proof from empty proofTable.`}))
+    if (tblLen <= targetIdx) {
+        raise(MmException({msg:`tblLen <= targetIdx`}))
     }
-    if (tbl[0].proof->Belt_Option.isNone) {
-        raise(MmException({msg:`The first record in a proofTable must have a proof.`}))
+    if (tbl[targetIdx].proof->Belt_Option.isNone) {
+        raise(MmException({msg:`The target record in a proofTable must have a proof.`}))
     }
-    let mandHyps = getMandHyps(ctx, tbl[0].expr)
+    let mandHyps = getMandHyps(ctx, tbl[targetIdx].expr)
     let mandHypLabelToInt = Belt_MapString.fromArray(
         mandHyps->Js_array2.mapi(({label}, i) => (label, i+1))
     )
@@ -250,10 +240,10 @@ let createProof = (ctx:mmContext, tbl:proofTable):proof => {
             | i => i+1
         }
     }
-    let reusedExprs = collectReusedExprs(tbl)
+    let reusedExprs = collectReusedExprs(tbl,targetIdx)
     let reusedExprToInt = Belt_MutableMap.make(~id=module(ExprCmp))
     let proofSteps = []
-    traverseRecordsInRpnOrder(tbl,
+    traverseRecordsInRpnOrder(tbl,targetIdx,
         ~onUse = r => {
             let idx = switch r.proof {
                 | Some(Hypothesis({label})) => {

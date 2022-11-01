@@ -1,15 +1,16 @@
 open MM_context
 open MM_substitution
 open MM_proof_table
-open MM_parenCounter
 
-type proofPrecalcData = {
+type frameProofDataRec = {
     frame: frame,
     frmConstParts:constParts,
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
 }
+
+type frameProofData = array<frameProofDataRec>
 
 let isDirectFrame = frm => {
     let numOfVarsInAsrt = frm.asrt
@@ -19,7 +20,7 @@ let isDirectFrame = frm => {
     numOfVarsInAsrt == frm.numOfVars
 }
 
-let prepareFrameData = ctx => {
+let prepareFrameProofData = ctx => {
     let frames = []
     ctx->forEachFrame(frm => {
         if (isDirectFrame(frm)) {
@@ -107,18 +108,18 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
     }
 }
 
-let findProof = (~ctx, ~expr) => {
-    let frameData = prepareFrameData(ctx)
-    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
-    let tbl = createProofTable(expr)
+let findProof = (~ctx, ~frameProofData as frameData, ~parenCnt, ~expr, ~proofTbl as tbl) => {
+    let targetIdx = tbl->addExprToProve(expr)
+    tbl->markProved
+    tbl->updateDist(targetIdx)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
-    while (tbl[0].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {
+    while (tbl[targetIdx].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {
         suggestPossibleProofs(~tbl, ~ctx, ~frameData, ~parenCnt,
             ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
         )
         tbl->markProved
-        tbl->updateDist
+        tbl->updateDist(targetIdx)
         exprToProveIdx.contents = tbl->getNextExprToProveIdx
     }
-    tbl
+    targetIdx
 }
