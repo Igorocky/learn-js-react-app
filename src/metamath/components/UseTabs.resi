@@ -22,6 +22,7 @@ type tabMethods<'a> = {
     openTab: tabId => unit,
     removeTab: tabId => unit,
     tabs: array<tab<'a>>,
+    activeTabId: tabId,
     renderTabs: unit => reElem,
 
     updateTabs: (state<'a> => state<'a>) => unit

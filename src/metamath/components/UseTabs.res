@@ -24,6 +24,7 @@ type tabMethods<'a> = {
     openTab: tabId => unit,
     removeTab: tabId => unit,
     tabs: array<tab<'a>>,
+    activeTabId: tabId,
     renderTabs: unit => reElem,
 
     updateTabs: (state<'a> => state<'a>) => unit
@@ -136,6 +137,7 @@ let useTabs = ():tabMethods<'a> => {
         openTab,
         removeTab,
         tabs: state.tabs->Js.Array2.copy,
+        activeTabId: state.activeTabId,
         renderTabs,
 
         updateTabs: modifier => setState(modifier)
