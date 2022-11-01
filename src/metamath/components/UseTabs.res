@@ -44,7 +44,6 @@ let getNextId = st => {
 let getTabs = (st:state<'a>) => st.tabs
 
 let addTab = (st, ~label:string, ~closable:bool, ~data:'a) => {
-    Js.Console.log2("addTab:", label)
     let (st, newId) = st->getNextId
     let newTabs = st.tabs->Js_array2.concat([{id:newId, label, closable, data}])
     (
@@ -83,8 +82,6 @@ let removeTab = (st:state<'a>, tabId):state<'a> => {
 
 let useTabs = ():tabMethods<'a> => {
     let (state, setState) = useStateF(createEmptyState)
-
-    Js.Console.log2("state.tabs", state.tabs)
 
     let addTab = (~label:string, ~closable:bool, ~data:'a):promise<tabId> => promise(rlv => {
         setState(prev => {

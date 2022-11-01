@@ -5,7 +5,6 @@ open MM_context
 
 @react.component
 let make = () => {
-    Js_console.log("render")
     let (rootCtx, setRootCtx) = useState(createEmptyContext())
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs} = UseTabs.useTabs()
 
