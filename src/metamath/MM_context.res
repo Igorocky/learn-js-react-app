@@ -429,3 +429,74 @@ let rec getNestingLevel: mmContext => int = ctx => {
         | Some(pCtx) => 1 + getNestingLevel(pCtx)
     }
 }
+
+let findParentheses: mmContext => array<int> = ctx => {
+    let getAllConsts = ctx => {
+        let rootCtx = ref(ctx)
+        while (rootCtx.contents.parent->Belt_Option.isSome) {
+            rootCtx.contents = rootCtx.contents.parent->Belt_Option.getExn
+        }
+        rootCtx.contents.consts->Js_array2.map(cStr => {
+            switch rootCtx.contents.symToInt->Belt_MutableMapString.get(cStr) {
+                | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
+                | Some(i) => i
+            }
+        })
+    }
+
+    let getAllExprs = ctx => {
+        let allExpr = []
+        ctx->forEachFrame(frame => {
+            frame.hyps->Js_array2.forEach(hyp => {
+                if (hyp.typ == E) {
+                    allExpr->Js_array2.push(hyp.expr)->ignore
+                }
+            })
+            allExpr->Js_array2.push(frame.asrt)->ignore
+            None
+        })->ignore
+        allExpr
+    }
+
+    let checkValidParens = (allExprs, openSym, closeSym) => {
+        open MM_parenCounter
+        let res = ref(true)
+        let parenCnt = parenCntMake([openSym, closeSym])
+        let parenState = ref(Balanced)
+        let allExprsLen = allExprs->Js_array2.length
+        let e = ref(0)
+        while (e.contents < allExprsLen && res.contents) {
+            let expr = allExprs[e.contents]
+            let exprLen = expr->Js_array2.length
+            let s = ref(0)
+            while (s.contents < exprLen && res.contents) {
+                parenState.contents = parenCnt->parenCntPut(expr[s.contents])
+                res.contents = parenState.contents != Failed
+                s.contents = s.contents + 1
+            }
+            res.contents = parenState.contents == Balanced
+            e.contents = e.contents + 1
+        }
+        res.contents
+    }
+
+    let allConsts = getAllConsts(ctx)
+    let allExprs = getAllExprs(ctx)
+
+    let c = ref(0)
+    let maxC = allConsts->Js_array2.length - 2
+    let foundParens = []
+    while (c.contents <= maxC) {
+        let openSym = allConsts[c.contents]
+        let closeSym = allConsts[c.contents+1]
+        if (checkValidParens(allExprs, openSym, closeSym)) {
+            foundParens->Js_array2.push(openSym)->ignore
+            foundParens->Js_array2.push(closeSym)->ignore
+            c.contents = c.contents + 2
+        } else {
+            c.contents = c.contents + 1
+        }
+    }
+
+    foundParens
+}

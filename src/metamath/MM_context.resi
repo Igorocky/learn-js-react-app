@@ -40,5 +40,6 @@ let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
 let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a>
 let createFrame: (mmContext, string, array<string>) => frame
 let getNestingLevel: mmContext => int
+let findParentheses: mmContext => array<int>
 
 let exprEq: (expr,expr) => bool
