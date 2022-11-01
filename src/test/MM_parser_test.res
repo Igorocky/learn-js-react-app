@@ -12,7 +12,7 @@ describe("parseMmFile", (.) => {
         //then
         let actual = stmtToStrRec(ast)->Js_array2.filter(s => !(s->Js_string2.trim->Js_string2.startsWith("$(")))
         let expected = [
-                "$c 0 + = -> ( ) term wff |- [ ] { } $.",
+                "$c 0 + = -> ( ) term wff & => |- [ ] { } $.",
                 "$v t r s P Q $.",
                 "tt $f term t $.",
                 "tr $f term r $.",
@@ -32,6 +32,8 @@ describe("parseMmFile", (.) => {
                 "$}",
                 "th1 $p |- t = t $= tt tze tpl tt weq tt tt weq tt a2 tt tze tpl tt weq tt tze tpl tt weq tt tt weq wim tt a2 tt tze tpl tt tt a1 mp mp $.",
                 "th2 $p |- t = t $= tt tze tpl tt weq tt tt weq tt a2 tt tze tpl tt weq tze tt tpl tt weq tt tt weq wim tt a2 tt tze tpl tt tt a1 mp mp $.",
+                "paren1 $a |- [ t ] = [ t ] $.",
+                "paren2 $a |- { t } = { t } $.",
             ]
         //assertEq(actual->Js_array2.length, expected->Js_array2.length)
         //for i in 0 to actual->Js_array2.length-1 {
