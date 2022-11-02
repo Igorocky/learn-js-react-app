@@ -436,12 +436,14 @@ let findParentheses: mmContext => array<int> = ctx => {
         while (rootCtx.contents.parent->Belt_Option.isSome) {
             rootCtx.contents = rootCtx.contents.parent->Belt_Option.getExn
         }
-        let allConsts = []
+        let allConsts = ["(", ")", "[", "]", "{", "}"]->Js.Array2.filter(ctx->isConst)->makeExpr(ctx, _)
+        let predefiend = Belt_SetInt.fromArray(allConsts)
         rootCtx.contents.consts->Js_array2.forEach(cStr => {
             if (cStr != "") {
                 switch rootCtx.contents.symToInt->Belt_MutableMapString.get(cStr) {
                     | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
-                    | Some(i) => allConsts->Js_array2.push(i)->ignore
+                    | Some(i) if !(predefiend->Belt_SetInt.has(i)) => allConsts->Js_array2.push(i)->ignore
+                    | _ => ()
                 }
             }
         })

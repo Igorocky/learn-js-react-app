@@ -30,6 +30,8 @@ let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, ()) => mmContext
 
+let isConst: (mmContext,string) => bool
+let isVar: (mmContext,string) => bool
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>

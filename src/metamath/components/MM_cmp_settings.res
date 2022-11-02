@@ -176,8 +176,8 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
             availableColors=allColors
             onAdd=onTypeColorAdd
             onRemove=onTypeColorRemove
-            onTypeChange=onTypeChange
-            onColorChange=onColorChange
+            onTypeChange
+            onColorChange
         />
         {
             if (!eqState(prevState, state)) {
