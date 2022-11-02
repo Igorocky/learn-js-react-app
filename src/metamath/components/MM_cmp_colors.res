@@ -10,7 +10,6 @@ let make = (
     ~colors:array<string>,
     ~availableColors: array<string>,
     ~onAdd: unit => unit, 
-    ~onRemove: int => unit, 
     ~onTypeChange: (int,string) => unit, 
     ~onColorChange: (int,string) => unit, 
 ) => {
@@ -36,11 +35,14 @@ let make = (
     <Col>
         {
             React.array(types->Js_array2.mapi((typ,i) => {
-                <Row>
+                <Row key={i->Belt_Int.toString}>
                     <TextField label="Type" size=#small style=ReactDOM.Style.make(~width="100px", ()) value=typ onChange=evt2str(str => onTypeChange(i,str)) />
                     {rndColorSelect(~selectedColor=colors[i], ~onNewColorSelected = newColor => onColorChange(i, newColor))}
                 </Row>
             }))
         }
+        <IconButton key="add-button" onClick={_ => onAdd()}>
+            <Icons2.Add/>
+        </IconButton>
     </Col>
 }

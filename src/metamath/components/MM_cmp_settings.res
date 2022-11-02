@@ -11,6 +11,7 @@ let allColors = [
 type rec settings = {
     parens: string,
     parensIsValid: bool,
+    syntaxTypes: string,
     types: array<string>,
     colors: array<string>,
 }
@@ -19,16 +20,27 @@ let createDefaultSettings = () => {
     {
         parens: "( ) [ ] { }",
         parensIsValid: true,
+        syntaxTypes: "wff class",
         types:  [ "wff",     "term",    "setvar",  "class"],
         colors: [ "#4363d8", "#000000", "#e6194B", "#f032e6"],
     }
 }
 
+let getSpaceSeparatedValuesAsArray = str => {
+    str->Js_string2.split(" ")->Js_array2.map(Js_string2.trim)->Js_array2.filter(str => str != "")
+}
+
 let getParensAsArray = st => {
-    st.parens->Js_string2.split(" ")->Js_array2.map(Js_string2.trim)->Js_array2.filter(str => str != "")
+    st.parens->getSpaceSeparatedValuesAsArray
+}
+
+let getSyntaxTypesAsArray = st => {
+    st.syntaxTypes->getSpaceSeparatedValuesAsArray
 }
 
 let getParens: settings => array<string> = st => st->getParensAsArray
+
+let getSyntaxTypes: settings => array<string> = st => st->getSyntaxTypesAsArray
 
 let getCorrectedTypesAndColors = st => {
     let correctedTypes = []
@@ -54,6 +66,13 @@ let setParens = (st, str) => {
     {
         ...st,
         parens: str
+    }
+}
+
+let setSyntaxTypes = (st, str) => {
+    {
+        ...st,
+        syntaxTypes: str
     }
 }
 
@@ -94,11 +113,13 @@ let changeColor = (st,idx,newColor) => {
 
 let correctAndValidate = st => {
     let parensArr = st->getParensAsArray
+    let syntaxTypesArr = st->getSyntaxTypesAsArray
     let (types, colors) = getCorrectedTypesAndColors(st)
     {
         ...st,
         parens: parensArr->Expln_utils_common.strJoin(~sep=" ", ()),
         parensIsValid: parensArr->Js_array2.length->mod(_,2) == 0,
+        syntaxTypes: syntaxTypesArr->Expln_utils_common.strJoin(~sep=" ", ()),
         types,
         colors,
     }
@@ -109,7 +130,9 @@ let isValid = st => {
 }
 
 let eqState = (st1, st2) => {
-    getParensAsArray(st1) == getParensAsArray(st2) && st1.types == st2.types && st1.colors == st2.colors
+    getParensAsArray(st1) == getParensAsArray(st2) && 
+        getSyntaxTypesAsArray(st1) == getSyntaxTypesAsArray(st2) && 
+        st1.types == st2.types && st1.colors == st2.colors
 }
 
 @react.component
@@ -125,6 +148,10 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
         setState(st.contents)
     }
 
+    let onSyntaxTypesChange = newSyntaxTypes => {
+        setState(state->setSyntaxTypes(newSyntaxTypes))
+    }
+
     let syncParens = () => {
         findParentheses(ctx)->ctxExprToStr(ctx, _)->Expln_utils_common.strJoin(~sep=" ", ())->onParensChange
     }
@@ -137,13 +164,9 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
             onChange(st)
         }
     }
-
     
     let onTypeColorAdd = () => {
         setState(addTypeColor(state))
-    }
-    let onTypeColorRemove = idx => {
-        setState(removeTypeColor(state, idx))
     }
     let onTypeChange = (idx,newType) => {
         setState(changeType(state,idx,newType))
@@ -170,12 +193,18 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
                 <Icons2.Sync/>
             </IconButton>
         </Row>
+        <TextField 
+            size=#small
+            style=ReactDOM.Style.make(~width="400px", ())
+            label="Syntax types" 
+            value=state.syntaxTypes
+            onChange=evt2str(onSyntaxTypesChange)
+        />
         <MM_cmp_colors
             types=state.types
             colors=state.colors
             availableColors=allColors
             onAdd=onTypeColorAdd
-            onRemove=onTypeColorRemove
             onTypeChange
             onColorChange
         />
