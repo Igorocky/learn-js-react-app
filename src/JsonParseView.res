@@ -7,7 +7,7 @@ let make = () => {
   let (jsonStr,setJsonStr) = React.useState(_ => "")
   log2("jsonStr", jsonStr)
 
-  let onJsonStrChange = evt2Str(str => setJsonStr(_ => str))
+  let onJsonStrChange = evt2str(str => setJsonStr(_ => str))
 
   <Col spacing=2. style=ReactDOM.Style.make(~padding="10px", ())>
     <TextField size=#small multiline=true maxRows=20 label="JSON" onChange=onJsonStrChange inputProps={"size":20} />

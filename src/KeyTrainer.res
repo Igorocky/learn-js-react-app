@@ -43,6 +43,6 @@ let make = () => {
     <Paper style=ReactDOM.Style.make(~padding="20px", ~fontFamily="Courier New", ~fontSize="40px", ~color=if isMistake {"red"} else {"black"}, ())>
       {React.string(question)}
     </Paper>
-    <TextField autoFocus=true value="" onChange=evt2Str(acceptAnswer) />
+    <TextField autoFocus=true value="" onChange=evt2str(acceptAnswer) />
   </Col>
 }

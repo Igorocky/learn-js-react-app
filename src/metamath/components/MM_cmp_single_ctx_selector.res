@@ -114,7 +114,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
                 labelId="scope-type-select-label"
                 value=readInstrToStr(readInstr)
                 label="Scope"
-                onChange=evt2Str(newReadInstrType => {
+                onChange=evt2str(newReadInstrType => {
                     setScope(~fileName, ~fileText, ~ast, ~allLabels, ~readInstr=readInstrFromStr(newReadInstrType), ~label)
                 })
             >

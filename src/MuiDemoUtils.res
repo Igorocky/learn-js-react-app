@@ -5,7 +5,7 @@ open Belt
 
 let rndParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~setValue:option<'a>=>unit, ~rndValue: ()=>reElem) => {
   <Row alignItems=#center spacing=2.>
-    <Checkbox checked={Option.isSome(value)} onChange=evt2Bool(checked => setValue(if checked {Some(defaultValue)} else {None})) />
+    <Checkbox checked={Option.isSome(value)} onChange=evt2bool(checked => setValue(if checked {Some(defaultValue)} else {None})) />
     {React.string(paramName)}
     {rndValue()}
   </Row>
@@ -15,7 +15,7 @@ let rndStringParam = (~paramName:string, ~defaultValue:string, ~value:option<str
   rndParam(
     ~paramName, ~defaultValue=defaultValue, ~value, ~setValue,
     ~rndValue = () =>
-      <TextField disabled={value->Option.isNone} value={value->Option.getWithDefault("")} onChange=evt2Str(setValue) />
+      <TextField disabled={value->Option.isNone} value={value->Option.getWithDefault("")} onChange=evt2str(setValue) />
   )
 }
 
@@ -77,7 +77,7 @@ let rndEnumParam = (~paramName:string, ~defaultValue:'a, ~value:option<'a>, ~set
             | None => valToStr(possibleValues, defaultValue, ~paramName)
             | Some(val) => valToStr(possibleValues, val, ~paramName)
           }}
-          onChange=evt2Str(str => setValue(Some(strToVal(possibleValues, str, ~paramName))) )
+          onChange=evt2str(str => setValue(Some(strToVal(possibleValues, str, ~paramName))) )
         >
         {React.array(
           possibleValues->Js_array2.map(((_,s,_)) =>

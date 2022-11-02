@@ -61,7 +61,7 @@ let make = () => {
     let res = <TextField 
       value={value->strOrNull} 
       label={label->strOrNull} 
-      onChange=evt2Str(str => setValue(Some(str)))
+      onChange=evt2str(str => setValue(Some(str)))
       ?size
       ?variant
       ?multiline
