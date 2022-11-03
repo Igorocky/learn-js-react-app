@@ -81,7 +81,7 @@ let applySubs = (expr, subs): expr => {
 
 let extractSubstitution = (stack:array<proofNode>, stackLength, frame):array<expr> => {
     let subs = Expln_utils_common.createArray(frame.numOfVars)
-    let subsLock = Expln_utils_common.createArray(frame.numOfVars)->Js_array2.fillInPlace(false)
+    let subsLock = Belt_Array.make(frame.numOfVars, false)
     let baseIdx = stackLength - frame.numOfArgs
     frame.hyps->Js_array2.forEachi((hyp,i) => {
         if (hyp.typ == F) {

@@ -89,14 +89,6 @@ let addTypeColor = st => {
     }
 }
 
-let removeTypeColor = (st,idx) => {
-    {
-        ...st,
-        types: st.types->Js_array2.filteri((_,i) => i != idx),
-        colors: st.colors->Js_array2.filteri((_,i) => i != idx),
-    }
-}
-
 let changeType = (st,idx,newType) => {
     {
         ...st,
@@ -116,7 +108,6 @@ let correctAndValidate = st => {
     let syntaxTypesArr = st->getSyntaxTypesAsArray
     let (types, colors) = getCorrectedTypesAndColors(st)
     {
-        ...st,
         parens: parensArr->Expln_utils_common.strJoin(~sep=" ", ()),
         parensIsValid: parensArr->Js_array2.length->mod(_,2) == 0,
         syntaxTypes: syntaxTypesArr->Expln_utils_common.strJoin(~sep=" ", ()),

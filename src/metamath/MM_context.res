@@ -322,7 +322,7 @@ let applySingleStmt = (ctx:mmContext, stmt:stmt):unit => {
 
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?, ~stopAfter: string=?, ()) => mmContext = 
                                                 (ast, ~initialContext=?,~stopBefore="",~stopAfter="",()) => {
-    let ctxOpt = traverseAst(
+    let (ctx, _) = traverseAst(
         initialContext->Belt_Option.getWithDefault(createEmptyContext()),
         ast,
         ~preProcess = (ctx,node) => {
@@ -349,10 +349,8 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
                 | {stmt:Block({level})} => {
                     if (level > 0) {
                         closeChildContext(ctx)
-                        None
-                    } else {
-                        Some(ctx)
                     }
+                    None
                 }
                 | {stmt:Axiom({label}) | Provable({label})} if stopAfter == label => Some(ctx)
                 | _ => None
@@ -360,10 +358,7 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
         },
         ()
     )
-    switch ctxOpt {
-        | None => raise(MmException({msg:`Cannot extract mmContext from None.`}))
-        | Some(ctx) => ctx
-    }
+    ctx
 }
 
 let getHypothesis: (mmContext,string) => option<hypothesis> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)

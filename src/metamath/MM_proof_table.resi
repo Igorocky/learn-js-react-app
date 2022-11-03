@@ -19,6 +19,7 @@ let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int
 let markProved: proofTable => unit
 let updateDist: (proofTable, int) => unit
+
 let createProof: (mmContext, proofTable, int) => proof
 let createOrderedProofTableFromProof: proofNode => proofTable
 

@@ -270,7 +270,7 @@ let traverseAst: (
     ~process:('c, mmAstNode)=>option<'res>=?,
     ~postProcess:('c, mmAstNode)=>option<'res>=?,
     ()
-) => option<'res> =
+) => ('c, option<'res>) =
     (context, root, ~preProcess=?, ~process=?, ~postProcess=?, ()) => Expln_utils_data.traverseTree(
         context, 
         root, 
@@ -306,7 +306,7 @@ let stmtToStr: mmAstNode => string = node => {
 
 let stmtToStrRec: mmAstNode => array<string> = stmt => {
     let makePrefix = level => "    "->Js.String2.repeat(level)
-    traverseAst(
+    let ((_,result),_) = traverseAst(
         (ref(0),[]),
         stmt,
         ~preProcess=((level,arr),node)=>{
@@ -338,15 +338,12 @@ let stmtToStrRec: mmAstNode => array<string> = stmt => {
                     if (newLevel != 0) {
                         arr->Js_array2.push(makePrefix(level.contents) ++ "$}")->ignore
                     }
-                    if (newLevel == 0) {
-                        Some(arr)
-                    } else {
-                        None
-                    }
                 }
-                | _ => None
+                | _ => ()
             }
+            None
         },
         ()
-    )->Belt_Option.getExn
+    )
+    result
 }
