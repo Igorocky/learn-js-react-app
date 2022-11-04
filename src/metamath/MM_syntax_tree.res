@@ -3,13 +3,14 @@ open MM_parser
 open MM_proof_table
 
 type rec syntaxTreeNode = {
+    id: string,
     parent:option<syntaxTreeNode>,
     label:string,
     children:array<childNode>,
 }
 and childNode =
     | Subtree(syntaxTreeNode)
-    | Symbol(int)
+    | Symbol(string)
 
 let extractVarToRecIdxMapping = (args:array<int>, frame):array<int> => {
     let varToRecIdxMapping = Expln_utils_common.createArray(frame.numOfVars)
@@ -35,14 +36,22 @@ let extractVarToRecIdxMapping = (args:array<int>, frame):array<int> => {
     }
 }
 
-let rec buildSyntaxTreeInner = (ctx, tbl, parent, r):syntaxTreeNode => {
+let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
     switch r.proof {
         | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for syntax tree generation doesn't have a proof.`}))
         | Some(Hypothesis({label})) => {
             {
+                id: idSeq(),
                 parent,
                 label,
-                children: r.expr->Js_array2.map(s => Symbol(s))
+                children: {
+                    let maxI = r.expr->Js_array2.length - 1
+                    let children = Expln_utils_common.createArray(maxI)
+                    for i in 1 to maxI {
+                        children[i-1] = Symbol(ctx->ctxIntToStrExn(r.expr[i]))
+                    }
+                    children
+                }
             }
         }
         | Some(Assertion({args, label})) => {
@@ -51,18 +60,20 @@ let rec buildSyntaxTreeInner = (ctx, tbl, parent, r):syntaxTreeNode => {
                 | Some(frame) => {
                     let varToRecIdxMapping = extractVarToRecIdxMapping(args, frame)
                     let this = {
+                        id: idSeq(),
                         parent,
                         label,
-                        children: []
+                        children: Expln_utils_common.createArray(r.expr->Js_array2.length - 1)
                     }
-                    r.expr->Js_array2.forEach(s => {
-                        this.children->Js_array2.push(
-                            if (s < 0) {
-                                Symbol(s)
-                            } else {
-                                Subtree(buildSyntaxTreeInner(ctx, tbl, Some(this), tbl[varToRecIdxMapping[s]]))
-                            }
-                        )->ignore
+                    r.expr->Js_array2.forEachi((s,i) => {
+                        if (i > 0) {
+                            this.children[i-1] = 
+                                if (s < 0) {
+                                    Symbol(ctx->ctxIntToStrExn(s))
+                                } else {
+                                    Subtree(buildSyntaxTreeInner(idSeq, ctx, tbl, Some(this), tbl[varToRecIdxMapping[s]]))
+                                }
+                        }
                     })
                     this
                 }
@@ -72,5 +83,10 @@ let rec buildSyntaxTreeInner = (ctx, tbl, parent, r):syntaxTreeNode => {
 }
 
 let buildSyntaxTree = (ctx, tbl, targetIdx):syntaxTreeNode => {
-    buildSyntaxTreeInner(ctx, tbl, None, tbl[targetIdx])
+    let nextId = ref(0)
+    let idSeq = () => {
+        nextId.contents = nextId.contents + 1
+        Belt_Int.toString(nextId.contents-1)
+    }
+    buildSyntaxTreeInner(idSeq, ctx, tbl, None, tbl[targetIdx])
 }

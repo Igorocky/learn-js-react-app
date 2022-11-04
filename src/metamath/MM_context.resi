@@ -36,8 +36,10 @@ let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
 let makeExpr: (mmContext,array<string>) => expr
-let ctxExprToStr: (mmContext, expr) => array<string>
-let frmExprToStr: (mmContext, frame, expr) => array<string>
+let ctxIntToStrExn: (mmContext, int) => string
+let ctxExprToStrExn: (mmContext, expr) => array<string>
+let frmIntToStrExn: (mmContext, frame, int) => string
+let frmExprToStrExn: (mmContext, frame, expr) => array<string>
 let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
 let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a>
 let createFrame: (mmContext, string, array<string>) => frame

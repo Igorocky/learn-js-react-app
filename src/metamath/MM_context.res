@@ -364,12 +364,20 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
 let getHypothesis: (mmContext,string) => option<hypothesis> = (ctx,label) => ctx.symToHyp->Belt_MutableMapString.get(label)
 let getFrame: (mmContext,string) => option<frame> = (ctx,label) => ctx.frames->Belt_MutableMapString.get(label)
 
-let ctxExprToStr: (mmContext, expr) => array<string> = (ctx, expr) => {
-    expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]})
+let ctxIntToStrExn: (mmContext, int) => string = (ctx, i) => {
+    if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]}
 }
 
-let frmExprToStr: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
-    expr->Js_array2.map(i => if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)})
+let ctxExprToStrExn: (mmContext, expr) => array<string> = (ctx, expr) => {
+    expr->Js_array2.map(ctxIntToStrExn(ctx, _))
+}
+
+let frmIntToStrExn: (mmContext, frame, int) => string = (ctx, frame, i) => {
+    if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)}
+}
+
+let frmExprToStrExn: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
+    expr->Js_array2.map(frmIntToStrExn(ctx, frame, _))
 }
 
 let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
@@ -378,33 +386,17 @@ let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
 }
 
 let rec forEachFrame: (mmContext, frame => option<'a>) => option<'a> = (ctx, consumer) => {
-    let result = switch ctx.parent {
-        | Some(pCtx) => pCtx->forEachFrame(consumer)
-        | None => None
-    }
-    switch result {
-        | Some(_) => result
-        | None => {
-            let result = ref(None)
-            ctx.frames->Belt_MutableMapString.forEach((_,frm) => {
-                if (result.contents->Belt_Option.isNone) {
-                    result.contents = consumer(frm)
-                }
-            })
-            result.contents
+    let result = ref(None)
+    ctx.frames->Belt_MutableMapString.forEach((_,frm) => {
+        if (result.contents->Belt_Option.isNone) {
+            result.contents = consumer(frm)
         }
-    }
+    })
+    result.contents
 }
 
 let rec forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a> = (ctx, consumer) => {
-    let result = switch ctx.parent {
-        | Some(pCtx) => pCtx->forEachHypothesis(consumer)
-        | None => None
-    }
-    switch result {
-        | Some(_) => result
-        | None => ctx.hyps->Expln_utils_common.arrForEach(consumer)
-    }
+    ctx.hyps->Expln_utils_common.arrForEach(consumer)
 }
 
 let exprEq: (expr,expr) => bool = (a,b) => {
@@ -427,15 +419,11 @@ let rec getNestingLevel: mmContext => int = ctx => {
 
 let findParentheses: mmContext => array<int> = ctx => {
     let getAllConsts = ctx => {
-        let rootCtx = ref(ctx)
-        while (rootCtx.contents.parent->Belt_Option.isSome) {
-            rootCtx.contents = rootCtx.contents.parent->Belt_Option.getExn
-        }
         let allConsts = ["(", ")", "[", "]", "{", "}"]->Js.Array2.filter(ctx->isConst)->makeExpr(ctx, _)
         let predefiend = Belt_SetInt.fromArray(allConsts)
-        rootCtx.contents.consts->Js_array2.forEach(cStr => {
+        ctx.consts->Js_array2.forEach(cStr => {
             if (cStr != "") {
-                switch rootCtx.contents.symToInt->Belt_MutableMapString.get(cStr) {
+                switch ctx.symToInt->Belt_MutableMapString.get(cStr) {
                     | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
                     | Some(i) if !(predefiend->Belt_SetInt.has(i)) => allConsts->Js_array2.push(i)->ignore
                     | _ => ()

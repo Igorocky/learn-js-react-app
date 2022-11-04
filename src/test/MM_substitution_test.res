@@ -47,7 +47,7 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
                 open Expln_utils_common
                 frm.frameVarToSymb->Belt_MapInt.getExn(i)
                     ++ ": "
-                    ++ ctxExprToStr(ctx,s)->strJoin(~sep=" ", ())
+                    ++ ctxExprToStrExn(ctx,s)->strJoin(~sep=" ", ())
             })
         })
     assertEq(actualSubsStr, expectedSubstitutions)
