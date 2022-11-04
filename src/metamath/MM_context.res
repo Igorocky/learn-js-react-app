@@ -368,16 +368,16 @@ let ctxIntToStrExn: (mmContext, int) => string = (ctx, i) => {
     if (i < 0) {ctx.consts[-i]} else {ctx.vars[i]}
 }
 
-let ctxExprToStrExn: (mmContext, expr) => array<string> = (ctx, expr) => {
-    expr->Js_array2.map(ctxIntToStrExn(ctx, _))
+let ctxExprToStrExn: (mmContext, expr) => string = (ctx, expr) => {
+    expr->Js_array2.map(ctxIntToStrExn(ctx, _))->Expln_utils_common.strJoin(~sep=" ", ())
 }
 
 let frmIntToStrExn: (mmContext, frame, int) => string = (ctx, frame, i) => {
     if (i < 0) {ctx.consts[-i]} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)}
 }
 
-let frmExprToStrExn: (mmContext, frame, expr) => array<string> = (ctx, frame, expr) => {
-    expr->Js_array2.map(frmIntToStrExn(ctx, frame, _))
+let frmExprToStrExn: (mmContext, frame, expr) => string = (ctx, frame, expr) => {
+    expr->Js_array2.map(frmIntToStrExn(ctx, frame, _))->Expln_utils_common.strJoin(~sep=" ", ())
 }
 
 let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {

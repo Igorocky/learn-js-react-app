@@ -21,7 +21,7 @@ describe("verifyProof", (.) => {
 
         //then
         assertEq(
-            proof->getExprFromNode->ctxExprToStrExn(ctx, _)->Expln_utils_common.strJoin(~sep=" ", ()),
+            proof->getExprFromNode->ctxExprToStrExn(ctx, _),
             "|- t = t"
         )
     })
@@ -65,7 +65,7 @@ describe("verifyProof", (.) => {
 
         //then
         assertEq(
-            proof->getExprFromNode->ctxExprToStrExn(ctx, _)->Expln_utils_common.strJoin(~sep=" ", ()),
+            proof->getExprFromNode->ctxExprToStrExn(ctx, _),
             "|- ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )"
         )
     })

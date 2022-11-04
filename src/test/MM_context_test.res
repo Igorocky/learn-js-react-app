@@ -14,7 +14,7 @@ describe("findParentheses", (.) => {
 
         //then
         assertEq(
-            ctx->ctxExprToStrExn(actualFoundParens),
+            actualFoundParens->Js_array2.map(ctxIntToStrExn(ctx, _)),
             ["(",")","[","]","{","}","<.",".>"]
         )
     })

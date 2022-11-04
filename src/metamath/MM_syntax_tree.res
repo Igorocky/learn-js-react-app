@@ -25,7 +25,7 @@ let extractVarToRecIdxMapping = (args:array<int>, frame):array<int> => {
                 raise(MmException({msg:`extractVarToRecIdxMapping: locks[v]`}))
             } else {
                 locks[v] = true
-                varToRecIdxMapping[v] = i
+                varToRecIdxMapping[v] = args[i]
             }
         }
     })
@@ -63,9 +63,9 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                         id: idSeq(),
                         parent,
                         label,
-                        children: Expln_utils_common.createArray(r.expr->Js_array2.length - 1)
+                        children: Expln_utils_common.createArray(frame.asrt->Js_array2.length - 1)
                     }
-                    r.expr->Js_array2.forEachi((s,i) => {
+                    frame.asrt->Js_array2.forEachi((s,i) => {
                         if (i > 0) {
                             this.children[i-1] = 
                                 if (s < 0) {

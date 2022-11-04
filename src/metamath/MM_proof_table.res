@@ -16,7 +16,7 @@ type proofRecord = {
 type proofTable = array<proofRecord>
 
 let printProofRec = (ctx,r) => {
-    let exprStr = ctx->ctxExprToStrExn(r.expr)->Expln_utils_common.strJoin(~sep=" ", ())
+    let exprStr = ctx->ctxExprToStrExn(r.expr)
     let proofs = switch r.proof {
         | Some(proof) => {
             switch proof {
