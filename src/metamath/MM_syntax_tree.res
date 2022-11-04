@@ -10,7 +10,7 @@ type rec syntaxTreeNode = {
 }
 and childNode =
     | Subtree(syntaxTreeNode)
-    | Symbol(string)
+    | Symbol({id:string, sym:string})
 
 let extractVarToRecIdxMapping = (args:array<int>, frame):array<int> => {
     let varToRecIdxMapping = Expln_utils_common.createArray(frame.numOfVars)
@@ -48,7 +48,10 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                     let maxI = r.expr->Js_array2.length - 1
                     let children = Expln_utils_common.createArray(maxI)
                     for i in 1 to maxI {
-                        children[i-1] = Symbol(ctx->ctxIntToStrExn(r.expr[i]))
+                        children[i-1] = Symbol({
+                            id: idSeq(),
+                            sym: ctx->ctxIntToStrExn(r.expr[i])
+                        })
                     }
                     children
                 }
@@ -69,7 +72,10 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                         if (i > 0) {
                             this.children[i-1] = 
                                 if (s < 0) {
-                                    Symbol(ctx->ctxIntToStrExn(s))
+                                    Symbol({
+                                        id: idSeq(),
+                                        sym: ctx->ctxIntToStrExn(s)
+                                    })
                                 } else {
                                     Subtree(buildSyntaxTreeInner(idSeq, ctx, tbl, Some(this), tbl[varToRecIdxMapping[s]]))
                                 }

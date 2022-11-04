@@ -8,7 +8,6 @@ open MM_parenCounter
 open MM_syntax_tree
 
 type rec syntaxTreeNodeTest = {
-    id: string,
     label:string,
     children:array<childNodeTest>,
 }
@@ -18,12 +17,11 @@ and childNodeTest =
 
 let rec syntaxTreeToSyntaxTreeTest = (node:syntaxTreeNode) => {
     {
-        id: node.id,
         label: node.label,
         children: node.children->Js_array2.map(c => {
             switch c {
                 | Subtree(childNode) => Subtree(syntaxTreeToSyntaxTreeTest(childNode))
-                | Symbol(s) => Symbol(s)
+                | Symbol({sym}) => Symbol(sym)
             }
         })
     }
@@ -57,19 +55,16 @@ describe("buildSyntaxTree", (.) => {
 
         testSyntaxTree(~mmFile=demo0, ~exprStr="wff t = t", 
             ~expectedSyntaxTree = {
-                id: "0",
                 label: "weq",
                 children: [
                     Subtree({
-                        id: "1",
                         label: "tt",
                         children: [ 
                             Symbol("t") 
                         ]
                     }),
-                    Symbol("=") ,
+                    Symbol("="),
                     Subtree({
-                        id: "2",
                         label: "tt",
                         children: [ 
                             Symbol("t") 
@@ -78,13 +73,96 @@ describe("buildSyntaxTree", (.) => {
                 ]
             }
         )
-        //testCreateProof(~mmFile=demo0, ~exprStr="wff ( t = t -> ( t = t -> t = t ) )", ~expectedProof="( weq wim ) AABZDDCC")
-        //testCreateProof(~mmFile=demo0, ~exprStr="wff ( t = t -> ( r = r -> ( t = t -> ( r = r -> t = t ) ) ) )", ~expectedProof="( weq wim ) AACZBBCZEFEDDDD")
-        //testCreateProof(~mmFile=demo0, ~exprStr="wff ( ( ( ( r = r -> t = t ) -> ( r = r -> t = t ) ) -> ( ( r = r -> t = t ) -> ( r = r -> t = t ) ) ) -> ( ( ( r = r -> t = t ) -> ( r = r -> t = t ) ) -> ( ( r = r -> t = t ) -> ( r = r -> t = t ) ) ) )", ~expectedProof="( weq wim ) BBCAACDZEDZFDZGD")
 
-        //testCreateProof(~mmFile=setReduced, ~exprStr="wff ph", ~expectedProof="(  ) A")
-        //testCreateProof(~mmFile=setReduced, ~exprStr="wff ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )", ~expectedProof="( wb wi wn ) ABCABDBADEDEC")
-
-        //testCreateProof(~mmFile=setReduced, ~exprStr="wff -. ( ( ( ph <-> ps ) -> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) ) -> -. ( -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) -> ( ph <-> ps ) ) )", ~expectedProof="( wb wi wn ) ABCZABDBADEDEZDGFDEDE")
+        testSyntaxTree(~mmFile=setReduced, ~exprStr="wff ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )", 
+            ~expectedSyntaxTree = {
+                label: "wb",
+                children: [
+                    Symbol("("),
+                    Subtree({
+                        label: "wb",
+                        children: [
+                            Symbol("("),
+                            Subtree({
+                                label: "wph",
+                                children: [
+                                    Symbol("ph")
+                                ]
+                            }),
+                            Symbol("<->"),
+                            Subtree({
+                                label: "wps",
+                                children: [
+                                    Symbol("ps")
+                                ]
+                            }),
+                            Symbol(")")
+                        ]
+                    }),
+                    Symbol("<->"),
+                    Subtree({
+                        label: "wn",
+                        children: [
+                            Symbol("-."),
+                            Subtree({
+                                label: "wi",
+                                children: [
+                                    Symbol("("),
+                                    Subtree({
+                                        label: "wi",
+                                        children: [
+                                            Symbol("("),
+                                            Subtree({
+                                                label: "wph",
+                                                children: [
+                                                    Symbol("ph")
+                                                ]
+                                            }),
+                                            Symbol("->"),
+                                            Subtree({
+                                                label: "wps",
+                                                children: [
+                                                    Symbol("ps")
+                                                ]
+                                            }),
+                                            Symbol(")")
+                                        ]
+                                    }),
+                                    Symbol("->"),
+                                    Subtree({
+                                        label: "wn",
+                                        children: [
+                                            Symbol("-."),
+                                            Subtree({
+                                                label: "wi",
+                                                children: [
+                                                    Symbol("("),
+                                                    Subtree({
+                                                        label: "wps",
+                                                        children: [
+                                                            Symbol("ps")
+                                                        ]
+                                                    }),
+                                                    Symbol("->"),
+                                                    Subtree({
+                                                        label: "wph",
+                                                        children: [
+                                                            Symbol("ph")
+                                                        ]
+                                                    }),
+                                                    Symbol(")")
+                                                ]
+                                            })
+                                        ]
+                                    }),
+                                    Symbol(")")
+                                ]
+                            })
+                        ]
+                    }),
+                    Symbol(")")
+                ]
+            }
+        )
     })
 })
