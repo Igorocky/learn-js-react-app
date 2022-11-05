@@ -61,8 +61,6 @@ let closeModal = (st,id) => {
 
 @react.component
 let make = (~openModalRef:openModalRef /*, ~updateModalRef, ~closeModalRef*/) => {
-    //let (state, setState) = React.useState(_ => createInitialState())
-
     let (state, setState) = React.useState(_ => createInitialState())
 
     openModalRef.current = React.useMemo0(() => {
@@ -75,7 +73,12 @@ let make = (~openModalRef:openModalRef /*, ~updateModalRef, ~closeModalRef*/) =>
         }))
     })
 
-    <Col>
-    { state.modals->Js.Array2.map(m => <div key={m.id->Belt_Int.toString}> {m.render()} </div>)->React.array }
-    </Col>
+    let numOfModals = state.modals->Js.Array2.length
+    if ( numOfModals == 0) {
+        React.null
+    } else {
+        <Dialog opn=true>
+            {state.modals[numOfModals-1].render()}
+        </Dialog>
+    }
 }
