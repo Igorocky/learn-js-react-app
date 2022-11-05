@@ -1,4 +1,4 @@
-import {processRequest} from "./metamath/MM_backend.bs";
+import {processRequest} from "./MM_backend.bs";
 
 
 console.log('Hello from worker 2!')
