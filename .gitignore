@@ -28,3 +28,5 @@ yarn-error.log*
 /src/**/*.bs.js
 /.bsb.lock
 /src/tmp/
+/dist/
+/public/webworker-main.js

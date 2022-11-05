@@ -2,6 +2,7 @@ open Expln_React_common
 open Expln_React_Mui
 open MM_context
 open MM_cmp_settings
+open MM_frontend
 
 type tabData =
     | Settings
@@ -35,7 +36,19 @@ let make = () => {
                 st
             }
         })
-        None
+        let listenerId = registerBeListener(msg => {
+            switch msg {
+                | LogDone => {
+                    Js.Console.log("LogDone received.")
+                    true
+                }
+                | _ => false
+            }
+        })
+        sendToBe(LogMsg("sent from root cmp."))
+        Some(() => {
+            unregisterBeListener(listenerId)
+        })
     })
 
     let rndTabContent = (tab:UseTabs.tab<'a>) => {

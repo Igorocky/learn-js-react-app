@@ -21,7 +21,8 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
-    "mocha": "^10.1.0"
+    "mocha": "^10.1.0",
+    "webpack-cli": "^4.10.0"
   },
   "scripts": {
     "compile": "rescript",
