@@ -1,6 +1,7 @@
 open Expln_React_common
 open Expln_React_Mui
 open MM_parser
+open Modal
 
 type readInstr =
     | All
@@ -41,21 +42,21 @@ type mmSingleScope = {
 }
 
 @react.component
-let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelete:unit=>unit, ~renderDeleteButton:bool) => {
-    let (fileName, setFileName) = useState(initialScope.fileName)
-    let (fileText, setFileText) = useState(initialScope.fileText)
-    let (ast, setAst) = useState(initialScope.ast)
-    let (allLabels, setAllLabels) = useState(initialScope.allLabels)
-    let (readInstr, setReadInstr) = useState(initialScope.readInstr)
-    let (label, setLabel) = useState(initialScope.label)
+let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelete:unit=>unit, ~renderDeleteButton:bool, ~openModalRef:openModalRef) => {
+    let (fileName, setFileName) = React.useState(_ => initialScope.fileName)
+    let (fileText, setFileText) = React.useState(_ => initialScope.fileText)
+    let (ast, setAst) = React.useState(_ => initialScope.ast)
+    let (allLabels, setAllLabels) = React.useState(_ => initialScope.allLabels)
+    let (readInstr, setReadInstr) = React.useState(_ => initialScope.readInstr)
+    let (label, setLabel) = React.useState(_ => initialScope.label)
 
     let setScope = (~fileName, ~fileText, ~ast, ~allLabels, ~readInstr, ~label) => {
-        setFileName(fileName)
-        setFileText(fileText)
-        setAst(ast)
-        setAllLabels(allLabels)
-        setReadInstr(readInstr)
-        setLabel(label)
+        setFileName(_ => fileName)
+        setFileText(_ => fileText)
+        setAst(_ => ast)
+        setAllLabels(_ => allLabels)
+        setReadInstr(_ => readInstr)
+        setLabel(_ => label)
         onChange({
             id:initialScope.id,
             fileName,
@@ -88,6 +89,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
                 let fileName = Some(name)
                 let fileText = Some(text)
                 try {
+                    openModalRef->openModal(_ => <span>{`Modal for ${name}`->React.string}</span>)->ignore
                     let astRootNode = parseMmFile(text, ~onProgress=pct => Js.log(`Parsing ${name}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`), ())
                     let ast = Some(Ok(astRootNode))
                     let allLabels:array<string> = extractAllLabels(astRootNode)->Js_array2.sortInPlace

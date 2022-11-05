@@ -16,9 +16,9 @@ let getFirstRemainingKey = keys => keys[0]->Option.getWithDefault("getFirstRemai
 
 @react.component
 let make = () => {
-  let (remainingKeys, setRemainingKeys) = useState(initRemainingKeys())
-  let (question, setQuestion) = useState(getFirstRemainingKey(remainingKeys))
-  let (isMistake, setIsMistake) = useState(false)
+  let (remainingKeys, setRemainingKeys) = React.useState(_ => initRemainingKeys())
+  let (question, setQuestion) = React.useState(_ => getFirstRemainingKey(remainingKeys))
+  let (isMistake, setIsMistake) = React.useState(_ => false)
 
   let getNextQuestion = () => {
     let newRemainingKeys = if (remainingKeys->Array.size <= 1) {
@@ -26,16 +26,16 @@ let make = () => {
     } else {
       remainingKeys->Array.keepWithIndex((_,i) => i > 0)
     }
-    setRemainingKeys(newRemainingKeys)
+    setRemainingKeys(_ => newRemainingKeys)
     getFirstRemainingKey(newRemainingKeys)
   }
 
   let acceptAnswer = str => {
     if (str == question) {
-      setQuestion(getNextQuestion())
-      setIsMistake(false)
+      setQuestion(_ => getNextQuestion())
+      setIsMistake(_ => false)
     } else {
-      setIsMistake(true)
+      setIsMistake(_ => true)
     }
   }
 

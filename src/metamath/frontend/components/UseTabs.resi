@@ -1,6 +1,5 @@
 open Expln_React_common
-
-type promise<'a> = Js.Promise.t<'a>
+open Expln_utils_promise
 
 type tabId = string
 

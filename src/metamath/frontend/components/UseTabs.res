@@ -2,8 +2,6 @@ open Expln_React_common
 open Expln_React_Mui
 open Expln_utils_promise
 
-type promise<'a> = Js.Promise.t<'a>
-
 type tabId = string
 
 type tab<'a> = {
@@ -82,7 +80,7 @@ let removeTab = (st:state<'a>, tabId):state<'a> => {
 }
 
 let useTabs = ():tabMethods<'a> => {
-    let (state, setState) = useStateF(createEmptyState)
+    let (state, setState) = React.useState(createEmptyState)
 
     let addTab = (~label:string, ~closable:bool, ~data:'a):promise<tabId> => promise(rlv => {
         setState(prev => {

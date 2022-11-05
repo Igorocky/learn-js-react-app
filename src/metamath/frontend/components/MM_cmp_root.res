@@ -3,6 +3,7 @@ open Expln_React_Mui
 open MM_context
 open MM_cmp_settings
 open MM_frontend
+open Modal
 
 type tabData =
     | Settings
@@ -12,11 +13,11 @@ type tabData =
 
 @react.component
 let make = () => {
-    let (rootCtx, setRootCtx) = useState(createEmptyContext())
+    let (rootCtx, setRootCtx) = React.useState(_ => createEmptyContext())
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
 
     let onContextWasUpdated = newCtx => {
-        setRootCtx(newCtx)
+        setRootCtx(_ => newCtx)
         tabs->Js.Array2.forEach(tab => {
             switch tab.data {
                 | ProofExplorer(_) => removeTab(tab.id)
@@ -64,9 +65,12 @@ let make = () => {
         </div>
     }
 
+    let openModalRef = React.useRef(Js.Nullable.null)
+
     <Col>
-        <MM_cmp_context_selector onChange=onContextWasUpdated />
+        <MM_cmp_context_selector onChange=onContextWasUpdated openModalRef />
         {renderTabs()}
         {React.array(tabs->Js_array2.map(rndTabContent))}
+        <Modal openModalRef />
     </Col>
 }

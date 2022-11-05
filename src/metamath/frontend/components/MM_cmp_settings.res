@@ -128,19 +128,19 @@ let eqState = (st1, st2) => {
 
 @react.component
 let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit) => {
-    let (prevState, setPrevState) = useState(initialSettings)
-    let (state, setState) = useState(initialSettings)
+    let (prevState, setPrevState) = React.useState(_ => initialSettings)
+    let (state, setState) = React.useState(_ => initialSettings)
 
     let onParensChange = newParens => {
         let st = ref(state->setParens(newParens))
         if (!isValid(st.contents)) {
             st.contents = correctAndValidate(st.contents)
         }
-        setState(st.contents)
+        setState(_ => st.contents)
     }
 
     let onSyntaxTypesChange = newSyntaxTypes => {
-        setState(state->setSyntaxTypes(newSyntaxTypes))
+        setState(setSyntaxTypes(_, newSyntaxTypes))
     }
 
     let syncParens = () => {
@@ -149,25 +149,25 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
 
     let applyChanges = () => {
         let st = correctAndValidate(state)
-        setState(st)
+        setState(_ => st)
         if (st->isValid) {
-            setPrevState(st)
+            setPrevState(_ => st)
             onChange(st)
         }
     }
     
     let onTypeColorAdd = () => {
-        setState(addTypeColor(state))
+        setState(_ => addTypeColor(state))
     }
     let onTypeChange = (idx,newType) => {
-        setState(changeType(state,idx,newType))
+        setState(changeType(_,idx,newType))
     }
     let onColorChange = (idx,newColor) => {
-        setState(changeColor(state,idx,newColor))
+        setState(changeColor(_,idx,newColor))
     }
 
     let disregardChanges = () => {
-        setState(prevState)
+        setState(_ => prevState)
     }
 
     <Col spacing=3. style=ReactDOM.Style.make(~margin="30px", ())>

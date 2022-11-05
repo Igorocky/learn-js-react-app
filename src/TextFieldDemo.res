@@ -33,35 +33,35 @@ let rndBoolAttr = (~name:string, ~value:option<bool>) => {
 
 @react.component
 let make = () => {
-  let (value, setValue) = useState(None)
-  let (label, setLabel) = useState(None)
-  let (size, setSize) = useState(None)
+  let (value, setValue) = React.useState(_ => None)
+  let (label, setLabel) = React.useState(_ => None)
+  let (size, setSize) = React.useState(_ => None)
   let sizePossibleValues = [
     (#medium, "medium", "#medium"),
     (#small, "small", "#small"),
   ]
-  let (variant, setVariant) = useState(None)
+  let (variant, setVariant) = React.useState(_ => None)
   let variantPossibleValues = [
     (#filled, "filled", "#filled"),
     (#outlined, "outlined", "#outlined"),
     (#standard, "standard", "#standard"),
   ]
-  let (adornment, setAdornment) = useState(None)
+  let (adornment, setAdornment) = React.useState(_ => None)
   let adornmentPossibleValues = [
     (#start, "start", "#start"),
     (#end, "end", "#end"),
   ]
-  let (multiline, setMultiline) = useState(None)
-  let (minRows, setMinRows) = useState(None)
-  let (maxRows, setMaxRows) = useState(None)
-  let (cols, setCols) = useState(None)
-  let (disabled, setDisabled) = useState(None)
+  let (multiline, setMultiline) = React.useState(_ => None)
+  let (minRows, setMinRows) = React.useState(_ => None)
+  let (maxRows, setMaxRows) = React.useState(_ => None)
+  let (cols, setCols) = React.useState(_ => None)
+  let (disabled, setDisabled) = React.useState(_ => None)
 
   let rndTextField = () => {
     let res = <TextField 
       value={value->strOrNull} 
       label={label->strOrNull} 
-      onChange=evt2str(str => setValue(Some(str)))
+      onChange=evt2str(str => setValue(_ => Some(str)))
       ?size
       ?variant
       ?multiline
@@ -73,7 +73,7 @@ let make = () => {
       | Some(pos) => 
         let inputAdornment = 
           <InputAdornment position=pos>
-            <IconButton onClick={_ => setValue(Some(""))}>
+            <IconButton onClick={_ => setValue(_ => Some(""))}>
               <Icons.Clear/>
             </IconButton>
           </InputAdornment>
@@ -178,6 +178,7 @@ let make = () => {
         {rndTextFieldCode()}
       </Paper>
     </Row>
+    /*
     {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue=setValue)}
     {rndStringParam( ~paramName="label", ~defaultValue="label", ~value=label, ~setValue=setLabel)}
     {rndEnumParam( ~paramName="size", ~defaultValue=#medium, ~value=size, ~setValue=setSize, ~possibleValues = sizePossibleValues)}
@@ -188,5 +189,6 @@ let make = () => {
     {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue=setMaxRows, ~min=1, ~max=20, ~step=1)}
     {rndIntSliderParam( ~paramName="cols", ~defaultValue=20, ~value=cols, ~setValue=setCols, ~min=5, ~max=50, ~step=1)}
     {rndBoolParam( ~paramName="disabled", ~defaultValue=true, ~value=disabled, ~setValue=setDisabled)}
+    */
   </Col>
 }

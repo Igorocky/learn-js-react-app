@@ -3,6 +3,7 @@ open Expln_React_Mui
 open MM_parser
 open MM_cmp_single_ctx_selector
 open MM_context
+open Modal
 
 type mmScope = array<mmSingleScope>
 
@@ -25,12 +26,12 @@ let createEmptySingleScope = () => {
 }
 
 @react.component
-let make = (~onChange:mmContext=>unit) => {
-    let (expanded, setExpanded) = useStateF(_ => false)
-    let (thereAreChanges, setThereAreChanges) = useState(false)
-    let (scope, setScope) = useStateF(_ => [createEmptySingleScope()])
-    let (loadedScope, setLoadedScope) = useState([createEmptySingleScope()])
-    let (ctx, setCtx) = useState(Ok(createEmptyContext()))
+let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
+    let (expanded, setExpanded) = React.useState(_ => false)
+    let (thereAreChanges, setThereAreChanges) = React.useState(_ => false)
+    let (scope, setScope) = React.useState(_ => [createEmptySingleScope()])
+    let (loadedScope, setLoadedScope) = React.useState(_ => [createEmptySingleScope()])
+    let (ctx, setCtx) = React.useState(_ => Ok(createEmptyContext()))
 
     let toggleAccordion = () => {
         setExpanded(prev => !prev)
@@ -49,7 +50,7 @@ let make = (~onChange:mmContext=>unit) => {
                     initialScope=singleScope 
                     onChange={newScope => {
                         setScope(prev => prev->Js_array2.map(s => if s.id == singleScope.id {newScope} else {s}))
-                        setThereAreChanges(true)
+                        setThereAreChanges(_ => true)
                     }}
                     onDelete={() => {
                         setScope(prev => {
@@ -60,9 +61,10 @@ let make = (~onChange:mmContext=>unit) => {
                                 newScope
                             }
                         })
-                        setThereAreChanges(true)
+                        setThereAreChanges(_ => true)
                     }}
                     renderDeleteButton
+                    openModalRef
                 />
             })
         )
@@ -120,9 +122,9 @@ let make = (~onChange:mmContext=>unit) => {
                 }
             }
         })
-        setCtx(ctx.contents)
-        setLoadedScope(scope)
-        setThereAreChanges(false)
+        setCtx(_ => ctx.contents)
+        setLoadedScope(_ => scope)
+        setThereAreChanges(_ => false)
         closeAccordion()
         switch ctx.contents {
             | Ok(ctx) => onChange(ctx)
