@@ -33,11 +33,13 @@ let textAt = (text,i) => {
     "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
 }
 
-let parseMmFile = (text:string): mmAstNode => {
+let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): mmAstNode => {
     let textLength = text->Js_string2.length
+    let textLengthFlt = textLength->Belt_Int.toFloat
     let idx = ref(0) // index of the next char to read.
     let endOfFile = ref(false) // if idx is outside of text then endOfFile is true.
     let ch = ref("") // the char idx is pointing to. If endOfFile then ch == "".
+    let lastPct = ref(-1.) // last progress percentage sent to onProgress.
 
     let setIdx = i => {
         idx.contents = i
@@ -255,6 +257,12 @@ let parseMmFile = (text:string): mmAstNode => {
                 } else {
                     raise(MmException({msg:`Unexpected token '${token2}' at ${textAt(token2Idx)}`}))
                 }
+            }
+
+            let progressPct = tokenIdx->Belt_Int.toFloat /. textLengthFlt
+            if (progressPct > lastPct.contents +. 0.1) {
+                onProgress(progressPct)
+                lastPct.contents = progressPct
             }
         }
         result.contents->Belt_Option.getExn

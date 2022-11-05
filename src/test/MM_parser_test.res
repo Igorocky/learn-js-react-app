@@ -7,7 +7,7 @@ describe("parseMmFile", (.) => {
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
 
         //when
-        let ast = parseMmFile(mmFileText)
+        let ast = parseMmFile(mmFileText, ())
 
         //then
         let actual = stmtToStrRec(ast)->Js_array2.filter(s => !(s->Js_string2.trim->Js_string2.startsWith("$(")))

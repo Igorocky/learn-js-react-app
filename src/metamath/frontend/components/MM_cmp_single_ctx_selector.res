@@ -88,7 +88,7 @@ let make = (~initialScope:mmSingleScope, ~onChange:mmSingleScope=>unit, ~onDelet
                 let fileName = Some(name)
                 let fileText = Some(text)
                 try {
-                    let astRootNode = parseMmFile(text)
+                    let astRootNode = parseMmFile(text, ~onProgress=pct => Js.log(`Parsing ${name}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`), ())
                     let ast = Some(Ok(astRootNode))
                     let allLabels:array<string> = extractAllLabels(astRootNode)->Js_array2.sortInPlace
                     let readInstr = All

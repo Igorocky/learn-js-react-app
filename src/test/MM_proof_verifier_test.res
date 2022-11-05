@@ -7,7 +7,7 @@ describe("verifyProof", (.) => {
     it("successfully verifies a valid uncompressed proof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
-        let ast = parseMmFile(mmFileText)
+        let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="th1", ())
         let (_,Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
             switch node {
@@ -29,7 +29,7 @@ describe("verifyProof", (.) => {
     it("shows an error for an invalid uncompressed proof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
-        let ast = parseMmFile(mmFileText)
+        let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="th2", ())
         let (_, Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
             switch node {
@@ -51,7 +51,7 @@ describe("verifyProof", (.) => {
     it("successfully verifies a valid compressed proof", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/set-reduced.mm")
-        let ast = parseMmFile(mmFileText)
+        let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="dfbi1ALT", ())
         let (_,Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
             switch node {

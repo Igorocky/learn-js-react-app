@@ -65,7 +65,7 @@ let make = () => {
     }
 
     <Col>
-        <MM_cmp_root_ctx_selector onChange=onContextWasUpdated />
+        <MM_cmp_context_selector onChange=onContextWasUpdated />
         {renderTabs()}
         {React.array(tabs->Js_array2.map(rndTabContent))}
     </Col>
