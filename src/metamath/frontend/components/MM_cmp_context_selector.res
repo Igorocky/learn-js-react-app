@@ -95,7 +95,7 @@ let getSummary = st => {
 }
 
 @react.component
-let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef, ~updateModalRef:updateModalRef, ~closeModalRef:closeModalRef) => {
+let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
     let (state, setState) = React.useState(_ => {
         {
             nextId: 1, 
@@ -131,11 +131,11 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef, ~updateModalR
         switch nameAndTextOpt {
             | None => setState(updateSingleScope(_,id,reset))
             | Some((name,text)) => {
-                openModal(openModalRef, _ => rndParseMmFileProgress(name, 0.))->promiseMap(modalId => {
+                openModal(modalRef, _ => rndParseMmFileProgress(name, 0.))->promiseMap(modalId => {
                     let listenerId = registerBeListener(msg => {
                         switch msg {
                             | MmFileParseProgress({senderId, pct}) if senderId == modalId => {
-                                updateModal(updateModalRef, modalId, _ => rndParseMmFileProgress(name, pct))
+                                updateModal(modalRef, modalId, _ => rndParseMmFileProgress(name, pct))
                                 true
                             }
                             | MmFileParsed({senderId, ast}) if senderId == modalId => {
@@ -153,7 +153,7 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef, ~updateModalR
                                         setState(updateSingleScope(_,id,setAllLabels(_, extractAllLabels(ast)->Js_array2.sortInPlace)))
                                     }
                                 }
-                                closeModal(closeModalRef, modalId)
+                                closeModal(modalRef, modalId)
                                 //unregisterBeListener()
                                 true
                             }

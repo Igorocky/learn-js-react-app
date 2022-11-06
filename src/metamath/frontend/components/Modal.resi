@@ -4,14 +4,12 @@ open Expln_utils_promise
 
 type modalId = string
 
-type openModalRef = React.ref< Js.Nullable.t<(unit => reElem) => promise<modalId>> >
-let openModal: (openModalRef, unit => reElem) => promise<modalId>
+type modalRef
+let useModalRef: unit => modalRef
 
-type updateModalRef = React.ref< Js.Nullable.t<(modalId, (unit => reElem)) => unit> >
-let updateModal: (updateModalRef, modalId, unit => reElem) => unit
-
-type closeModalRef = React.ref< Js.Nullable.t<modalId => unit> >
-let closeModal: (closeModalRef, modalId) => unit
+let openModal: (modalRef, unit => reElem) => promise<modalId>
+let updateModal: (modalRef, modalId, unit => reElem) => unit
+let closeModal: (modalRef, modalId) => unit
 
 @react.component
-let make: (~openModalRef:openModalRef, ~updateModalRef:updateModalRef, ~closeModalRef:closeModalRef) => React.element
+let make: (~modalRef:modalRef) => React.element

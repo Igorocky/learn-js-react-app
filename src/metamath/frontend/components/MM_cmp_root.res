@@ -53,14 +53,12 @@ let make = () => {
         </div>
     }
 
-    let openModalRef = React.useRef(Js.Nullable.null)
-    let updateModalRef = React.useRef(Js.Nullable.null)
-    let closeModalRef = React.useRef(Js.Nullable.null)
+    let modalRef = useModalRef()
 
     <Col>
-        <MM_cmp_context_selector onChange=onContextWasUpdated openModalRef updateModalRef closeModalRef />
+        <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />
         {renderTabs()}
         {React.array(tabs->Js_array2.map(rndTabContent))}
-        <Modal openModalRef updateModalRef closeModalRef />
+        <Modal modalRef />
     </Col>
 }
