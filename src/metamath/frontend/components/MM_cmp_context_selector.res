@@ -1,84 +1,191 @@
 open Expln_React_common
 open Expln_React_Mui
 open MM_parser
-open MM_cmp_single_ctx_selector
+open MM_cmp_context_selector_single
 open MM_context
 open Modal
 
-type mmScope = array<mmSingleScope>
-
-let idGen = ref(1)
-let getNewId = () => {
-    idGen.contents = idGen.contents + 1
-    Belt_Int.toString(idGen.contents-1)
+let readInstrFromStr = str => {
+    switch str {
+        | "all" => #all
+        | "stopBefore" => #stopBefore
+        | "stopAfter" => #stopAfter
+        | _ => raise(MmException({msg:`Cannot convert string '${str}' to a readInstr.`}))
+    }
 }
 
-let createEmptySingleScope = () => {
+type mmSingleScope = {
+    id:string,
+    fileName: option<string>,
+    fileText: option<string>,
+    ast: option<result<mmAstNode,string>>,
+    allLabels: array<string>,
+    readInstr: readInstr,
+    label: option<string>,
+}
+
+let createEmptySingleScope = id => {
     {
-        id:getNewId(),
+        id,
         fileName:None,
         fileText:None,
         ast:None,
         allLabels:[],
-        readInstr:All,
+        readInstr:#all,
         label:None
+    }
+}
+
+type rec mmScope = {
+    nextId: int,
+    expanded: bool,
+    singleScopes: array<mmSingleScope>,
+    prev: option<mmScope>,
+    loadedContextSummary: string,
+}
+
+let setFileName = (ss, fileName) => {...ss, fileName}
+let setFileText = (ss, fileText) => {...ss, fileText}
+let setAst = (ss, ast) => {...ss, ast}
+let setAllLabels = (ss, allLabels) => {...ss, allLabels}
+let setReadInstr = (ss, readInstr) => {...ss, readInstr}
+let setLabel = (ss, label) => {...ss, label}
+let reset = ss => createEmptySingleScope(ss.id)
+
+let addSingleScope = st => {
+    {
+        ...st,
+        nextId:st.nextId+1,
+        singleScopes: st.singleScopes->Belt.Array.concat([createEmptySingleScope(st.nextId->Belt_Int.toString)])
+    }
+}
+let updateSingleScope = (st,id,update) => {...st, singleScopes:st.singleScopes->Js_array2.map(ss => if ss.id == id {update(ss)} else {ss})}
+let deleteSingleScope = (st,id) => {
+    let st = {
+        ...st, 
+        singleScopes:st.singleScopes->Belt.Array.keep(ss => ss.id != id)
+    }
+    if (st.singleScopes->Js_array2.length == 0) {
+        addSingleScope(st)
+    } else {
+        st
+    }
+}
+let setExpanded = (st,expanded) => {...st, expanded}
+let setPrev = (st,prev) => {...st, prev}
+let setLoadedContextSummary = (st,loadedContextSummary) => {...st, loadedContextSummary}
+
+let getSummary = st => {
+    if (st.singleScopes->Js.Array2.length == 1 && st.singleScopes[0].fileName->Belt_Option.isNone) {
+        "No MM context is loaded."
+    } else {
+        let filesInfo = st.singleScopes->Js_array2.map(ss => {
+            let fileName = ss.fileName->Belt_Option.getWithDefault("")
+            let readInstr = switch ss.readInstr {
+                | #all => ""
+                | #stopBefore => `, stoped before '${ss.label->Belt_Option.getWithDefault("")}'`
+                | #stopAfter => `, stoped after '${ss.label->Belt_Option.getWithDefault("")}'`
+            }
+            fileName ++ readInstr
+        })
+        "Loaded: " ++ filesInfo->Expln_utils_common.strJoin(~sep="; ", ())
     }
 }
 
 @react.component
 let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
-    let (expanded, setExpanded) = React.useState(_ => false)
-    let (thereAreChanges, setThereAreChanges) = React.useState(_ => false)
-    let (scope, setScope) = React.useState(_ => [createEmptySingleScope()])
-    let (loadedScope, setLoadedScope) = React.useState(_ => [createEmptySingleScope()])
-    let (ctx, setCtx) = React.useState(_ => Ok(createEmptyContext()))
+    let (state, setState) = React.useState(_ => {
+        {
+            nextId: 1, 
+            singleScopes: [createEmptySingleScope("0")], 
+            expanded: true, 
+            prev: None, 
+            loadedContextSummary: ""
+        }
+    })
+
+    React.useEffect0(() => {
+        setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
+        None
+    })
+
+    let extractAllLabels = (ast):array<string> => {
+        let result = []
+        traverseAst((), ast, ~process = (_,n) => {
+            switch n {
+                | {stmt:Axiom({label})} | {stmt:Provable({label})} => result->Js_array2.push(label)->ignore
+                | _ => ()
+            }
+            None
+        }, ())->ignore
+        result
+    }
+
+    let parseMmFileText = (id, nameAndTextOpt) => {
+        switch nameAndTextOpt {
+            | None => setState(updateSingleScope(_,id,reset))
+            | Some((name,text)) => {
+                setState(updateSingleScope(_,id,setFileName(_,Some(name))))
+                setState(updateSingleScope(_,id,setFileText(_,Some(text))))
+                setState(updateSingleScope(_,id,setReadInstr(_,#all)))
+                setState(updateSingleScope(_,id,setLabel(_,None)))
+                try {
+                    //openModalRef->openModal(_ => <span>{`Modal for ${name}`->React.string}</span>)->ignore
+                    let astRootNode = parseMmFile(text, ~onProgress=pct => Js.log(`Parsing ${name}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`), ())
+                    setState(updateSingleScope(_,id,setAst(_,Some(Ok(astRootNode)))))
+                    setState(updateSingleScope(_,id,setAllLabels(_, extractAllLabels(astRootNode)->Js_array2.sortInPlace)))
+                } catch {
+                    | MmException({msg}) => {
+                        setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
+                        setState(updateSingleScope(_,id,setAllLabels(_, [])))
+                    }
+                }
+            }
+        }
+    }
 
     let toggleAccordion = () => {
-        setExpanded(prev => !prev)
+        setState(prev => prev->setExpanded(!prev.expanded))
     }
     
     let closeAccordion = () => {
-        setExpanded(_ => false)
+        setState(setExpanded(_, false))
     }
 
     let rndSingleScopeSelectors = () => {
-        let renderDeleteButton = scope->Js.Array2.length > 1 || scope[0].fileName->Belt_Option.isSome
+        let renderDeleteButton = state.singleScopes->Js.Array2.length > 1 || state.singleScopes[0].fileName->Belt_Option.isSome
         React.array(
-            scope->Js_array2.map(singleScope => {
-                <MM_cmp_single_ctx_selector 
+            state.singleScopes->Js_array2.map(singleScope => {
+                <MM_cmp_context_selector_single 
                     key=singleScope.id
-                    initialScope=singleScope 
-                    onChange={newScope => {
-                        setScope(prev => prev->Js_array2.map(s => if s.id == singleScope.id {newScope} else {s}))
-                        setThereAreChanges(_ => true)
-                    }}
-                    onDelete={() => {
-                        setScope(prev => {
-                            let newScope = prev->Js_array2.filter(s => s.id != singleScope.id)
-                            if (newScope->Js_array2.length == 0) {
-                                [createEmptySingleScope()]
-                            } else {
-                                newScope
-                            }
-                        })
-                        setThereAreChanges(_ => true)
-                    }}
+                    onFileChange=parseMmFileText(singleScope.id, _)
+                    parseError={
+                        switch singleScope.ast {
+                            | Some(Error(msg)) => Some(msg)
+                            | _ => None
+                        }
+                    }
+                    readInstr=singleScope.readInstr
+                    onReadInstrChange={readInstrStr => setState(updateSingleScope(_,singleScope.id,setReadInstr(_,readInstrFromStr(readInstrStr))))}
+                    label=singleScope.label
+                    onLabelChange={labelOpt => setState(updateSingleScope(_,singleScope.id,setLabel(_,labelOpt)))}
+                    allLabels=singleScope.allLabels
                     renderDeleteButton
-                    openModalRef
+                    onDelete={_=>setState(deleteSingleScope(_,singleScope.id))}
                 />
             })
         )
     }
 
     let rndAddButton = () => {
-        let thereIsAtLeastOneValidSingleScope = scope->Js_array2.some(singleScope => {
+        let thereIsAtLeastOneValidSingleScope = state.singleScopes->Js_array2.some(singleScope => {
             switch singleScope.ast {
                 | Some(Ok(_)) => true
                 | _ => false
             }
         })
         if (thereIsAtLeastOneValidSingleScope) {
-            <IconButton key="add-button" onClick={_ => setScope(prev => prev->Js_array2.concat([createEmptySingleScope()]))} >
+            <IconButton key="add-button" onClick={_ => setState(addSingleScope)} >
                 <Icons2.Add/>
             </IconButton>
         } else {
@@ -88,32 +195,32 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
 
     let applyChanges = () => {
         let ctx = ref(Ok(createEmptyContext()))
-        scope->Js.Array2.forEachi((ss,i) => {
+        state.singleScopes->Js.Array2.forEachi((ss,i) => {
             if (ctx.contents->Belt_Result.isOk) {
                 switch ss.ast {
+                    | Some(Error(msg)) => {
+                        ctx.contents = Error(`Error loading MM context from the file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
+                    }
                     | Some(Ok(ast)) => {
                         try {
-                            let updatedCtx = ref(loadContext(
+                            let updatedCtx = loadContext(
                                 ast,
                                 ~initialContext=ctx.contents->Belt.Result.getExn,
-                                ~stopBefore = ?(if (ss.readInstr == StopBefore) {ss.label} else {None}),
-                                ~stopAfter = ?(if (ss.readInstr == StopAfter) {ss.label} else {None}),
+                                ~stopBefore = ?(if (ss.readInstr == #stopBefore) {ss.label} else {None}),
+                                ~stopAfter = ?(if (ss.readInstr == #stopAfter) {ss.label} else {None}),
                                 ()
-                            ))
-                            while (getNestingLevel(updatedCtx.contents) > 0) {
-                                closeChildContext(updatedCtx.contents)
+                            )
+                            while (getNestingLevel(updatedCtx) > 0) {
+                                closeChildContext(updatedCtx)
                             }
-                            ctx.contents = Ok(updatedCtx.contents)
+                            ctx.contents = Ok(updatedCtx)
                         } catch {
                             | MmException({msg}) => 
                                 ctx.contents = Error(`Error loading MM context from the file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
                         }
                     }
-                    | Some(Error(msg)) => {
-                        ctx.contents = Error(`Error parsing file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
-                    }
-                    | _ => {
-                        if (scope->Js.Array2.length == 1 && i == 0) {
+                    | None => {
+                        if (state.singleScopes->Js.Array2.length == 1 && i == 0) {
                             ()
                         } else {
                             ctx.contents = Error(`Error loading MM context: got an empty AST.`)
@@ -122,24 +229,32 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
                 }
             }
         })
-        setCtx(_ => ctx.contents)
-        setLoadedScope(_ => scope)
-        setThereAreChanges(_ => false)
-        closeAccordion()
         switch ctx.contents {
-            | Ok(ctx) => onChange(ctx)
-            | Error(_) => onChange(createEmptyContext())
+            | Ok(ctx) => {
+                setState(setPrev(_,Some(state->setPrev(None))))
+                setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
+                closeAccordion()
+                onChange(ctx)
+            }
+            | Error(msg) => Js.Console.log(msg)
         }
     }
 
     let rndSaveButtons = () => {
-        if (thereAreChanges) {
-            let scopeIsCorrect = scope->Js.Array2.every(ss => {
+        let thereAreNoChanges = switch state.prev {
+            | None if state.singleScopes->Js_array2.length == 1 => state.singleScopes[0].fileName->Belt_Option.isNone
+            | Some(prevState) => state.singleScopes == prevState.singleScopes
+            | _ => false
+        }
+        if (thereAreNoChanges) {
+            React.null
+        } else {
+            let scopeIsCorrect = state.singleScopes->Js.Array2.every(ss => {
                 switch ss.ast {
                     | Some(Ok(_)) => {
                         switch ss.readInstr {
-                            | All => true
-                            | StopBefore | StopAfter => {
+                            | #all => true
+                            | #stopBefore | #stopAfter => {
                                 switch ss.label {
                                     | Some(_) => true
                                     | None => false
@@ -150,46 +265,19 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
                     | _ => false
                 }
             })
-            let scopeIsEmpty = scope->Js.Array2.length == 1 && scope[0].fileName->Belt_Option.isNone
+            let scopeIsEmpty = state.singleScopes->Js.Array2.length == 1 && state.singleScopes[0].fileName->Belt_Option.isNone
             <Row>
-                <Button variant=#contained disabled={!scopeIsEmpty && !scopeIsCorrect} onClick={_=>applyChanges()} >
+                <Button variant=#contained disabled={!scopeIsCorrect && !scopeIsEmpty} onClick={_=>applyChanges()} >
                     {React.string("Apply changes")}
                 </Button>
             </Row>
-        } else {
-            React.null
         }
     }
 
-    let getPreloadedContextInfo = () => {
-        switch ctx {
-            | Error(msg) => {
-                <pre style=ReactDOM.Style.make(~color="red", ())>
-                    {React.string(msg)}
-                </pre>
-            }
-            | Ok(_) => {
-                if (loadedScope->Js.Array2.length == 1 && loadedScope[0].fileName->Belt_Option.isNone) {
-                    React.string("No MM context is loaded.")
-                } else {
-                    let filesInfo = loadedScope->Js_array2.map(ss => {
-                        let fileName = ss.fileName->Belt_Option.getWithDefault("")
-                        let readInstr = switch ss.readInstr {
-                            | All => ""
-                            | StopBefore => `, stoped before '${ss.label->Belt_Option.getWithDefault("")}'`
-                            | StopAfter => `, stoped after '${ss.label->Belt_Option.getWithDefault("")}'`
-                        }
-                        fileName ++ readInstr
-                    })
-                    React.string("Loaded: " ++ filesInfo->Expln_utils_common.strJoin(~sep="; ", ()))
-                }
-            }
-        }
-    }
 
-    <Accordion expanded >
+    <Accordion expanded=state.expanded >
         <AccordionSummaryStyled expandIcon={<Icons2.ExpandMore/>} onClick=toggleAccordion >
-            {getPreloadedContextInfo()}
+            {state.loadedContextSummary->React.string}
         </AccordionSummaryStyled>
         <AccordionDetails>
             <Col spacing=2.>
