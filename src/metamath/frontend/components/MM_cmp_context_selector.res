@@ -1,9 +1,11 @@
 open Expln_React_common
 open Expln_React_Mui
+open Expln_utils_promise
 open MM_parser
 open MM_cmp_context_selector_single
 open MM_context
 open Modal
+open MM_frontend
 
 let readInstrFromStr = str => {
     switch str {
@@ -93,7 +95,7 @@ let getSummary = st => {
 }
 
 @react.component
-let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
+let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef, ~updateModalRef:updateModalRef, ~closeModalRef:closeModalRef) => {
     let (state, setState) = React.useState(_ => {
         {
             nextId: 1, 
@@ -121,25 +123,45 @@ let make = (~onChange:mmContext=>unit, ~openModalRef:openModalRef) => {
         result
     }
 
+    let rndParseMmFileProgress = (fileName, pct) => {
+        <span>{`Parsing ${fileName}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
+    }
+
     let parseMmFileText = (id, nameAndTextOpt) => {
         switch nameAndTextOpt {
             | None => setState(updateSingleScope(_,id,reset))
             | Some((name,text)) => {
-                setState(updateSingleScope(_,id,setFileName(_,Some(name))))
-                setState(updateSingleScope(_,id,setFileText(_,Some(text))))
-                setState(updateSingleScope(_,id,setReadInstr(_,#all)))
-                setState(updateSingleScope(_,id,setLabel(_,None)))
-                try {
-                    //openModalRef->openModal(_ => <span>{`Modal for ${name}`->React.string}</span>)->ignore
-                    let astRootNode = parseMmFile(text, ~onProgress=pct => Js.log(`Parsing ${name}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`), ())
-                    setState(updateSingleScope(_,id,setAst(_,Some(Ok(astRootNode)))))
-                    setState(updateSingleScope(_,id,setAllLabels(_, extractAllLabels(astRootNode)->Js_array2.sortInPlace)))
-                } catch {
-                    | MmException({msg}) => {
-                        setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
-                        setState(updateSingleScope(_,id,setAllLabels(_, [])))
-                    }
-                }
+                openModal(openModalRef, _ => rndParseMmFileProgress(name, 0.))->promiseMap(modalId => {
+                    let listenerId = registerBeListener(msg => {
+                        switch msg {
+                            | MmFileParseProgress({senderId, pct}) if senderId == modalId => {
+                                updateModal(updateModalRef, modalId, _ => rndParseMmFileProgress(name, pct))
+                                true
+                            }
+                            | MmFileParsed({senderId, ast}) if senderId == modalId => {
+                                setState(updateSingleScope(_,id,setFileName(_,Some(name))))
+                                setState(updateSingleScope(_,id,setFileText(_,Some(text))))
+                                setState(updateSingleScope(_,id,setReadInstr(_,#all)))
+                                setState(updateSingleScope(_,id,setLabel(_,None)))
+                                switch ast {
+                                    | Error(msg) => {
+                                        setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
+                                        setState(updateSingleScope(_,id,setAllLabels(_, [])))
+                                    }
+                                    | Ok(ast) => {
+                                        setState(updateSingleScope(_,id,setAst(_,Some(Ok(ast)))))
+                                        setState(updateSingleScope(_,id,setAllLabels(_, extractAllLabels(ast)->Js_array2.sortInPlace)))
+                                    }
+                                }
+                                closeModal(closeModalRef, modalId)
+                                //unregisterBeListener()
+                                true
+                            }
+                            | _ => false
+                        }
+                    })
+                    sendToBe(ParseMmFile({senderId:modalId, mmFileText:text}))
+                })->ignore
             }
         }
     }

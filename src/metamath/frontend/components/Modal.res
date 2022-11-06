@@ -2,7 +2,7 @@ open Expln_React_common
 open Expln_React_Mui
 open Expln_utils_promise
 
-type modalId = int
+type modalId = string
 
 type modal = {
     id: modalId,
@@ -14,7 +14,7 @@ type updateModalRef = React.ref< Js.Nullable.t<(modalId, (unit => reElem)) => un
 type closeModalRef = React.ref< Js.Nullable.t<modalId => unit> >
 
 type state = {
-    nextId: modalId,
+    nextId: int,
     modals: array<modal>,
 }
 
@@ -26,10 +26,10 @@ let createInitialState = () => {
 }
 
 let openModalPriv = (st, render) => {
-    let id = st.nextId
+    let id = st.nextId->Belt_Int.toString
     (
         {
-            nextId: id+1,
+            nextId: st.nextId+1,
             modals: st.modals->Js_array2.concat([{
                 id,
                 render
@@ -75,45 +75,30 @@ let closeModal: (closeModalRef, modalId) => unit = (closeModalRef, modalId) => {
 }
 
 @react.component
-let make = (~openModalRef:option<openModalRef>=?, ~updateModalRef:option<updateModalRef>=?, ~closeModalRef:option<closeModalRef>=?) => {
+let make = (~openModalRef:openModalRef, ~updateModalRef:updateModalRef, ~closeModalRef:closeModalRef) => {
     let (state, setState) = React.useState(createInitialState)
 
-    switch openModalRef {
-        | Some(openModalRef) => {
-            openModalRef.current = React.useMemo0(() => {
-                Js.Nullable.return(render => promise(rlv => {
-                    setState(prev => {
-                        let (st, id) = prev->openModalPriv(render)
-                        rlv(id)
-                        st
-                    })
-                }))
+    openModalRef.current = React.useMemo0(() => {
+        Js.Nullable.return(render => promise(rlv => {
+            setState(prev => {
+                let (st, id) = prev->openModalPriv(render)
+                rlv(id)
+                st
             })
-        }
-        | None => ()
-    }
+        }))
+    })
 
-    switch updateModalRef {
-        | Some(updateModalRef) => {
-            updateModalRef.current = React.useMemo0(() => {
-                Js.Nullable.return((modalId, render) => {
-                    setState(updateModalPriv(_, modalId, render))
-                })
-            })
-        }
-        | None => ()
-    }
+    updateModalRef.current = React.useMemo0(() => {
+        Js.Nullable.return((modalId, render) => {
+            setState(updateModalPriv(_, modalId, render))
+        })
+    })
 
-    switch closeModalRef {
-        | Some(closeModalRef) => {
-            closeModalRef.current = React.useMemo0(() => {
-                Js.Nullable.return(modalId => {
-                    setState(closeModalPriv(_, modalId))
-                })
-            })
-        }
-        | None => ()
-    }
+    closeModalRef.current = React.useMemo0(() => {
+        Js.Nullable.return(modalId => {
+            setState(closeModalPriv(_, modalId))
+        })
+    })
 
     let numOfModals = state.modals->Js.Array2.length
     if ( numOfModals == 0) {

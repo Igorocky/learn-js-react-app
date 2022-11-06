@@ -37,19 +37,7 @@ let make = () => {
                 st
             }
         })
-        let listenerId = registerBeListener(msg => {
-            switch msg {
-                | LogDone => {
-                    Js.Console.log("LogDone received.")
-                    true
-                }
-                | _ => false
-            }
-        })
-        sendToBe(LogMsg("sent from root cmp."))
-        Some(() => {
-            unregisterBeListener(listenerId)
-        })
+        None
     })
 
     let rndTabContent = (tab:UseTabs.tab<'a>) => {
@@ -66,11 +54,13 @@ let make = () => {
     }
 
     let openModalRef = React.useRef(Js.Nullable.null)
+    let updateModalRef = React.useRef(Js.Nullable.null)
+    let closeModalRef = React.useRef(Js.Nullable.null)
 
     <Col>
-        <MM_cmp_context_selector onChange=onContextWasUpdated openModalRef />
+        <MM_cmp_context_selector onChange=onContextWasUpdated openModalRef updateModalRef closeModalRef />
         {renderTabs()}
         {React.array(tabs->Js_array2.map(rndTabContent))}
-        <Modal openModalRef />
+        <Modal openModalRef updateModalRef closeModalRef />
     </Col>
 }

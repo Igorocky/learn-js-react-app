@@ -1,6 +1,9 @@
+open MM_parser
+
 type beRequest =
-    | LogMsg(string)
+    | ParseMmFile({senderId:string, mmFileText:string})
 
 type beResponse =
-    | LogDone
+    | MmFileParseProgress({senderId:string, pct:float})
+    | MmFileParsed({senderId:string, ast:result<mmAstNode,string>})
 
