@@ -2,7 +2,7 @@ open Expln_React_common
 
 type size = [#small | #medium]
 
-@module("../react-mui-components/AutocompleteVirtualized.js") @react.component
+@module("./AutocompleteVirtualized.js") @react.component
 external make: (
     ~value:option<string>,
     ~options: array<string>,
