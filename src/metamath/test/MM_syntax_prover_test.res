@@ -23,8 +23,8 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
 
 describe("findProof", (.) => {
     it("finds proofs for simple wffs", (.) => {
-        let demo0 = "./src/test/resources/demo0.mm"
-        let setReduced = "./src/test/resources/set-reduced.mm"
+        let demo0 = "./src/metamath/test/resources/demo0.mm"
+        let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 
         testCanFindProof(~mmFile=demo0, ~exprStr="wff t = t")
         testCanFindProof(~mmFile=setReduced, ~exprStr="wff ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )")

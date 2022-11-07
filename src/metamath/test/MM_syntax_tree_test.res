@@ -50,8 +50,8 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
 
 describe("buildSyntaxTree", (.) => {
     it("builds correct syntax trees for WWFs", (.) => {
-        let demo0 = "./src/test/resources/demo0.mm"
-        let setReduced = "./src/test/resources/set-reduced.mm"
+        let demo0 = "./src/metamath/test/resources/demo0.mm"
+        let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 
         testSyntaxTree(~mmFile=demo0, ~exprStr="wff t = t", 
             ~expectedSyntaxTree = {

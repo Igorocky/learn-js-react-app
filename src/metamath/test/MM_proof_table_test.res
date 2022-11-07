@@ -41,8 +41,8 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
 
 describe("createProof", (.) => {
     it("finds proofs for simple wffs", (.) => {
-        let demo0 = "./src/test/resources/demo0.mm"
-        let setReduced = "./src/test/resources/set-reduced.mm"
+        let demo0 = "./src/metamath/test/resources/demo0.mm"
+        let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 
         testCreateProof(~mmFile=demo0, ~exprStr="wff t = t", ~expectedProof="( weq ) AAB")
         testCreateProof(~mmFile=demo0, ~exprStr="wff ( t = t -> ( t = t -> t = t ) )", ~expectedProof="( weq wim ) AABZDDCC")

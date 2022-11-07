@@ -5,7 +5,7 @@ open MM_context
 describe("findParentheses", (.) => {
     it("finds all parantheses", (.) => {
         //given
-        let mmFileText = Expln_utils_files.readStringFromFile("./src/test/resources/demo0.mm")
+        let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ())
 

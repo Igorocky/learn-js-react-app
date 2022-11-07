@@ -5,7 +5,7 @@ open MM_parser
 open MM_cmp_context_selector_single
 open MM_context
 open Modal
-open MM_frontend
+open MM_worker_client
 
 let readInstrFromStr = str => {
     switch str {
