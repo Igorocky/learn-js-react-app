@@ -1,4 +1,4 @@
-open MM_fe_be
+open MM_worker_api
 open MM_parser
 
 @val external sendToFe: beResponse => unit = "postMessage"

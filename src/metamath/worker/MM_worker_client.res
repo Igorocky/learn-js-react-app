@@ -1,4 +1,4 @@
-open MM_fe_be
+open MM_worker_api
 
 @val external webworker: {..} = "window.webWorkerInst"
 let sendToBe: beRequest => unit = req => webworker["postMessage"](. req)

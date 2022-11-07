@@ -1,5 +1,5 @@
-open MM_fe_be
+open MM_worker_api
 
-let sendToBe: MM_fe_be.beRequest => unit
+let sendToBe: beRequest => unit
 let registerBeListener: (beResponse => bool) => int
 let unregisterBeListener: int => unit
