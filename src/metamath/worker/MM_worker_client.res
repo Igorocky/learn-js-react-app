@@ -1,7 +1,7 @@
 open MM_worker_api
 
 @val external webworker: {..} = "window.webWorkerInst"
-let sendToBe: beRequest => unit = req => webworker["postMessage"](. req)
+let sendToWorker: beRequest => unit = req => webworker["postMessage"](. req)
 
 
 type listener = {
@@ -14,12 +14,12 @@ let getNextListenerId = () => {
     nextListenerId.contents - 1
 }
 let listeners = ref([])
-let registerBeListener = callback => {
+let regWorkerListener = callback => {
     let id = getNextListenerId()
     listeners.contents->Js_array2.push({ id, callback })->ignore
     id
 }
-let unregisterBeListener = id => {
+let unregWorkerListener = id => {
     let i = ref(0)
     while (i.contents < listeners.contents->Js_array2.length) {
         if (listeners.contents[i.contents].id == id) {
