@@ -119,11 +119,11 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
             | None => setState(updateSingleScope(_,id,reset))
             | Some((name,text)) => {
                 openModal(modalRef, _ => rndParseMmFileProgress(name, 0.))->promiseMap(modalId => {
-                    let listenerId = regWorkerListener(msg => {
+                    regWorkerListener(msg => {
                         switch msg {
                             | MmFileParseProgress({senderId, pct}) if senderId == modalId => {
                                 updateModal(modalRef, modalId, _ => rndParseMmFileProgress(name, pct))
-                                true
+                                Stop
                             }
                             | MmFileParsed({senderId, parseResult}) if senderId == modalId => {
                                 setState(updateSingleScope(_,id,setFileName(_,Some(name))))
@@ -141,12 +141,11 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                                     }
                                 }
                                 closeModal(modalRef, modalId)
-                                //unregisterBeListener()
-                                true
+                                StopAndUnreg
                             }
-                            | _ => false
+                            | _ => Cont
                         }
-                    })
+                    })->ignore
                     sendToWorker(ParseMmFile({senderId:modalId, mmFileText:text}))
                 })->ignore
             }
