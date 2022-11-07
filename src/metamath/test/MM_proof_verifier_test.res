@@ -9,12 +9,16 @@ describe("verifyProof", (.) => {
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="th1", ())
-        let (_,Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
+        let foundTheorem = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"th1",expr,proof})} => Some((expr,proof))
                 | _ => None
             }
         }, ())
+        let (exprStr, proof) = switch foundTheorem {
+            | (_,Some((exprStr,proof))) => (exprStr,proof)
+            | _ => failMsg(`!!!`)
+        }
 
         //when
         let proof = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
@@ -31,12 +35,16 @@ describe("verifyProof", (.) => {
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="th2", ())
-        let (_, Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
+        let foundTheorem = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"th2",expr,proof})} => Some((expr,proof))
                 | _ => None
             }
         }, ())
+        let (exprStr, proof) = switch foundTheorem {
+            | (_,Some((exprStr,proof))) => (exprStr,proof)
+            | _ => failMsg(`!!!`)
+        }
 
         //when
         let errorMsg = ref("")
@@ -53,12 +61,16 @@ describe("verifyProof", (.) => {
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/set-reduced.mm")
         let ast = parseMmFile(mmFileText, ())
         let ctx = loadContext(ast, ~stopBefore="dfbi1ALT", ())
-        let (_,Some((exprStr,proof))) = traverseAst((), ast, ~process=(_,node) => {
+        let foundTheorem = traverseAst((), ast, ~process=(_,node) => {
             switch node {
                 | {stmt:Provable({label:"dfbi1ALT",expr,proof})} => Some((expr,proof))
                 | _ => None
             }
         }, ())
+        let (exprStr, proof) = switch foundTheorem {
+            | (_,Some((exprStr,proof))) => (exprStr,proof)
+            | _ => failMsg(`!!!`)
+        }
 
         //when
         let proof = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
