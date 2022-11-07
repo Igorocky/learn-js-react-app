@@ -44,7 +44,6 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
     let actualSubsStr = actualSubs
         ->Js_array2.map(exprs => {
             exprs->Js_array2.mapi((s,i) => {
-                open Expln_utils_common
                 frm.frameVarToSymb->Belt_MapInt.getExn(i)
                     ++ ": "
                     ++ ctxExprToStrExn(ctx,s)

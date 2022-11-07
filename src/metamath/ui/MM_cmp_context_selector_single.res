@@ -1,8 +1,5 @@
 open Expln_React_common
 open Expln_React_Mui
-open MM_parser
-open Modal
-open Expln_utils_promise
 
 type readInstr = [ #all | #stopBefore | #stopAfter]
 

@@ -385,7 +385,7 @@ let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => {
     extractMandatoryHypotheses(ctx, mandatoryVars)
 }
 
-let rec forEachFrame: (mmContext, frame => option<'a>) => option<'a> = (ctx, consumer) => {
+let forEachFrame: (mmContext, frame => option<'a>) => option<'a> = (ctx, consumer) => {
     let result = ref(None)
     ctx.frames->Belt_MutableMapString.forEach((_,frm) => {
         if (result.contents->Belt_Option.isNone) {
@@ -395,7 +395,7 @@ let rec forEachFrame: (mmContext, frame => option<'a>) => option<'a> = (ctx, con
     result.contents
 }
 
-let rec forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a> = (ctx, consumer) => {
+let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a> = (ctx, consumer) => {
     ctx.hyps->Expln_utils_common.arrForEach(consumer)
 }
 

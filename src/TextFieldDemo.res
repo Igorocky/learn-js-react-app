@@ -178,17 +178,15 @@ let make = () => {
         {rndTextFieldCode()}
       </Paper>
     </Row>
-    /*
-    {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue=setValue)}
-    {rndStringParam( ~paramName="label", ~defaultValue="label", ~value=label, ~setValue=setLabel)}
-    {rndEnumParam( ~paramName="size", ~defaultValue=#medium, ~value=size, ~setValue=setSize, ~possibleValues = sizePossibleValues)}
-    {rndEnumParam( ~paramName="variant", ~defaultValue=#outlined, ~value=variant, ~setValue=setVariant, ~possibleValues = variantPossibleValues)}
-    {rndEnumParam( ~paramName="adornment", ~defaultValue=#end, ~value=adornment, ~setValue=setAdornment, ~possibleValues = adornmentPossibleValues)}
-    {rndBoolParam( ~paramName="multiline", ~defaultValue=true, ~value=multiline, ~setValue=setMultiline)}
-    {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue=setMinRows, ~min=1, ~max=10, ~step=1)}
-    {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue=setMaxRows, ~min=1, ~max=20, ~step=1)}
-    {rndIntSliderParam( ~paramName="cols", ~defaultValue=20, ~value=cols, ~setValue=setCols, ~min=5, ~max=50, ~step=1)}
-    {rndBoolParam( ~paramName="disabled", ~defaultValue=true, ~value=disabled, ~setValue=setDisabled)}
-    */
+    {rndStringParam( ~paramName="value", ~defaultValue="value", ~value=value, ~setValue= v => setValue(_ => v))}
+    {rndStringParam( ~paramName="label", ~defaultValue="label", ~value=label, ~setValue= v => setLabel(_ => v))}
+    {rndEnumParam( ~paramName="size", ~defaultValue=#medium, ~value=size, ~setValue= v => setSize(_ => v), ~possibleValues = sizePossibleValues)}
+    {rndEnumParam( ~paramName="variant", ~defaultValue=#outlined, ~value=variant, ~setValue= v => setVariant(_ => v), ~possibleValues = variantPossibleValues)}
+    {rndEnumParam( ~paramName="adornment", ~defaultValue=#end, ~value=adornment, ~setValue= v => setAdornment(_ => v), ~possibleValues = adornmentPossibleValues)}
+    {rndBoolParam( ~paramName="multiline", ~defaultValue=true, ~value=multiline, ~setValue= v => setMultiline(_ => v))}
+    {rndIntSliderParam( ~paramName="minRows", ~defaultValue=1, ~value=minRows, ~setValue= v => setMinRows(_ => v), ~min=1, ~max=10, ~step=1)}
+    {rndIntSliderParam( ~paramName="maxRows", ~defaultValue=1, ~value=maxRows, ~setValue= v => setMaxRows(_ => v), ~min=1, ~max=20, ~step=1)}
+    {rndIntSliderParam( ~paramName="cols", ~defaultValue=20, ~value=cols, ~setValue= v => setCols(_ => v), ~min=5, ~max=50, ~step=1)}
+    {rndBoolParam( ~paramName="disabled", ~defaultValue=true, ~value=disabled, ~setValue= v => setDisabled(_ => v))}
   </Col>
 }

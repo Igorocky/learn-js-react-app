@@ -2,8 +2,6 @@ open Expln_test
 open MM_parser
 open MM_context
 open MM_syntax_prover
-open MM_proof_table
-open MM_proof_verifier
 open MM_parenCounter
 open MM_syntax_tree
 
