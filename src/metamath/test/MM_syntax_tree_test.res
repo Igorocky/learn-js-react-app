@@ -29,7 +29,7 @@ let rec syntaxTreeToSyntaxTreeTest = (node:syntaxTreeNode) => {
 let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest) => {
     //given
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
-    let ast = parseMmFile(mmFileText, ())
+    let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
     let frameProofData = prepareFrameProofData(ctx)

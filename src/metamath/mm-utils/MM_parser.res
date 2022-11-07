@@ -33,13 +33,14 @@ let textAt = (text,i) => {
     "'" ++ text->Js.String2.substrAtMost(~from=i, ~length=lengthToShow) ++ ellipsis ++ "'"
 }
 
-let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): mmAstNode => {
+let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): (mmAstNode,array<string>) => {
     let textLength = text->Js_string2.length
     let textLengthFlt = textLength->Belt_Int.toFloat
     let idx = ref(0) // index of the next char to read.
     let endOfFile = ref(false) // if idx is outside of text then endOfFile is true.
     let ch = ref("") // the char idx is pointing to. If endOfFile then ch == "".
     let lastPct = ref(-1.) // last progress percentage sent to onProgress.
+    let allLabels = []
 
     let setIdx = i => {
         idx.contents = i
@@ -242,6 +243,7 @@ let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): mmAstNo
                 pushStmt(parseDisj(~beginIdx=tokenIdx))
             } else {
                 let label = token
+                allLabels->Js_array2.push(label)->ignore
                 let token2 = readNextToken(())
                 let token2Idx = idx.contents - token2->Js_string2.length
                 if (token2 == "") {
@@ -268,7 +270,8 @@ let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): mmAstNo
         result.contents->Belt_Option.getExn
     }
 
-    parseBlock(~beginIdx=idx.contents, ~level=0)
+    let rootAst = parseBlock(~beginIdx=idx.contents, ~level=0)
+    (rootAst, allLabels)
 }
 
 let traverseAst: (

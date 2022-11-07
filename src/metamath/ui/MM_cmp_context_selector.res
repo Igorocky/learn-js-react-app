@@ -110,18 +110,6 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
         None
     })
 
-    let extractAllLabels = (ast):array<string> => {
-        let result = []
-        traverseAst((), ast, ~process = (_,n) => {
-            switch n {
-                | {stmt:Axiom({label})} | {stmt:Provable({label})} => result->Js_array2.push(label)->ignore
-                | _ => ()
-            }
-            None
-        }, ())->ignore
-        result
-    }
-
     let rndParseMmFileProgress = (fileName, pct) => {
         <span>{`Parsing ${fileName}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
     }
@@ -137,19 +125,19 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                                 updateModal(modalRef, modalId, _ => rndParseMmFileProgress(name, pct))
                                 true
                             }
-                            | MmFileParsed({senderId, ast}) if senderId == modalId => {
+                            | MmFileParsed({senderId, parseResult}) if senderId == modalId => {
                                 setState(updateSingleScope(_,id,setFileName(_,Some(name))))
                                 setState(updateSingleScope(_,id,setFileText(_,Some(text))))
                                 setState(updateSingleScope(_,id,setReadInstr(_,#all)))
                                 setState(updateSingleScope(_,id,setLabel(_,None)))
-                                switch ast {
+                                switch parseResult {
                                     | Error(msg) => {
                                         setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
                                         setState(updateSingleScope(_,id,setAllLabels(_, [])))
                                     }
-                                    | Ok(ast) => {
+                                    | Ok((ast,allLabels)) => {
                                         setState(updateSingleScope(_,id,setAst(_,Some(Ok(ast)))))
-                                        setState(updateSingleScope(_,id,setAllLabels(_, extractAllLabels(ast)->Js_array2.sortInPlace)))
+                                        setState(updateSingleScope(_,id,setAllLabels(_, allLabels->Js_array2.sortInPlace)))
                                     }
                                 }
                                 closeModal(modalRef, modalId)

@@ -24,7 +24,7 @@ type mmException = {
 }
 exception MmException(mmException)
 
-let parseMmFile: (string, ~onProgress:float => unit=?, ()) => mmAstNode
+let parseMmFile: (string, ~onProgress:float => unit=?, ()) => (mmAstNode,array<string>)
 let textAt: (string,int) => string
 let traverseAst: ('c, mmAstNode,
     ~preProcess:('c, mmAstNode)=>option<'res>=?, ~process:('c, mmAstNode)=>option<'res>=?, ~postProcess:('c, mmAstNode)=>option<'res>=?, ()) => ('c, option<'res>)

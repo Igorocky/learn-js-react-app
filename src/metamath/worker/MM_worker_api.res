@@ -5,5 +5,5 @@ type beRequest =
 
 type beResponse =
     | MmFileParseProgress({senderId:string, pct:float})
-    | MmFileParsed({senderId:string, ast:result<mmAstNode,string>})
+    | MmFileParsed({senderId:string, parseResult:result<(mmAstNode,array<string>),string>})
 

@@ -6,7 +6,7 @@ open MM_substitution
 let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConstParts:array<(int,int)>, ~expectedMatchingConstParts:array<array<(int,int)>>) => {
     //given
     let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/substitutions-test.mm")
-    let ast = parseMmFile(mmFileText, ())
+    let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->Js_string2.split(" ")}))
     let frm = switch ctx->getFrame("test") {
@@ -27,7 +27,7 @@ let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConst
 let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSubstitutions:array<array<string>>) => {
     //given
     let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/substitutions-test.mm")
-    let ast = parseMmFile(mmFileText, ())
+    let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->Js_string2.split(" ")}))
     let frm = switch ctx->getFrame("test") {

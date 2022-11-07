@@ -5,17 +5,18 @@ open MM_parser
 
 let parse = (senderId,text) => {
     try {
-        let ast = parseMmFile(
+        let parseResult = parseMmFile(
             text,
             ~onProgress = pct => {
                 sendToFe(MmFileParseProgress({senderId, pct}))
             },
             ()
         )
-        sendToFe(MmFileParsed({senderId, ast:Ok(ast)}))
+        sendToFe(MmFileParseProgress({senderId, pct:1.}))
+        sendToFe(MmFileParsed({senderId, parseResult:Ok(parseResult)}))
     } catch {
         | MmException({msg}) => {
-            sendToFe(MmFileParsed({senderId, ast:Error(msg)}))
+            sendToFe(MmFileParsed({senderId, parseResult:Error(msg)}))
         }
     }
 }
