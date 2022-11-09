@@ -243,7 +243,6 @@ let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): (mmAstN
                 pushStmt(parseDisj(~beginIdx=tokenIdx))
             } else {
                 let label = token
-                allLabels->Js_array2.push(label)->ignore
                 let token2 = readNextToken(())
                 let token2Idx = idx.contents - token2->Js_string2.length
                 if (token2 == "") {
@@ -253,8 +252,10 @@ let parseMmFile = (text:string, ~onProgress: float=>unit = _ => (), ()): (mmAstN
                 } else if (token2 == "$e") {
                     pushStmt(parseEssential(~beginIdx=tokenIdx, ~label))
                 } else if (token2 == "$a") {
+                    allLabels->Js_array2.push(label)->ignore
                     pushStmt(parseAxiom(~beginIdx=tokenIdx, ~label))
                 } else if (token2 == "$p") {
+                    allLabels->Js_array2.push(label)->ignore
                     pushStmt(parseProvable(~beginIdx=tokenIdx, ~label))
                 } else {
                     raise(MmException({msg:`Unexpected token '${token2}' at ${textAt(token2Idx)}`}))
