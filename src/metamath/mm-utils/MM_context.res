@@ -320,12 +320,30 @@ let applySingleStmt = (ctx:mmContext, stmt:stmt):unit => {
     }
 }
 
-let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?, ~stopAfter: string=?, ()) => mmContext = 
-                                                (ast, ~initialContext=?,~stopBefore="",~stopAfter="",()) => {
-    let (ctx, _) = traverseAst(
-        initialContext->Belt_Option.getWithDefault(createEmptyContext()),
+let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?, ~stopAfter: string=?, 
+                    ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext =
+                                                (ast, ~initialContext=?,~stopBefore="",~stopAfter="", 
+                                                    ~expectedNumOfAssertions=-1, ~onProgress= _=>(), ()) => {
+    let ctx = initialContext->Belt_Option.getWithDefault(createEmptyContext())
+    let lastPctSent = ref(-1)
+    let labelsProcessed = ref(0.)
+    let expectedNumOfAssertionsF = expectedNumOfAssertions->Belt_Int.toFloat
+
+    let onAsrtProcess = () => {
+        if (expectedNumOfAssertions > 0) {
+            labelsProcessed.contents = labelsProcessed.contents +. 1.
+            let pct = (labelsProcessed.contents /. expectedNumOfAssertionsF *. 100.)->Js_math.round->Belt_Float.toInt
+            if (lastPctSent.contents < pct) {
+                onProgress(pct->Belt_Int.toFloat /. 100.)
+                lastPctSent.contents = pct
+            }
+        }
+    }
+
+    traverseAst(
+        (),
         ast,
-        ~preProcess = (ctx,node) => {
+        ~preProcess = (_,node) => {
             switch node {
                 | {stmt:Block({level})} => {
                     if (level > 0) {
@@ -333,18 +351,25 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
                     }
                     None
                 }
-                | {stmt:Axiom({label}) | Provable({label})} if stopBefore == label => Some(ctx)
+                | {stmt:Axiom({label}) | Provable({label})} => {
+                    onAsrtProcess()
+                    if (stopBefore == label) {
+                        Some(ctx)
+                    } else {
+                        None
+                    }
+                }
                 | _ => None
             }
         },
-        ~process = (ctx,node) => {
+        ~process = (_,node) => {
             switch node {
                 | {stmt:Block(_)} => ()
                 | {stmt} => applySingleStmt(ctx,stmt)
             }
             None
         },
-        ~postProcess = (ctx,node) => {
+        ~postProcess = (_,node) => {
             switch node {
                 | {stmt:Block({level})} => {
                     if (level > 0) {
@@ -357,7 +382,7 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
             }
         },
         ()
-    )
+    )->ignore
     ctx
 }
 
