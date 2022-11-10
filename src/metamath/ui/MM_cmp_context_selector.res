@@ -5,6 +5,7 @@ open MM_cmp_context_selector_single
 open MM_context
 open Modal
 open MM_worker_client
+open MM_worker_api
 
 let readInstrFromStr = str => {
     switch str {
@@ -114,6 +115,10 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
         <span>{`Parsing ${fileName}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
     }
 
+    let rndLoadMmContextProgress = (pct) => {
+        <span>{`Loading MM context: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
+    }
+
     let parseMmFileText = (id, nameAndTextOpt) => {
         switch nameAndTextOpt {
             | None => setState(updateSingleScope(_,id,reset))
@@ -137,7 +142,7 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                                     }
                                     | Ok((ast,allLabels)) => {
                                         setState(updateSingleScope(_,id,setAst(_,Some(Ok(ast)))))
-                                        setState(updateSingleScope(_,id,setAllLabels(_, allLabels->Js_array2.sortInPlace)))
+                                        setState(updateSingleScope(_,id,setAllLabels(_, allLabels)))
                                     }
                                 }
                                 closeModal(modalRef, modalId)
@@ -202,50 +207,51 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
     }
 
     let applyChanges = () => {
-        let ctx = ref(Ok(createEmptyContext()))
-        state.singleScopes->Js.Array2.forEachi((ss,i) => {
-            if (ctx.contents->Belt_Result.isOk) {
-                switch ss.ast {
-                    | Some(Error(msg)) => {
-                        ctx.contents = Error(`Error loading MM context from the file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
+        openModal(modalRef, _ => rndLoadMmContextProgress(0.))->promiseMap(modalId => {
+            regWorkerListener(msg => {
+                switch msg {
+                    | MmContextLoadProgress({senderId, pct}) if senderId == modalId => {
+                        updateModal(modalRef, modalId, _ => rndLoadMmContextProgress(pct))
+                        Stop
                     }
-                    | Some(Ok(ast)) => {
-                        try {
-                            let updatedCtx = loadContext(
-                                ast,
-                                ~initialContext=ctx.contents->Belt.Result.getExn,
-                                ~stopBefore = ?(if (ss.readInstr == #stopBefore) {ss.label} else {None}),
-                                ~stopAfter = ?(if (ss.readInstr == #stopAfter) {ss.label} else {None}),
-                                ()
-                            )
-                            while (getNestingLevel(updatedCtx) > 0) {
-                                closeChildContext(updatedCtx)
+                    | MmContextLoaded({senderId, ctx}) if senderId == modalId => {
+                        switch ctx {
+                            | Error(msg) => Js.Console.log(msg)
+                            | Ok(ctx) => {
+                                setState(setPrev(_,Some(state->setPrev(None))))
+                                setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
+                                closeAccordion()
+                                onChange(ctx)
                             }
-                            ctx.contents = Ok(updatedCtx)
-                        } catch {
-                            | MmException({msg}) => 
-                                ctx.contents = Error(`Error loading MM context from the file '${ss.fileName->Belt.Option.getWithDefault("")}': ${msg}`)
                         }
+                        closeModal(modalRef, modalId)
+                        StopAndUnreg
                     }
-                    | None => {
-                        if (state.singleScopes->Js.Array2.length == 1 && i == 0) {
-                            ()
-                        } else {
-                            ctx.contents = Error(`Error loading MM context: got an empty AST.`)
-                        }
-                    }
+                    | _ => Cont
                 }
-            }
-        })
-        switch ctx.contents {
-            | Ok(ctx) => {
-                setState(setPrev(_,Some(state->setPrev(None))))
-                setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
-                closeAccordion()
-                onChange(ctx)
-            }
-            | Error(msg) => Js.Console.log(msg)
-        }
+            })->ignore
+            sendToWorker(LoadMmContext({
+                senderId:modalId, 
+                scopes: state.singleScopes->Js.Array2.map(ss => {
+                    let stopBefore = if (ss.readInstr == #stopBefore) {ss.label} else {None}
+                    let stopAfter = if (ss.readInstr == #stopAfter) {ss.label} else {None}
+                    let label = stopBefore->Belt_Option.getWithDefault(
+                        stopAfter->Belt_Option.getWithDefault(
+                            ss.allLabels->Belt_Array.get(ss.allLabels->Js_array2.length-1)->Belt_Option.getWithDefault("")
+                        )
+                    )
+                    {
+                        ast: switch ss.ast {
+                            | Some(Ok(ast)) => ast
+                            | _ => raise(MmException({msg:`Cannot load an MM context from an empty or error ast.`}))
+                        },
+                        stopBefore,
+                        stopAfter,
+                        expectedNumOfAssertions: ss.allLabels->Js_array2.indexOf(label) + 1
+                    }
+                })
+            }))
+        })->ignore
     }
 
     let rndSaveButtons = () => {
