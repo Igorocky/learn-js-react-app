@@ -126,6 +126,16 @@ let mutableSetIntMakeFromArray = arr => {
     set
 }
 
+let mutableSetIntToArray = set => {
+    let arr = Expln_utils_common.createArray(set->mutableSetIntSize)
+    let i = ref(0)
+    set->mutableSetIntForEach(e => {
+        arr[i.contents] = e
+        i.contents = i.contents + 1
+    })
+    arr
+}
+
 let addDisjPairToMap = (disjMap:mutableMapInt<mutableSetInt>, n, m) => {
     switch disjMap->mutableMapIntGet(n) {
         | None => disjMap->mutableMapIntPut(n, mutableSetIntMakeFromArray([m]))
@@ -213,6 +223,26 @@ let symToIntExn = (ctx,sym) => {
 
 let makeExprExn: (mmContext,array<string>) => expr = (ctx, symbols) => {
     symbols->Js_array2.map(ctx->symToIntExn)
+}
+
+let ctxIntToStr = (ctx,i) => {
+    if (i >= 0) {
+        ctx->forEachCtxInReverseOrder(ctx => {
+            if (i < ctx.varsBaseIdx) {
+                None
+            } else {
+                Some(ctx.vars[i])
+            }
+        })
+    } else {
+        ctx->forEachCtxInDeclarationOrder(ctx => {
+            ctx.consts->Belt_Array.get(-i)
+        })
+    }
+}
+
+let ctxIntToStrExn = (ctx,i) => {
+    ctxIntToStr(ctx,i)->Belt.Option.getExn
 }
 
 // cdblk #update ===========================================================================================
@@ -397,16 +427,22 @@ let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: array<int>): hypot
 }
 
 let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, varRenumbering: array<int>): Belt_MapInt.t<string> => {
-    asrt->Js_array2.concatMany(
-        mandatoryHypotheses->Js_array2.map(hyp => hyp.expr)
-    )
-        ->Js_array2.filter(i => i >= 0)
-        ->Belt_SetInt.fromArray
-        ->Belt_SetInt.toArray
-        ->Js_array2.map(i => {
-            (varRenumbering->Belt_MapInt.getExn(i), ctx.vars[i])
+    let allVars = mutableSetIntMake()
+    mandatoryHypotheses->Js.Array2.forEach(hyp => {
+        hyp.expr->Js_array2.forEach(i => {
+            if (i >= 0) {
+                allVars->mutableSetIntAdd(i)
+            }
         })
-        ->Belt_MapInt.fromArray
+    })
+    asrt->Js_array2.forEach(i => {
+        if (i >= 0) {
+            allVars->mutableSetIntAdd(i)
+        }
+    })
+    Belt_MapInt.fromArray(
+        allVars->mutableSetIntToArray->Js_array2.map(v => (varRenumbering[v], ctxIntToStrExn(ctx,v)))
+    )
 }
 /*
 
