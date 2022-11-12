@@ -1,6 +1,6 @@
 open Expln_test
 open MM_parser
-open MM_context2
+open MM_context
 
 describe("findParentheses", (.) => {
     it("finds all parantheses", (.) => {

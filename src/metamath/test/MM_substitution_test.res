@@ -14,7 +14,7 @@ let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConst
         | None => failMsg("Cannot find 'test' frame in testIterateConstParts.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
-    let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
+    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
 
     //when
     let (actualConstParts, actualMatchingConstParts) = test_iterateConstParts(~ctx, ~frmExpr, ~expr)
@@ -35,7 +35,7 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
         | None => failMsg("Cannot find 'test' frame in testIterateSubstitutions.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
-    let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
+    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
 
     //when
     let actualSubs = test_iterateSubstitutions(~ctx, ~frmExpr, ~expr)

@@ -77,7 +77,7 @@ let applySubs = (expr, subs): expr => {
 
 let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
     let exprToProve = recToProve.expr
-    let foundHyp = ctx->forEachHypothesis(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
+    let foundHyp = ctx->forEachHypothesisInDeclarationOrder(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
     switch foundHyp {
         | Some(hyp) => recToProve.branches = Some([Hypothesis({label:hyp.label})])
         | None => {

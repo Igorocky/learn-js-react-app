@@ -144,7 +144,7 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
     }
 
     let syncParens = () => {
-        findParentheses(ctx)->ctxExprToStrExn(ctx, _)->onParensChange
+        findParentheses(ctx, ())->ctxExprToStrExn(ctx, _)->onParensChange
     }
 
     let applyChanges = () => {

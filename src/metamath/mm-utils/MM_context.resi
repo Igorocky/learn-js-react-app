@@ -24,10 +24,10 @@ type frame = {
     numOfArgs: int,
 }
 
-let createEmptyContext: unit => mmContext
+let createContext: (~parent:mmContext=?, ()) => mmContext
 let applySingleStmt: (mmContext, stmt) => unit
-let openChildContext: mmContext => unit
-let closeChildContext: mmContext => unit
+let openChildContext: mmContext => mmContext
+let closeChildContext: mmContext => mmContext
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, 
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext
 
@@ -36,15 +36,15 @@ let isVar: (mmContext,string) => bool
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
-let makeExpr: (mmContext,array<string>) => expr
+let makeExprExn: (mmContext,array<string>) => expr
 let ctxIntToStrExn: (mmContext, int) => string
 let ctxExprToStrExn: (mmContext, expr) => string
 let frmIntToStrExn: (mmContext, frame, int) => string
 let frmExprToStrExn: (mmContext, frame, expr) => string
 let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
-let forEachHypothesis: (mmContext, hypothesis => option<'a>) => option<'a>
+let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) => option<'a>
 let createFrame: (mmContext, string, array<string>) => frame
 let getNestingLevel: mmContext => int
-let findParentheses: mmContext => array<int>
+let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
 
 let exprEq: (expr,expr) => bool

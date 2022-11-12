@@ -21,7 +21,7 @@ describe("verifyProof", (.) => {
         }
 
         //when
-        let proof = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
+        let proof = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
 
         //then
         assertEq(
@@ -49,7 +49,7 @@ describe("verifyProof", (.) => {
         //when
         let errorMsg = ref("")
         try {
-            let _ = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
+            let _ = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
         } catch {
             | MmException({msg}) => errorMsg.contents = msg
         }
@@ -73,7 +73,7 @@ describe("verifyProof", (.) => {
         }
 
         //when
-        let proof = verifyProof(ctx, makeExpr(ctx, exprStr), proof)
+        let proof = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
 
         //then
         assertEq(

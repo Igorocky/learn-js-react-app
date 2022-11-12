@@ -11,7 +11,7 @@ type tabData =
 
 @react.component
 let make = () => {
-    let (rootCtx, setRootCtx) = React.useState(_ => createEmptyContext())
+    let (rootCtx, setRootCtx) = React.useState(_ => createContext(()))
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
 
     let onContextWasUpdated = newCtx => {

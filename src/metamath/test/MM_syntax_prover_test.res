@@ -9,9 +9,9 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
-    let expr = ctx->makeExpr(exprStr->Js_string2.split(" "))
+    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
     let frameProofData = prepareFrameProofData(ctx)
-    let parenCnt = parenCntMake(ctx->makeExpr(["(", ")", "{", "}", "[", "]"]))
+    let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
     let proofTbl = []
 
     //when
