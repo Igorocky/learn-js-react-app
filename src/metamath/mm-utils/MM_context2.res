@@ -282,9 +282,8 @@ let extractMandatoryVariables = (ctx,asrt): mutableSetInt => {
 
 let extractMandatoryDisj = (ctx, mandatoryVars:mutableSetInt): mutableMapInt<mutableSetInt> => {
     let mandatoryDisj = mutableMapIntMake()
-    let ctx = ref(Some(ctx))
-    while (ctx.contents->Belt.Option.isSome) {
-        (ctx.contents->Belt.Option.getExn).disj->mutableMapIntForEach((n,ms) => {
+    ctx->forEachCtxInReverseOrder(ctx => {
+        ctx.disj->mutableMapIntForEach((n,ms) => {
             if (mandatoryVars->mutableSetIntHas(n)) {
                 ms->mutableSetIntForEach(m => {
                     if (mandatoryVars->mutableSetIntHas(m)) {
@@ -292,8 +291,9 @@ let extractMandatoryDisj = (ctx, mandatoryVars:mutableSetInt): mutableMapInt<mut
                     }
                 })
             }
-        })
-    }
+        })->ignore
+        None
+    })->ignore
     mandatoryDisj
 }
 
@@ -542,30 +542,30 @@ let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
    }
 }
 
-let renumberVarsInDisj = (disj: mutableMapInt<mutableSetInt>, renumbering: array<int>): Belt_MapInt.t<Belt_SetInt.t> => {
+let renumberVarsInDisj = (disj: mutableMapInt<mutableSetInt>, renumbering: Belt_MapInt.t<int>): Belt_MapInt.t<Belt_SetInt.t> => {
     let disjArr = Expln_utils_common.createArray(disj->mutableMapIntSize)
     disj->mutableMapIntForEach((n,ms) => {
         let msArr = Expln_utils_common.createArray(ms->mutableSetIntSize)
         let i = ref(0)
         ms->mutableSetIntForEach(m => {
-            msArr[i.contents] = renumbering[m]
+            msArr[i.contents] = renumbering->Belt_MapInt.getExn(m)
             i.contents = i.contents + 1
         })
-        disjArr->Js.Array2.push((renumbering[n], Belt_Set.Int.fromArray(msArr)))->ignore
+        disjArr->Js.Array2.push((renumbering->Belt_MapInt.getExn(n), Belt_Set.Int.fromArray(msArr)))->ignore
     })
     Belt_MapInt.fromArray(disjArr)
 }
 
-let renumberVarsInExpr = (expr: expr, renumbering: array<int>): expr => {
-    expr->Js_array2.map(i => if (i<0) {i} else {renumbering[i]})
+let renumberVarsInExpr = (expr: expr, renumbering: Belt_MapInt.t<int>): expr => {
+    expr->Js_array2.map(i => if (i<0) {i} else {renumbering->Belt_MapInt.getExn(i)})
 }
 
-let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: array<int>): hypothesis => {
+let renumberVarsInHypothesis = (hyp: hypothesis, renumbering: Belt_MapInt.t<int>): hypothesis => {
     ...hyp,
     expr: renumberVarsInExpr(hyp.expr, renumbering)
 }
 
-let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, renumbering: array<int>): Belt_MapInt.t<string> => {
+let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt, renumbering: Belt_MapInt.t<int>): Belt_MapInt.t<string> => {
     let allVars = mutableSetIntMake()
     mandatoryHypotheses->Js.Array2.forEach(hyp => {
         hyp.expr->Js_array2.forEach(i => {
@@ -580,15 +580,15 @@ let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt,
         }
     })
     Belt_MapInt.fromArray(
-        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering[v], ctxIntToStrExn(ctx,v)))
+        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering->Belt_MapInt.getExn(0), ctxIntToStrExn(ctx,v)))
     )
 }
 
-let extractVarTypes = (mandatoryHypotheses:array<hypothesis>, renumbering: array<int>): array<int> => {
-    let varTypes = Expln_utils_common.createArray(renumbering->Js_array2.length)
+let extractVarTypes = (mandatoryHypotheses:array<hypothesis>, renumbering: Belt_MapInt.t<int>): array<int> => {
+    let varTypes = Expln_utils_common.createArray(renumbering->Belt_MapInt.size)
     mandatoryHypotheses->Js_array2.forEach(hyp => {
         if (hyp.typ == F) {
-            varTypes[renumbering[hyp.expr[1]]] = hyp.expr[0]
+            varTypes[renumbering->Belt_MapInt.getExn(hyp.expr[1])] = hyp.expr[0]
         }
     })
     varTypes
@@ -611,7 +611,10 @@ let createFrame: (mmContext, string, array<string>) => frame = (ctx, label, expr
                 let mandatoryVars: mutableSetInt = extractMandatoryVariables(ctx, asrt)
                 let mandatoryDisj: mutableMapInt<mutableSetInt> = extractMandatoryDisj(ctx, mandatoryVars)
                 let mandatoryHypotheses: array<hypothesis> = extractMandatoryHypotheses(ctx, mandatoryVars)
-                let varRenumbering: array<int> = mandatoryVars->mutableSetIntToArray
+                let varRenumbering: Belt_MapInt.t<int> = mandatoryVars
+                                                            ->mutableSetIntToArray
+                                                            ->Js_array2.mapi((v,i) => (v,i))
+                                                            ->Belt_MapInt.fromArray
                 let varTypes = extractVarTypes(mandatoryHypotheses, varRenumbering)
                 let hyps = mandatoryHypotheses->Js_array2.map(renumberVarsInHypothesis(_, varRenumbering))
                 {
