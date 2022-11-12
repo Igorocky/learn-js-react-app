@@ -7,7 +7,7 @@ describe("findParentheses", (.) => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let (ast, _) = parseMmFile(mmFileText, ())
-        let ctx = loadContext(ast, ~onProgress=pct=>Js.Console.log(`pct: ${pct->Belt_Float.toString}`), ())
+        let ctx = loadContext(ast, ())
 
         //when
         let actualFoundParens = findParentheses(ctx, ())

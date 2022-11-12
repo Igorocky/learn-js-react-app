@@ -580,7 +580,7 @@ let createFrameVarToSymbMap = (ctx, mandatoryHypotheses:array<hypothesis>, asrt,
         }
     })
     Belt_MapInt.fromArray(
-        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering->Belt_MapInt.getExn(0), ctxIntToStrExn(ctx,v)))
+        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering->Belt_MapInt.getExn(v), ctxIntToStrExn(ctx,v)))
     )
 }
 
