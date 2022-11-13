@@ -1,4 +1,4 @@
-open MM_wrk_api_2
+open MM_wrk_api
 
 let webworker: option<{..}> = %raw("typeof window !== 'undefined' ? window.webWorkerInst : undefined")
 let sendToWorker: workerRequest => unit = req => {

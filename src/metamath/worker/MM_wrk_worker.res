@@ -1,4 +1,4 @@
-open MM_wrk_api_2
+open MM_wrk_api
 
 @val external sendToClient: workerResponse => unit = "postMessage"
 
@@ -11,24 +11,7 @@ let toRequestProcessor = (func:workerSideTask<'req,'resp>):requestProcessor =>
             ~sendToClient = resp=>sendToClient({senderId:req.senderId,body:serialize(resp)}),
         )
 
-//module type WorkerTask = {
-    //type request
-    //type response
-    //let procName: string
-    //let processOnWorkerSide:workerSideTask<request,response>
-//}
-
-//let createRequestProcessors = (modules:array<module(WorkerTask)>):Belt_MapString.t<requestProcessor> => {
-    //modules
-        //->Js_array2.map((module modul) => ("", toRequestProcessor((module(modul)).processOnWorkerSide)))
-        //->Belt_MapString.fromArray
-//}
-
 let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
-    (
-        MM_wrk_TextLength.procName, 
-        toRequestProcessor(MM_wrk_TextLength.processOnWorkerSide)
-    ),
     (
         MM_wrk_ParseMmFile.procName, 
         toRequestProcessor(MM_wrk_ParseMmFile.processOnWorkerSide)

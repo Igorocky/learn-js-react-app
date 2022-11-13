@@ -1,4 +1,4 @@
-open MM_wrk_client_2
+open MM_wrk_client
 open MM_parser
 
 let procName = "MM_wrk_ParseMmFile"

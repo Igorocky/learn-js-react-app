@@ -1,3 +1,3 @@
-open MM_wrk_api_2
+open MM_wrk_api
 
 let processRequest: workerRequest => unit
