@@ -7,14 +7,9 @@ type request =
 type response =
     | Length(int)
 
-let processOnWorkerSide = (~req:request, ~sendToClient:response=>unit):unit => {
-    switch req {
-        | CalcLength(str) => sendToClient(Length(str->Js_string2.length))
-    }
-}
-
 let calcTextLength = (~text:string, ~onDone:int=>unit) => {
     beginWorkerInteraction(
+        ~procName,
         ~initialRequest = CalcLength(text),
         ~onResponse = (~resp:response,~endWorkerInteraction:unit=>unit) => {
             switch resp {
@@ -25,4 +20,10 @@ let calcTextLength = (~text:string, ~onDone:int=>unit) => {
             }
         }
     )
+}
+
+let processOnWorkerSide = (~req:request, ~sendToClient:response=>unit):unit => {
+    switch req {
+        | CalcLength(str) => sendToClient(Length(str->Js_string2.length))
+    }
 }

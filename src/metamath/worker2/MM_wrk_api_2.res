@@ -1,8 +1,8 @@
 type serialized = Js.Json.t
 
 type workerRequest = {
-    senderId: int,
     procName: string,
+    senderId: int,
     body: serialized
 }
 
