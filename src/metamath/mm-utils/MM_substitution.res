@@ -346,7 +346,7 @@ let rec iterateVarGroups = (
         let existingExpr = subs.exprs[varNum]
         let existingExprBeginIdx = subs.begins[varNum]
         let existingExprLen = subs.ends[varNum] - existingExprBeginIdx + 1
-        if (existingExprLen <= maxSubExprLength && (varNum < grp.numOfVars-1 || existingExprLen == maxSubExprLength)) {
+        if (existingExprLen <= maxSubExprLength && (curVarIdx < grp.numOfVars-1 || existingExprLen == maxSubExprLength)) {
             let checkedLen = ref(0)
             while (checkedLen.contents < existingExprLen 
                     && existingExpr[existingExprBeginIdx+checkedLen.contents] == expr[subExprBeginIdx+checkedLen.contents]) {
@@ -467,8 +467,8 @@ let test_iterateSubstitutions: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => ar
     let varGroups = createVarGroups(~frmExpr, ~frmConstParts)
     let numOfVars = frmExpr
         ->Js_array2.filter(i => i >= 0)
-        ->Expln_utils_common.arrIntDistinct
-        ->Js_array2.length
+        ->Belt_SetInt.fromArray
+        ->Belt_SetInt.size
     let subs = createSubs(~numOfVars)
     let result = []
     iterateSubstitutions(
