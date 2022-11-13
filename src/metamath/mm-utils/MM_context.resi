@@ -26,8 +26,8 @@ type frame = {
 
 let createContext: (~parent:mmContext=?, ()) => mmContext
 let applySingleStmt: (mmContext, stmt) => unit
-let openChildContext: mmContext => mmContext
-let closeChildContext: mmContext => mmContext
+let openChildContext: mmContext => unit
+let closeChildContext: mmContext => unit
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, 
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext
 
