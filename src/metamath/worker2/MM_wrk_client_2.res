@@ -56,17 +56,18 @@ webworker["onmessage"] = msg => {
 }
 
 let beginWorkerInteraction = (
-    ~initialRequest:workerRequestBody, 
-    ~onResponse:(~resp:workerResponseBody,~endWorkerInteraction:unit=>unit)=>unit,
+    ~procName:string,
+    ~initialRequest:'req, 
+    ~onResponse:(~resp:'resp,~endWorkerInteraction:unit=>unit)=>unit,
 ) => {
     let id = ref(-1)
     id.contents = regWorkerListener(resp => {
         if (resp.senderId == id.contents) {
-            onResponse(~resp=resp.body,~endWorkerInteraction= _=>unregWorkerListener(id.contents))
+            onResponse(~resp=deserialize(resp.body),~endWorkerInteraction= _=>unregWorkerListener(id.contents))
             StopPropagationAndUnregister
         } else {
             ContinuePropagation
         }
     })
-    sendToWorker({senderId:id.contents, body:initialRequest})
+    sendToWorker({senderId:id.contents, procName, body:serialize(initialRequest)})
 }

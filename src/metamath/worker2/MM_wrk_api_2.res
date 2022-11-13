@@ -1,15 +1,15 @@
-type workerRequestBody =
-    | MM_wrk_TextLength(MM_wrk_TextLength.request)
-
-type workerResponseBody =
-    | MM_wrk_TextLength(MM_wrk_TextLength.response)
+type serialized = Js.Json.t
 
 type workerRequest = {
     senderId: int,
-    body: workerRequestBody
+    procName: string,
+    body: serialized
 }
 
 type workerResponse = {
     senderId: int,
-    body: workerResponseBody
+    body: serialized
 }
+
+external serialize: 'a => serialized = "%identity"
+external deserialize: serialized => 'a = "%identity"
