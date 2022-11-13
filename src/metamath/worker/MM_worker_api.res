@@ -17,4 +17,3 @@ type beResponse =
     | MmFileParsed({senderId:string, parseResult:result<(mmAstNode,array<string>),string>})
     | MmContextLoadProgress({senderId:string, pct:float})
     | MmContextLoaded({senderId:string, ctx:result<mmContext,string>})
-
