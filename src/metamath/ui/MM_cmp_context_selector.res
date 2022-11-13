@@ -124,34 +124,27 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
             | None => setState(updateSingleScope(_,id,reset))
             | Some((name,text)) => {
                 openModal(modalRef, _ => rndParseMmFileProgress(name, 0.))->promiseMap(modalId => {
-                    regWorkerListener(msg => {
-                        switch msg {
-                            | MmFileParseProgress({senderId, pct}) if senderId == modalId => {
-                                updateModal(modalRef, modalId, _ => rndParseMmFileProgress(name, pct))
-                                Stop
-                            }
-                            | MmFileParsed({senderId, parseResult}) if senderId == modalId => {
-                                setState(updateSingleScope(_,id,setFileName(_,Some(name))))
-                                setState(updateSingleScope(_,id,setFileText(_,Some(text))))
-                                setState(updateSingleScope(_,id,setReadInstr(_,#all)))
-                                setState(updateSingleScope(_,id,setLabel(_,None)))
-                                switch parseResult {
-                                    | Error(msg) => {
-                                        setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
-                                        setState(updateSingleScope(_,id,setAllLabels(_, [])))
-                                    }
-                                    | Ok((ast,allLabels)) => {
-                                        setState(updateSingleScope(_,id,setAst(_,Some(Ok(ast)))))
-                                        setState(updateSingleScope(_,id,setAllLabels(_, allLabels)))
-                                    }
+                    MM_wrk_ParseMmFile.beginParsingMmFile(
+                        ~mmFileText = text,
+                        ~onProgress = pct => updateModal(modalRef, modalId, () => rndParseMmFileProgress(name, pct)),
+                        ~onDone = parseResult => {
+                            setState(updateSingleScope(_,id,setFileName(_,Some(name))))
+                            setState(updateSingleScope(_,id,setFileText(_,Some(text))))
+                            setState(updateSingleScope(_,id,setReadInstr(_,#all)))
+                            setState(updateSingleScope(_,id,setLabel(_,None)))
+                            switch parseResult {
+                                | Error(msg) => {
+                                    setState(updateSingleScope(_,id,setAst(_, Some(Error(msg)))))
+                                    setState(updateSingleScope(_,id,setAllLabels(_, [])))
                                 }
-                                closeModal(modalRef, modalId)
-                                StopAndUnreg
+                                | Ok((ast,allLabels)) => {
+                                    setState(updateSingleScope(_,id,setAst(_,Some(Ok(ast)))))
+                                    setState(updateSingleScope(_,id,setAllLabels(_, allLabels)))
+                                }
                             }
-                            | _ => Cont
+                            closeModal(modalRef, modalId)
                         }
-                    })->ignore
-                    sendToWorker(ParseMmFile({senderId:modalId, mmFileText:text}))
+                    )
                 })->ignore
             }
         }

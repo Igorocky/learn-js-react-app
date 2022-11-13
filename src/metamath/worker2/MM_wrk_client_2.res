@@ -1,7 +1,9 @@
 open MM_wrk_api_2
 
-@val external webworker: {..} = "window.webWorkerInst"
-let sendToWorker: workerRequest => unit = req => webworker["postMessage"](. req)
+let webworker: option<{..}> = %raw("typeof window !== 'undefined' ? window.webWorkerInst : undefined")
+let sendToWorker: workerRequest => unit = req => {
+    webworker->Belt_Option.forEach(webworker => webworker["postMessage"](. req))
+}
 
 type listenerResp =
     | ContinuePropagation
@@ -38,17 +40,19 @@ let unregWorkerListener = id => {
     }
 }
 
-webworker["onmessage"] = msg => {
-    let resp = msg["data"]
-    let i = ref(0)
-    while (i.contents < listeners->Js_array2.length) {
-        let listener = listeners[i.contents]
-        switch listener.callback(resp) {
-            | ContinuePropagation => i.contents = i.contents + 1
-            | StopPropagation => i.contents = listeners->Js_array2.length
+webworker->Belt_Option.forEach(webworker => {
+    webworker["onmessage"]= msg => {
+        let resp = msg["data"]
+        let i = ref(0)
+        while (i.contents < listeners->Js_array2.length) {
+            let listener = listeners[i.contents]
+            switch listener.callback(resp) {
+                | ContinuePropagation => i.contents = i.contents + 1
+                | StopPropagation => i.contents = listeners->Js_array2.length
+            }
         }
     }
-}
+})
 
 let beginWorkerInteraction = (
     ~procName:string,
