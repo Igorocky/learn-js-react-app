@@ -6,7 +6,6 @@ let sendToWorker: workerRequest => unit = req => webworker["postMessage"](. req)
 type listenerResp =
     | ContinuePropagation
     | StopPropagation
-    | StopPropagationAndUnregister
 
 type listener = {
     id: int,
@@ -47,10 +46,6 @@ webworker["onmessage"] = msg => {
         switch listener.callback(resp) {
             | ContinuePropagation => i.contents = i.contents + 1
             | StopPropagation => i.contents = listeners->Js_array2.length
-            | StopPropagationAndUnregister => {
-                unregWorkerListener(listener.id)
-                i.contents = listeners->Js_array2.length
-            }
         }
     }
 }
@@ -64,7 +59,7 @@ let beginWorkerInteraction = (
     id.contents = regWorkerListener(resp => {
         if (resp.senderId == id.contents) {
             onResponse(~resp=deserialize(resp.body),~endWorkerInteraction= _=>unregWorkerListener(id.contents))
-            StopPropagationAndUnregister
+            StopPropagation
         } else {
             ContinuePropagation
         }
