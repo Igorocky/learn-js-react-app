@@ -3,13 +3,6 @@ open MM_parser
 
 let procName = "MM_wrk_ParseMmFile"
 
-type mmScope = {
-    ast: mmAstNode,
-    expectedNumOfAssertions: int,
-    stopBefore: option<string>,
-    stopAfter: option<string>,
-}
-
 type parseResult = result<(mmAstNode, array<string>), string>
 
 type request = 

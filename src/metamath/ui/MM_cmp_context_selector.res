@@ -201,31 +201,8 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
 
     let applyChanges = () => {
         openModal(modalRef, _ => rndLoadMmContextProgress(0.))->promiseMap(modalId => {
-            regWorkerListener(msg => {
-                switch msg {
-                    | MmContextLoadProgress({senderId, pct}) if senderId == modalId => {
-                        updateModal(modalRef, modalId, _ => rndLoadMmContextProgress(pct))
-                        Stop
-                    }
-                    | MmContextLoaded({senderId, ctx}) if senderId == modalId => {
-                        switch ctx {
-                            | Error(msg) => Js.Console.log(msg)
-                            | Ok(ctx) => {
-                                setState(setPrev(_,Some(state->setPrev(None))))
-                                setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
-                                closeAccordion()
-                                onChange(ctx)
-                            }
-                        }
-                        closeModal(modalRef, modalId)
-                        StopAndUnreg
-                    }
-                    | _ => Cont
-                }
-            })->ignore
-            sendToWorker(LoadMmContext({
-                senderId:modalId, 
-                scopes: state.singleScopes->Js.Array2.map(ss => {
+            MM_wrk_LoadCtx.beginLoadingMmContext(
+                ~scopes = state.singleScopes->Js.Array2.map(ss => {
                     let stopBefore = if (ss.readInstr == #stopBefore) {ss.label} else {None}
                     let stopAfter = if (ss.readInstr == #stopAfter) {ss.label} else {None}
                     let label = stopBefore->Belt_Option.getWithDefault(
@@ -234,7 +211,7 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                         )
                     )
                     {
-                        ast: switch ss.ast {
+                        MM_wrk_LoadCtx.ast: switch ss.ast {
                             | Some(Ok(ast)) => ast
                             | _ => raise(MmException({msg:`Cannot load an MM context from an empty or error ast.`}))
                         },
@@ -242,8 +219,21 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                         stopAfter,
                         expectedNumOfAssertions: ss.allLabels->Js_array2.indexOf(label) + 1
                     }
-                })
-            }))
+                }),
+                ~onProgress = pct => updateModal(modalRef, modalId, _ => rndLoadMmContextProgress(pct)),
+                ~onDone = ctx => {
+                    switch ctx {
+                        | Error(msg) => Js.Console.log(msg)
+                        | Ok(ctx) => {
+                            setState(setPrev(_,Some(state->setPrev(None))))
+                            setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
+                            closeAccordion()
+                            onChange(ctx)
+                        }
+                    }
+                    closeModal(modalRef, modalId)
+                }
+            )
         })->ignore
     }
 

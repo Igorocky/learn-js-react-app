@@ -33,6 +33,10 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
         MM_wrk_ParseMmFile.procName, 
         toRequestProcessor(MM_wrk_ParseMmFile.processOnWorkerSide)
     ),
+    (
+        MM_wrk_LoadCtx.procName, 
+        toRequestProcessor(MM_wrk_LoadCtx.processOnWorkerSide)
+    ),
 ])
 
 let processRequest: workerRequest => unit = req => {
