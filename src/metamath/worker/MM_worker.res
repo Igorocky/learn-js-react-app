@@ -28,13 +28,13 @@ let loadMmContext = (senderId, scopes) => {
     try {
         let i = ref(0)
         let len = scopes->Js_array2.length
-        let ctx = ref(createContext(()))
+        let ctx = createContext(())
         while (i.contents < len) {
             let scope = scopes[i.contents]
             let basePct = weights->Js_array2.reducei((a,w,idx) => if idx < i.contents {a +. w} else {a}, 0.)
-            ctx.contents = loadContext(
+            loadContext(
                 scopes[i.contents].ast,
-                ~initialContext=ctx.contents,
+                ~initialContext=ctx,
                 ~stopBefore=?scope.stopBefore,
                 ~stopAfter=?scope.stopAfter,
                 ~expectedNumOfAssertions=scope.expectedNumOfAssertions,
@@ -42,11 +42,11 @@ let loadMmContext = (senderId, scopes) => {
                     sendToUi(MmContextLoadProgress({senderId, pct: basePct +. pct}))
                 },
                 ()
-            )
+            )->ignore
             i.contents = i.contents + 1
         }
         sendToUi(MmContextLoadProgress({senderId, pct: 1.}))
-        sendToUi(MmContextLoaded({senderId, ctx:Ok(ctx.contents)}))
+        sendToUi(MmContextLoaded({senderId, ctx:Ok(ctx)}))
     } catch {
         | MmException({msg}) => {
             sendToUi(MmContextLoaded({senderId, ctx:Error(msg)}))

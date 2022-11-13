@@ -46,8 +46,8 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
     assertEqMsg(actualSyntaxTree->syntaxTreeToSyntaxTreeTest, expectedSyntaxTree, `testSyntaxTree for: ${exprStr}`)
 }
 
-describe("buildSyntaxTree", (.) => {
-    it("builds correct syntax trees for WWFs", (.) => {
+describe("buildSyntaxTree", _ => {
+    it("builds correct syntax trees for WWFs", _ => {
         let demo0 = "./src/metamath/test/resources/demo0.mm"
         let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 

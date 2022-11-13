@@ -1,8 +1,8 @@
 open Expln_test
 open MM_parser
 
-describe("parseMmFile", (.) => {
-    it("parses a valid mm file", (.) => {
+describe("parseMmFile", _ => {
+    it("parses a valid mm file", _ => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
 

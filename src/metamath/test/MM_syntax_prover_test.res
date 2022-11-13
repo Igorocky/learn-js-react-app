@@ -21,8 +21,8 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     assertEq(true, proofTbl[targetIdx].proof->Belt_Option.isSome)
 }
 
-describe("findProof", (.) => {
-    it("finds proofs for simple wffs", (.) => {
+describe("findProof", _ => {
+    it("finds proofs for simple wffs", _ => {
         let demo0 = "./src/metamath/test/resources/demo0.mm"
         let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 

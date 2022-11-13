@@ -53,8 +53,8 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
     assertEq(actualSubsStr, expectedSubstitutions)
 }
 
-describe("iterateConstParts", (.) => {
-    it("one option", (.) => {
+describe("iterateConstParts", _ => {
+    it("one option", _ => {
         testIterateConstParts(
             ~frmExprStr = "a -> b",
             ~expectedConstParts = [(1,1)],
@@ -64,7 +64,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("two options", (.) => {
+    it("two options", _ => {
         testIterateConstParts(
             ~frmExprStr = "a -> b",
             ~expectedConstParts = [(1,1)],
@@ -75,7 +75,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("three options", (.) => {
+    it("three options", _ => {
         testIterateConstParts(
             ~frmExprStr = "a -> b -> c",
             ~expectedConstParts = [(1,1), (3,3)],
@@ -87,7 +87,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("assertion begins with a constant", (.) => {
+    it("assertion begins with a constant", _ => {
         testIterateConstParts(
             ~frmExprStr = "|- a -> b",
             ~expectedConstParts = [(0,0), (2,2)],
@@ -98,7 +98,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("assertion begins with a constant and same expression is present inside of the statement", (.) => {
+    it("assertion begins with a constant and same expression is present inside of the statement", _ => {
         testIterateConstParts(
             ~frmExprStr = "|- a -> b",
             ~expectedConstParts = [(0,0), (2,2)],
@@ -109,7 +109,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("there_are_sequences_of_more_than_one_constant", (.) => {
+    it("there_are_sequences_of_more_than_one_constant", _ => {
         testIterateConstParts(
             ~frmExprStr = "|- ( a -> b ) -> ( a -> b )",
             ~expectedConstParts = [(0,1),(3,3),(5,7),(9,9),(11,11)],
@@ -119,7 +119,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("few_options_and_asrt_ends_with_constant", (.) => {
+    it("few_options_and_asrt_ends_with_constant", _ => {
         testIterateConstParts(
             ~frmExprStr = "a -> b ->",
             ~expectedConstParts = [(1,1),(3,3)],
@@ -130,7 +130,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("var_and_const", (.) => {
+    it("var_and_const", _ => {
         testIterateConstParts(
             ~frmExprStr = "a ->",
             ~expectedConstParts = [(1,1)],
@@ -140,7 +140,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("gaps_between_some_constant_parts_are_less_than_number_of_variables_and_asrt_starts_with_constant", (.) => {
+    it("gaps_between_some_constant_parts_are_less_than_number_of_variables_and_asrt_starts_with_constant", _ => {
         testIterateConstParts(
             ~frmExprStr = "|- a b c -> a b d",
             ~expectedConstParts = [(0,0),(4,4)],
@@ -150,7 +150,7 @@ describe("iterateConstParts", (.) => {
             ]
         )
     })
-    it("gaps_between_some_constant_parts_are_less_than_number_of_variables_and_asrt_starts_with_non_constant", (.) => {
+    it("gaps_between_some_constant_parts_are_less_than_number_of_variables_and_asrt_starts_with_non_constant", _ => {
         testIterateConstParts(
             ~frmExprStr = "a b c -> a b d",
             ~expectedConstParts = [(3,3)],
@@ -172,7 +172,7 @@ describe("iterateConstParts", (.) => {
             ~expectedMatchingConstParts = [ ]
         )
     })
-    it("there_are_no_constants", (.) => {
+    it("there_are_no_constants", _ => {
         testIterateConstParts(
             ~frmExprStr = "a b",
             ~expectedConstParts = [],
@@ -184,8 +184,8 @@ describe("iterateConstParts", (.) => {
     })
 })
 
-describe("iterateSubstitutions", (.) => {
-    it("one_option", (.) => {
+describe("iterateSubstitutions", _ => {
+    it("one_option", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- a -> b",
             ~exprStr = "|- A -> B",
@@ -197,7 +197,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("two_options", (.) => {
+    it("two_options", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- a -> b",
             ~exprStr = "|- A -> B -> C",
@@ -207,14 +207,14 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("zero_options", (.) => {
+    it("zero_options", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- a -> b",
             ~exprStr = "|- A = B",
             ~expectedSubstitutions = [ ]
         )
     })
-    it("there_are_no_constants_in_assertion", (.) => {
+    it("there_are_no_constants_in_assertion", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "a b",
             ~exprStr = "A = B",
@@ -224,7 +224,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("there_are_no_variables_in_assertion_and_assertion_matches_the_statement", (.) => {
+    it("there_are_no_variables_in_assertion_and_assertion_matches_the_statement", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "A = B",
             ~exprStr = "A = B",
@@ -233,14 +233,14 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("there_are_no_variables_in_assertion_and_assertion_doesnt_match_the_statement", (.) => {
+    it("there_are_no_variables_in_assertion_and_assertion_doesnt_match_the_statement", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "A -> B",
             ~exprStr = "A = B",
             ~expectedSubstitutions = [ ]
         )
     })
-    it("one_variable_repeats", (.) => {
+    it("one_variable_repeats", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- a -> b",
             ~exprStr = "|- A -> B -> A -> B",
@@ -258,7 +258,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("variable is reused in another varGroup in opposite order", (.) => {
+    it("variable is reused in another varGroup in opposite order", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "a     b     | b     a    ",
             ~exprStr =    "[ A ] [ B ] | [ B ] [ A ]",
@@ -270,7 +270,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("case1_from_set_mm", (.) => {
+    it("case1_from_set_mm", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- ( ( a e. f /\\ b e. f /\\ c e. f ) -> ( ( a e b ) d c ) = ( ( a d c ) + ( b d c ) ) )",
             ~exprStr = "|- ( ( A e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) /\\ B e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) /\\ C e. ( BaseSet ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) ) -> ( ( A ( +v ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) B ) ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) = ( ( A ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) + ( B ( .iOLD ` if ( U e. CPreHilOLD , U , <. <. + , x. >. , abs >. ) ) C ) ) )",
@@ -286,7 +286,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it("case2_from_set_mm", (.) => {
+    it("case2_from_set_mm", _ => {
         testIterateSubstitutions(
             ~frmExprStr = "|- ( ph -> ( ( ps -> ch ) -> ( ( ( th -> ps ) -> ( ch -> ta ) ) -> ( ps -> ta ) ) ) )",
             ~exprStr = "|- ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) -> ( ( ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) -> ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) ) -> ( ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) -> ( ( ( ph -> ps ) -> ( ph -> ps ) ) -> ( ( ( ( ( ph -> ps ) -> ch ) -> ( ph -> ps ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) -> ( ( ph -> ps ) -> ( ph -> ps ) ) ) ) ) ) ) )",
@@ -301,7 +301,7 @@ describe("iterateSubstitutions", (.) => {
             ]
         )
     })
-    it_skip("finds_all_substitutions_in_set_mm", (.) => {
+    it_skip("finds_all_substitutions_in_set_mm", _ => {
         ()
     })
 })

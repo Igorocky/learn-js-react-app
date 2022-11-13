@@ -39,8 +39,8 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     assertEqMsg(actualProofStr, expectedProof, `testCreateProof for: ${exprStr}`)
 }
 
-describe("createProof", (.) => {
-    it("finds proofs for simple wffs", (.) => {
+describe("createProof", _ => {
+    it("finds proofs for simple wffs", _ => {
         let demo0 = "./src/metamath/test/resources/demo0.mm"
         let setReduced = "./src/metamath/test/resources/set-reduced.mm"
 

@@ -36,7 +36,6 @@ type rec mmContextContents = {
     vars: array<string>,
     symToInt: mutableMapStr<int>,
     disj: mutableMapInt<mutableSetInt>,
-    hypsBaseIdx: int,
     hyps: array<hypothesis>,
     symToHyp: mutableMapStr<hypothesis>,
     mutable lastComment: string,
@@ -97,10 +96,24 @@ let mutableMapIntForEach = (map,func) => {
     map->Belt.HashMap.Int.forEach(func)
 }
 
+let mutableMapIntForEachI = (map:mutableMapInt<'v>,func:(int,'v,int)=>unit) => {
+    let i = ref(0)
+    map->Belt.HashMap.Int.forEach((k,v) => {
+        func(k,v,i.contents)
+        i.contents = i.contents + 1
+    })
+}
+
 let mutableMapIntMakeFromArray = arr => {
     let map = mutableMapIntMake()
     arr->Js_array2.forEach(((k,v)) => map->mutableMapIntPut(k,v))
     map
+}
+
+let mutableMapIntToArr = (map, valueMapper) => {
+    let res = []
+    map->mutableMapIntForEach((k,v) => res->Js.Array2.push((k, valueMapper(v)))->ignore)
+    res
 }
 
 let mutableSetIntMake = () => {
@@ -121,6 +134,14 @@ let mutableSetIntHas = (set,k) => {
 
 let mutableSetIntForEach = (set,func) => {
     set->Belt.HashSet.Int.forEach(func)
+}
+
+let mutableSetIntForEachI = (set,func) => {
+    let i = ref(0)
+    set->Belt.HashSet.Int.forEach(e => {
+        func(e,i.contents)
+        i.contents = i.contents + 1
+    })
 }
 
 let mutableSetIntMakeFromArray = arr => {
@@ -257,7 +278,7 @@ let ctxIntToStr = (ctx:mmContextContents,i):option<string> => {
             if (i < ctx.varsBaseIdx) {
                 None
             } else {
-                Some(ctx.vars[i])
+                Some(ctx.vars[i-ctx.varsBaseIdx])
             }
         })
     } else {
@@ -474,10 +495,6 @@ let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
             vars: [],
             symToInt: mutableMapStrMake(),
             disj: mutableMapIntMake(),
-            hypsBaseIdx: switch pCtxContentsOpt {
-                | None => 0
-                | Some(parent) => parent.hypsBaseIdx + parent.hyps->Js_array2.length
-            },
             hyps: [],
             symToHyp: mutableMapStrMake(),
             lastComment: "",
@@ -587,14 +604,21 @@ let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
 
 let renumberVarsInDisj = (disj: mutableMapInt<mutableSetInt>, renumbering: Belt_MapInt.t<int>): Belt_MapInt.t<Belt_SetInt.t> => {
     let disjArr = Expln_utils_common.createArray(disj->mutableMapIntSize)
-    disj->mutableMapIntForEach((n,ms) => {
+    disj->mutableMapIntForEachI((n,ms,ni) => {
         let msArr = Expln_utils_common.createArray(ms->mutableSetIntSize)
-        let i = ref(0)
-        ms->mutableSetIntForEach(m => {
-            msArr[i.contents] = renumbering->Belt_MapInt.getExn(m)
-            i.contents = i.contents + 1
+        ms->mutableSetIntForEachI((m,mi) => {
+            msArr[mi] = switch renumbering->Belt_MapInt.get(m) {
+                | None => raise(MmException({msg:`[1] Cannot determine frame variable for the context variable ${m->Belt_Int.toString}`}))
+                | Some(fv) => fv
+            }
         })
-        disjArr->Js.Array2.push((renumbering->Belt_MapInt.getExn(n), Belt_Set.Int.fromArray(msArr)))->ignore
+        disjArr[ni] = (
+            switch renumbering->Belt_MapInt.get(n) {
+                | None => raise(MmException({msg:`[2] Cannot determine frame variable for the context variable ${n->Belt_Int.toString}`}))
+                | Some(fv) => fv
+            }, 
+            Belt_Set.Int.fromArray(msArr)
+        )
     })
     Belt_MapInt.fromArray(disjArr)
 }
@@ -656,7 +680,7 @@ let createFramePriv: (mmContextContents, string, array<string>) => frame = (ctx,
                 let mandatoryHypotheses: array<hypothesis> = extractMandatoryHypotheses(ctx, mandatoryVars)
                 let varRenumbering: Belt_MapInt.t<int> = mandatoryVars
                                                             ->mutableSetIntToArray
-                                                            ->Js_array2.mapi((v,i) => (v,i))
+                                                            ->Js_array2.mapi((cv,fv) => (cv,fv))
                                                             ->Belt_MapInt.fromArray
                 let varTypes = extractVarTypes(mandatoryHypotheses, varRenumbering)
                 let hyps = mandatoryHypotheses->Js_array2.map(renumberVarsInHypothesis(_, varRenumbering))
@@ -716,7 +740,10 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
     }
 
     let (ctx, _) = traverseAst(
-        createContext(~parent=?initialContext, ()),
+        switch initialContext {
+            | Some(ctx) => ctx
+            | None => createContext(())
+        },
         ast,
         ~preProcess = (ctx,node) => {
             switch node {

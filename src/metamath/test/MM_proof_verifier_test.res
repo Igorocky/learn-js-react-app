@@ -3,8 +3,8 @@ open MM_parser
 open MM_context
 open MM_proof_verifier
 
-describe("verifyProof", (.) => {
-    it("successfully verifies a valid uncompressed proof", (.) => {
+describe("verifyProof", _ => {
+    it("successfully verifies a valid uncompressed proof", _ => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let (ast, _) = parseMmFile(mmFileText, ())
@@ -30,7 +30,7 @@ describe("verifyProof", (.) => {
         )
     })
 
-    it("shows an error for an invalid uncompressed proof", (.) => {
+    it("shows an error for an invalid uncompressed proof", _ => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let (ast, _) = parseMmFile(mmFileText, ())
@@ -56,7 +56,7 @@ describe("verifyProof", (.) => {
         assertEq(errorMsg.contents, "!compareExprAfterSubstitution(ess, subs, stack->getExprFromStack(baseIdx+i))")
     })
 
-    it("successfully verifies a valid compressed proof", (.) => {
+    it("successfully verifies a valid compressed proof", _ => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/set-reduced.mm")
         let (ast, _) = parseMmFile(mmFileText, ())
@@ -83,8 +83,8 @@ describe("verifyProof", (.) => {
     })
 })
 
-describe("compressedProofBlockToArray", (.) => {
-    it("converts a compressed proof block to array of strings", (.) => {
+describe("compressedProofBlockToArray", _ => {
+    it("converts a compressed proof block to array of strings", _ => {
         assertEq(
             compressedProofBlockToArray("YMYRYHUUBCEYMUNZYRZQ"),
             ["YM","YR","YH","UUB","C","E","YM","UN","Z","YR","Z","Q"]
@@ -92,8 +92,8 @@ describe("compressedProofBlockToArray", (.) => {
     })
 })
 
-describe("compressedProofStrToInt", (.) => {
-    it("converts compressed proof numbers to intigers", (.) => {
+describe("compressedProofStrToInt", _ => {
+    it("converts compressed proof numbers to intigers", _ => {
         assertEq(compressedProofStrToInt("A"), 1)
         assertEq(compressedProofStrToInt("B"), 2)
         assertEq(compressedProofStrToInt("T"), 20)

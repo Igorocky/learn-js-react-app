@@ -31,7 +31,7 @@ let make = (
             <InputLabel id="scope-type-select-label">"Scope"</InputLabel>
             <Select 
                 labelId="scope-type-select-label"
-                value=readInstr
+                value={readInstr :> string}
                 label="Scope"
                 onChange=evt2str(onReadInstrChange)
             >
