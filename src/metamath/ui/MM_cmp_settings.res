@@ -132,11 +132,14 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
     let (state, setState) = React.useState(_ => initialSettings)
 
     let onParensChange = newParens => {
-        let st = ref(state->setParens(newParens))
-        if (!isValid(st.contents)) {
-            st.contents = correctAndValidate(st.contents)
-        }
-        setState(_ => st.contents)
+        setState(st=>{
+            let st = st->setParens(newParens)
+            if (st->isValid) {
+                st
+            } else {
+                st->correctAndValidate
+            }
+        })
     }
 
     let onSyntaxTypesChange = newSyntaxTypes => {

@@ -3,7 +3,7 @@ open MM_parser
 open MM_context
 
 describe("findParentheses", _ => {
-    it("finds all parantheses", _ => {
+    it("finds all parentheses", _ => {
         //given
         let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
         let (ast, _) = parseMmFile(mmFileText, ())
