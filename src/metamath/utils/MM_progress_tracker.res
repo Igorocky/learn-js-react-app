@@ -1,18 +1,31 @@
+let scaleFactor = 100_000
+let scaleFactorF = scaleFactor->Belt_Int.toFloat
+
 type progressState = {
-    step: float,
-    pct: float,
-    weight: float,
+    step: int,
+    numOfSteps: int,
+    lastSentNumOfSteps: int,
     onProgress: option<float=>unit>,
-    lastSentPct: float,
+    dontDecrease: bool
 }
 
-let progressTrackerMake = (~step:float, ~pct=0., ~weight=1., ~onProgress: option<float=>unit>=?, ()) => {
+let pctToNumOfSteps = (~pct:float, ~step:int):int => {
+    (pct *. scaleFactorF)->Belt_Float.toInt / step
+}
+
+let numOfStepsToPct = (~numOfSteps:int, ~step:int):float => {
+    (numOfSteps * step)->Belt_Int.toFloat /. scaleFactorF
+}
+
+let progressTrackerMake = (~step:float, ~pct=0., ~onProgress: option<float=>unit>=?, ~dontDecrease:bool=false, ()) => {
+    let step = (step *. scaleFactorF)->Belt_Float.toInt
+    let numOfSteps = pctToNumOfSteps(~pct, ~step)
     {
         step,
-        pct,
-        weight,
+        numOfSteps,
+        lastSentNumOfSteps: numOfSteps,
         onProgress,
-        lastSentPct: -1.
+        dontDecrease,
     }
 }
 
@@ -20,11 +33,12 @@ let progressTrackerSetCurrPct = (state:progressState, curPct:float):progressStat
     switch state.onProgress {
         | None => state
         | Some(onProgress) => {
-            if (Js.Math.abs_float(state.lastSentPct -. curPct) >= state.step) {
-                onProgress(curPct *. state.weight)
+            let curNumOfSteps = pctToNumOfSteps(~pct=curPct, ~step=state.step)
+            if (state.dontDecrease && curNumOfSteps > state.lastSentNumOfSteps || !state.dontDecrease && curNumOfSteps != state.lastSentNumOfSteps) {
+                onProgress(numOfStepsToPct(~numOfSteps=curNumOfSteps, ~step=state.step))
                 {
                     ...state,
-                    lastSentPct: curPct
+                    lastSentNumOfSteps: curNumOfSteps
                 }
             } else {
                 state
