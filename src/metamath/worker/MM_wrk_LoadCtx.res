@@ -46,6 +46,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                 while (i.contents < len) {
                     let scope = scopes[i.contents]
                     let basePct = weights->Js_array2.reducei((a,w,idx) => if idx < i.contents {a +. w} else {a}, 0.)
+                    let weight = weights[i.contents]
                     loadContext(
                         scopes[i.contents].ast,
                         ~initialContext=ctx,
@@ -53,7 +54,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                         ~stopAfter=?scope.stopAfter,
                         ~expectedNumOfAssertions=scope.expectedNumOfAssertions,
                         ~onProgress = pct => {
-                            sendToClient(MmContextLoadProgress({pct: basePct +. pct}))
+                            sendToClient(MmContextLoadProgress({pct: basePct +. pct *. weight}))
                         },
                         ()
                     )->ignore
@@ -64,6 +65,9 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             } catch {
                 | MmException({msg}) => {
                     sendToClient(MmContextLoaded({ctx:Error(msg)}))
+                }
+                | Js.Exn.Error(exn) => {
+                    sendToClient(MmContextLoaded({ctx:Error(exn->Js.Exn.message->Belt_Option.getWithDefault("Internal error."))}))
                 }
             }
         }

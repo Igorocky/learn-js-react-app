@@ -108,9 +108,9 @@ let correctAndValidate = st => {
     let syntaxTypesArr = st->getSyntaxTypesAsArray
     let (types, colors) = getCorrectedTypesAndColors(st)
     {
-        parens: parensArr->Expln_utils_common.strJoin(~sep=" ", ()),
+        parens: parensArr->Js_array2.joinWith(" "),
         parensIsValid: parensArr->Js_array2.length->mod(_,2) == 0,
-        syntaxTypes: syntaxTypesArr->Expln_utils_common.strJoin(~sep=" ", ()),
+        syntaxTypes: syntaxTypesArr->Js_array2.joinWith(" "),
         types,
         colors,
     }

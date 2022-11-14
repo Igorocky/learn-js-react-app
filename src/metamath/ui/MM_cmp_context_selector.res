@@ -88,7 +88,7 @@ let getSummary = st => {
             }
             fileName ++ readInstr
         })
-        "Loaded: " ++ filesInfo->Expln_utils_common.strJoin(~sep="; ", ())
+        "Loaded: " ++ filesInfo->Js_array2.joinWith("; ")
     }
 }
 

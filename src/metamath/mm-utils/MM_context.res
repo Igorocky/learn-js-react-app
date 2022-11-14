@@ -295,7 +295,7 @@ let ctxIntToStrExnPriv = (ctx:mmContextContents,i) => {
 let ctxIntToStrExn = (ctx:mmContext,i) => ctxIntToStrExnPriv(ctx.contents,i)
 
 let ctxExprToStrExnPriv: (mmContextContents, expr) => string = (ctx, expr) => {
-    expr->Js_array2.map(ctxIntToStrExnPriv(ctx, _))->Expln_utils_common.strJoin(~sep=" ", ())
+    expr->Js_array2.map(ctxIntToStrExnPriv(ctx, _))->Js_array2.joinWith(" ")
 }
 
 let ctxExprToStrExn: (mmContext, expr) => string = (ctx, expr) => ctxExprToStrExnPriv(ctx.contents,expr)
@@ -307,7 +307,7 @@ let frmIntToStrExnPriv: (mmContextContents, frame, int) => string = (ctx, frame,
 let frmIntToStrExn: (mmContext, frame, int) => string = (ctx, frame, i) => frmIntToStrExnPriv(ctx.contents,frame,i)
 
 let frmExprToStrExnPriv: (mmContextContents, frame, expr) => string = (ctx, frame, expr) => {
-    expr->Js_array2.map(frmIntToStrExnPriv(ctx, frame, _))->Expln_utils_common.strJoin(~sep=" ", ())
+    expr->Js_array2.map(frmIntToStrExnPriv(ctx, frame, _))->Js_array2.joinWith(" ")
 }
 
 let frmExprToStrExn: (mmContext, frame, expr) => string = (ctx, frame, expr) => frmExprToStrExnPriv(ctx.contents, frame, expr)

@@ -173,7 +173,7 @@ let intToCompressedProofStr: int => string = i => {
             res->Js_array2.push(Js_string2.fromCharCode(uCode + mod(i.contents-1, 5)))->ignore
             i.contents = (i.contents-1) / 5
         }
-        res->Js_array2.reverseInPlace->Expln_utils_common.strJoin(~sep="", ())
+        res->Js_array2.reverseInPlace->Js_array2.joinWith("")
     }
 }
 

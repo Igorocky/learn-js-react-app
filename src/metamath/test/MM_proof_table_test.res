@@ -32,7 +32,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     }->ignore
     let actualProofStr = switch actualProof {
         | Compressed({labels, compressedProofBlock}) => {
-            "( " ++ (labels->Expln_utils_common.strJoin(~sep=" ", ())) ++ " ) " ++ compressedProofBlock
+            "( " ++ (labels->Js_array2.joinWith(" ")) ++ " ) " ++ compressedProofBlock
         }
         | p => failMsg(`Unexpected form of proof: ${Expln_utils_common.stringify(p)}`)
     }

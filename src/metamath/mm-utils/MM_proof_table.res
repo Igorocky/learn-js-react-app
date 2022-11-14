@@ -21,7 +21,7 @@ let printProofRec = (ctx,r) => {
         | Some(proof) => {
             switch proof {
                 | Hypothesis({label}) => "hyp: " ++ label
-                | Assertion({args, label}) => args->Js_array2.map(Belt_Int.toString)->Expln_utils_common.strJoin(~sep=", ", ()) ++ " " ++ label
+                | Assertion({args, label}) => args->Js_array2.joinWith(", ") ++ " " ++ label
             }
         }
         | None => {
@@ -276,7 +276,7 @@ let createProof = (ctx:mmContext, tbl:proofTable, targetIdx:int):proof => {
             } else {
                 intToCompressedProofStr(i)
             }
-        })->Expln_utils_common.strJoin(~sep="", ())
+        })->Js_array2.joinWith("")
     })
 
 }
