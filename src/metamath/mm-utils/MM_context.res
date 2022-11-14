@@ -724,18 +724,14 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext =
                                                 (ast, ~initialContext=?,~stopBefore="",~stopAfter="", 
                                                     ~expectedNumOfAssertions=-1, ~onProgress= _=>(), ()) => {
-    let lastPctSent = ref(-1)
-    let labelsProcessed = ref(0.)
     let expectedNumOfAssertionsF = expectedNumOfAssertions->Belt_Int.toFloat
+    let assertionsProcessed = ref(0.)
+    let progressTracker = ref(progressTrackerMake(~step=0.01, ~onProgress, ()))
 
     let onAsrtProcess = () => {
         if (expectedNumOfAssertions > 0) {
-            labelsProcessed.contents = labelsProcessed.contents +. 1.
-            let pct = (labelsProcessed.contents /. expectedNumOfAssertionsF *. 100.)->Js_math.round->Belt_Float.toInt
-            if (lastPctSent.contents < pct) {
-                onProgress(pct->Belt_Int.toFloat /. 100.)
-                lastPctSent.contents = pct
-            }
+            assertionsProcessed.contents = assertionsProcessed.contents +. 1.
+            progressTracker.contents = progressTracker.contents->progressTrackerSetCurrPct(assertionsProcessed.contents /. expectedNumOfAssertionsF)
         }
     }
 
