@@ -1,4 +1,4 @@
-- let allConsts = ["(", ")", "[", "]", "{", "}"]->Js_array2.map() getAllConsts(ctx)
+- don't show scope selector when no file chosen.
 - validate distinct variables
 - introduce new type of proof: SyntaxAuto
 - precalculate number of combinations (store in an array)
