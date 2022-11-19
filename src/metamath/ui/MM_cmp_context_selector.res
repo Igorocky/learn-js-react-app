@@ -40,7 +40,6 @@ type rec mmScope = {
     nextId: int,
     expanded: bool,
     singleScopes: array<mmSingleScope>,
-    prev: option<mmScope>,
     loadedContextSummary: string,
 }
 
@@ -72,7 +71,6 @@ let deleteSingleScope = (st,id) => {
     }
 }
 let setExpanded = (st,expanded) => {...st, expanded}
-let setPrev = (st,prev) => {...st, prev}
 let setLoadedContextSummary = (st,loadedContextSummary) => {...st, loadedContextSummary}
 
 let getSummary = st => {
@@ -99,10 +97,10 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
             nextId: 1, 
             singleScopes: [createEmptySingleScope("0")], 
             expanded: true, 
-            prev: None, 
             loadedContextSummary: ""
         }
     })
+    let (prevState, setPrevState) = React.useState(_ => state)
 
     React.useEffect0(() => {
         setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
@@ -110,11 +108,11 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
     })
 
     let rndParseMmFileProgress = (fileName, pct) => {
-        <span>{`Parsing ${fileName}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
+        rndProgress(~text=`Parsing ${fileName}`, ~pct)
     }
 
     let rndLoadMmContextProgress = (pct) => {
-        <span>{`Loading MM context: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
+        rndProgress(~text=`Loading MM context`, ~pct)
     }
 
     let parseMmFileText = (id, nameAndTextOpt) => {
@@ -223,8 +221,11 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                     switch ctx {
                         | Error(msg) => Js.Console.log(msg)
                         | Ok(ctx) => {
-                            setState(setPrev(_,Some(state->setPrev(None))))
-                            setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
+                            setState(st => {
+                                let st = st->setLoadedContextSummary(getSummary(st))
+                                setPrevState(_ => st)
+                                st
+                            })
                             closeAccordion()
                             onChange(ctx)
                         }
@@ -236,11 +237,7 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
     }
 
     let rndSaveButtons = () => {
-        let thereAreNoChanges = switch state.prev {
-            | None if state.singleScopes->Js_array2.length == 1 => state.singleScopes[0].fileName->Belt_Option.isNone
-            | Some(prevState) => state.singleScopes == prevState.singleScopes
-            | _ => false
-        }
+        let thereAreNoChanges = state.singleScopes == prevState.singleScopes
         if (thereAreNoChanges) {
             React.null
         } else {

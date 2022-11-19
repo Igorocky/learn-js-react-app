@@ -103,3 +103,7 @@ let make = (~modalRef:modalRef) => {
         </Dialog>
     }
 }
+
+let rndProgress: (~text:string, ~pct:float) => reElem = (~text:string, ~pct:float) => {
+    <span>{`${text}: ${(pct *. 100.)->Js.Math.round->Belt.Float.toInt->Belt_Int.toString}%`->React.string}</span>
+}

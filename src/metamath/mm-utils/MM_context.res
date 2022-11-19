@@ -459,7 +459,7 @@ let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int> 
     let maxC = allConsts->Js_array2.length - 2
     let maxCF = maxC->Belt_Int.toFloat
     let foundParens = []
-    let progressState = ref(progressTrackerMake(~step=1., ~onProgress?, ()))
+    let progressState = ref(progressTrackerMake(~step=0.01, ~onProgress?, ()))
     while (c.contents <= maxC) {
         let openSym = allConsts[c.contents]
         let closeSym = allConsts[c.contents+1]
