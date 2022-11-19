@@ -75,7 +75,7 @@ let setLoadedContextSummary = (st,loadedContextSummary) => {...st, loadedContext
 
 let getSummary = st => {
     if (st.singleScopes->Js.Array2.length == 1 && st.singleScopes[0].fileName->Belt_Option.isNone) {
-        "No MM context is loaded."
+        "Empty MM context is loaded."
     } else {
         let filesInfo = st.singleScopes->Js_array2.map(ss => {
             let fileName = ss.fileName->Belt_Option.getWithDefault("")

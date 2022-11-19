@@ -12,6 +12,7 @@ type tabData =
 @react.component
 let make = () => {
     let (rootCtx, setRootCtx) = React.useState(_ => createContext(()))
+    let (settings, setSettings) = React.useState(createDefaultSettings)
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
     let modalRef = useModalRef()
 
@@ -29,8 +30,9 @@ let make = () => {
         updateTabs(st => {
             if (st->UseTabs.getTabs->Js_array2.length == 0) {
                 let (st, _) = st->UseTabs.addTab(~label="Settings", ~closable=false, ~data=Settings)
-                let (st, _) = st->UseTabs.addTab(~label="Editor", ~closable=false, ~data=Editor)
+                let (st, editorTabId) = st->UseTabs.addTab(~label="Editor", ~closable=false, ~data=Editor)
                 let (st, _) = st->UseTabs.addTab(~label="Search", ~closable=false, ~data=Search)
+                let st = st->UseTabs.openTab(editorTabId)
                 st
             } else {
                 st
@@ -43,8 +45,8 @@ let make = () => {
         <div key=tab.id style=ReactDOM.Style.make(~display=if (tab.id == activeTabId) {"block"} else {"none"}, ())>
             {
                 switch tab.data {
-                    | Settings => <MM_cmp_settings initialSettings=createDefaultSettings() ctx=rootCtx onChange={_ => ()} modalRef />
-                    | Editor => <MM_cmp_click_counter title="Editor" />
+                    | Settings => <MM_cmp_settings initialSettings=settings ctx=rootCtx onChange={newSettings => setSettings(_=>newSettings)} modalRef />
+                    | Editor => <MM_cmp_editor settings ctx=rootCtx modalRef />
                     | Search => <MM_cmp_click_counter title="Search" />
                     | ProofExplorer({label}) => <MM_cmp_click_counter title=label />
                 }
