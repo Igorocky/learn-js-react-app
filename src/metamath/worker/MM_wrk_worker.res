@@ -20,8 +20,16 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
         MM_wrk_LoadCtx.procName, 
         toRequestProcessor(MM_wrk_LoadCtx.processOnWorkerSide)
     ),
+    (
+        MM_wrk_FindParens.procName, 
+        toRequestProcessor(MM_wrk_FindParens.processOnWorkerSide)
+    ),
 ])
 
 let processRequest: workerRequest => unit = req => {
-    processors->Belt_MapString.get(req.procName)->Belt_Option.forEach(processor => processor(~req=req, ~sendToClient))
+//    Js.Console.log(`[senderId=${req.senderId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
+    processors->Belt_MapString.get(req.procName)->Belt_Option.forEach(processor => processor(~req=req, ~sendToClient=resp=>{
+//        Js.Console.log(`[senderId=${resp.senderId->Belt_Int.toString}] worker is sending a response`)
+        sendToClient(resp)
+    }))
 }

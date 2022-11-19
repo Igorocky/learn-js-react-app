@@ -13,6 +13,7 @@ type tabData =
 let make = () => {
     let (rootCtx, setRootCtx) = React.useState(_ => createContext(()))
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
+    let modalRef = useModalRef()
 
     let onContextWasUpdated = newCtx => {
         setRootCtx(_ => newCtx)
@@ -42,7 +43,7 @@ let make = () => {
         <div key=tab.id style=ReactDOM.Style.make(~display=if (tab.id == activeTabId) {"block"} else {"none"}, ())>
             {
                 switch tab.data {
-                    | Settings => <MM_cmp_settings initialSettings=createDefaultSettings() ctx=rootCtx onChange={_ => ()}/>
+                    | Settings => <MM_cmp_settings initialSettings=createDefaultSettings() ctx=rootCtx onChange={_ => ()} modalRef />
                     | Editor => <MM_cmp_click_counter title="Editor" />
                     | Search => <MM_cmp_click_counter title="Search" />
                     | ProofExplorer({label}) => <MM_cmp_click_counter title=label />
@@ -50,8 +51,6 @@ let make = () => {
             }
         </div>
     }
-
-    let modalRef = useModalRef()
 
     <Col>
         <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />

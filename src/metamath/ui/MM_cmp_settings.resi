@@ -1,5 +1,6 @@
 open MM_context
 open Expln_React_common
+open Modal
 
 type settings
 let createDefaultSettings: unit => settings
@@ -8,4 +9,4 @@ let getSyntaxTypes: settings => array<string>
 let getTypeColors: settings => Belt_MapString.t<string>
 
 @react.component
-let make: (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit) => reElem
+let make: (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit, ~modalRef:modalRef) => reElem

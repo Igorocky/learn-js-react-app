@@ -1,6 +1,9 @@
 open MM_context
 open Expln_React_common
 open Expln_React_Mui
+open MM_wrk_FindParens
+open Modal
+open Expln_utils_promise
 
 let allColors = [
     "#e6194B", "#3cb44b", "#ffe119", "#4363d8", "#f58231", "#911eb4", "#42d4f4", "#f032e6", "#bfef45", "#fabed4",
@@ -127,7 +130,7 @@ let eqState = (st1, st2) => {
 }
 
 @react.component
-let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit) => {
+let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit, ~modalRef:modalRef) => {
     let (prevState, setPrevState) = React.useState(_ => initialSettings)
     let (state, setState) = React.useState(_ => initialSettings)
 
@@ -146,8 +149,21 @@ let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => un
         setState(setSyntaxTypes(_, newSyntaxTypes))
     }
 
+    let rndFindParensProgress = (pct) => {
+        rndProgress(~text=`Searching parentheses`, ~pct)
+    }
+
     let syncParens = () => {
-        findParentheses(ctx, ())->ctxExprToStrExn(ctx, _)->onParensChange
+        openModal(modalRef, _ => rndFindParensProgress(0.))->promiseMap(modalId => {
+            MM_wrk_FindParens.beginFindParens(
+                ~ctx,
+                ~onProgress = pct => updateModal(modalRef, modalId, () => rndFindParensProgress(pct)),
+                ~onDone = parens => {
+                    onParensChange(parens)
+                    closeModal(modalRef, modalId)
+                }
+            )
+        })->ignore
     }
 
     let applyChanges = () => {

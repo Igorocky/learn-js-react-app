@@ -2,6 +2,7 @@ open MM_wrk_api
 
 let webworker: option<{..}> = %raw("typeof window !== 'undefined' ? window.webWorkerInst : undefined")
 let sendToWorker: workerRequest => unit = req => {
+//    Js.Console.log(`[senderId=${req.senderId->Belt_Int.toString}] client is sending a request, procName = ${req.procName}`)
     webworker->Belt_Option.forEach(webworker => webworker["postMessage"](. req))
 }
 
@@ -62,6 +63,7 @@ let beginWorkerInteraction = (
     let id = ref(-1)
     id.contents = regWorkerListener(resp => {
         if (resp.senderId == id.contents) {
+//            Js.Console.log(`[senderId=${resp.senderId->Belt_Int.toString}] client receved a response`)
             onResponse(~resp=deserialize(resp.body),~endWorkerInteraction= _=>unregWorkerListener(id.contents))
             StopPropagation
         } else {
