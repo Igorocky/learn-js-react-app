@@ -7,25 +7,29 @@ open Expln_utils_promise
 open MM_cmp_settings
 open MM_id_generator
 
-type userStmtType = Const | Var | Disj | Floating | Essential | Axiom | Provable
+// type userStmtType = Const | Var | Disj | Floating | Essential | Axiom | Provable
 
 type userStmt = {
     id: string,
-    typ: userStmtType,
+    // typ: userStmtType,
     text: string,
 }   
 
+let createEmptyUserStmt = (id/* , typ */) => {
+    { id, /* typ,  */text: "" }
+}
+
 type state = {
-    stmtIdGen: idGenState,
+    nextStmtId: int,
     stmts: array<userStmt>,
     focusedStmtId: string,
 }
 
 let initialState = {
     {
-        stmtIdGen: idGenMake(),
+        nextStmtId: 0,
         stmts: [],
-        focusedStmtIdx: -1,
+        focusedStmtId: "-1",
     }
 }
 
@@ -43,10 +47,28 @@ let focusStmt = (st,id) => {
     }
 }
 
-let addNewStmt = st => {
+let addNewStmt = (st, ~beforeId=?, ~afterId=?, ()) => {
+    let newId = st.nextStmtId->Belt_Int.toString
     {
         ...st,
-        stmts: st.
+        nextStmtId: st.nextStmtId+1,
+        stmts: 
+            if (beforeId->Belt_Option.isSome || afterId->Belt_Option.isSome) {
+                st.stmts->Js_array2.map(stmt => {
+                    switch beforeId {
+                        | Some(beforeId) if stmt.id == beforeId => [createEmptyUserStmt(newId/* ,Provable */), stmt]
+                        | _ => {
+                            switch afterId {
+                                | Some(afterId) if stmt.id == afterId => [stmt, createEmptyUserStmt(newId/* ,Provable */)]
+                                | _ => [stmt]
+                            }
+                        }
+                    }
+                })->Belt_Array.concatMany
+            } else {
+                st.stmts->Js_array2.concat([createEmptyUserStmt(newId/* , Provable */)])
+            }
+        
     }
 }
 
@@ -54,7 +76,24 @@ let addNewStmt = st => {
 let make = (~settings:settings, ~ctx:mmContext, ~modalRef:modalRef) => {
     let (state, setState) = React.useState(_ => initialState)
 
-    let rndButtons
+    let rndButtons = () => {
+        <Row>
+            <IconButton key="add-button" onClick={_ => setState(addNewStmt(_, ()))}>
+                <Icons2.Add/>
+            </IconButton>
+        </Row>
+    }
 
-    React.string("Editor")
+    let rndStmts = () => {
+        <Col>
+            {
+                state.stmts->Js_array2.map(stmt => stmt.id->React.string)->React.array
+            }
+        </Col>
+    }
+
+    <Col>
+        {rndButtons()}
+        {rndStmts()}
+    </Col>
 }
