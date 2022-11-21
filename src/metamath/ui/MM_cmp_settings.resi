@@ -9,4 +9,4 @@ let getSyntaxTypes: settings => array<string>
 let getTypeColors: settings => Belt_MapString.t<string>
 
 @react.component
-let make: (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit, ~modalRef:modalRef) => reElem
+let make: (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onChange: settings => unit) => reElem

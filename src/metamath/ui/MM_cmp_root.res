@@ -9,15 +9,44 @@ type tabData =
     | Search
     | ProofExplorer({label:string})
 
+type state = {
+    ctx: mmContext,
+    ctxV: int,
+    settings: settings,
+    settingsV: int,
+}
+
+let createInitialState = () => {
+    ctx: createContext(()),
+    ctxV: 0,
+    settings: createDefaultSettings(),
+    settingsV: 0,
+}
+
+let setCtx = (st,ctx) => {
+    {
+        ...st,
+        ctx,
+        ctxV: st.ctxV + 1
+    }
+}
+
+let setSettings = (st,settings) => {
+    {
+        ...st,
+        settings,
+        settingsV: st.settingsV + 1
+    }
+}
+
 @react.component
 let make = () => {
-    let (rootCtx, setRootCtx) = React.useState(_ => createContext(()))
-    let (settings, setSettings) = React.useState(createDefaultSettings)
-    let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
     let modalRef = useModalRef()
+    let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
+    let (state, setState) = React.useState(_ => createInitialState())
 
     let onContextWasUpdated = newCtx => {
-        setRootCtx(_ => newCtx)
+        setState(setCtx(_,newCtx))
         tabs->Js.Array2.forEach(tab => {
             switch tab.data {
                 | ProofExplorer(_) => removeTab(tab.id)
@@ -45,8 +74,21 @@ let make = () => {
         <div key=tab.id style=ReactDOM.Style.make(~display=if (tab.id == activeTabId) {"block"} else {"none"}, ())>
             {
                 switch tab.data {
-                    | Settings => <MM_cmp_settings initialSettings=settings ctx=rootCtx onChange={newSettings => setSettings(_=>newSettings)} modalRef />
-                    | Editor => <MM_cmp_editor settings ctx=rootCtx modalRef />
+                    | Settings => 
+                        <MM_cmp_settings 
+                            modalRef
+                            ctx=state.ctx 
+                            initialSettings=state.settings 
+                            onChange={newSettings => setState(setSettings(_,newSettings))} 
+                        />
+                    | Editor => 
+                        <MM_cmp_editor 
+                            modalRef
+                            settings=state.settings
+                            settingsV=state.settingsV
+                            ctx=state.ctx
+                            ctxV=state.ctxV
+                        />
                     | Search => <MM_cmp_click_counter title="Search" />
                     | ProofExplorer({label}) => <MM_cmp_click_counter title=label />
                 }

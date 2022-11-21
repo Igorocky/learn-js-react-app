@@ -130,7 +130,7 @@ let eqState = (st1, st2) => {
 }
 
 @react.component
-let make = (~initialSettings:settings, ~ctx:mmContext, ~onChange: settings => unit, ~modalRef:modalRef) => {
+let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onChange: settings => unit) => {
     let (prevState, setPrevState) = React.useState(_ => initialSettings)
     let (state, setState) = React.useState(_ => initialSettings)
 
