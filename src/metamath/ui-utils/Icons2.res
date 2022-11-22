@@ -12,3 +12,13 @@ module Sync = {
     @module("@mui/icons-material/Sync") @react.component
     external make: () => React.element = "default"
 }
+
+module ArrowUpward = {
+    @module("@mui/icons-material/ArrowUpward") @react.component
+    external make: () => React.element = "default"
+}
+
+module ArrowDownward = {
+    @module("@mui/icons-material/ArrowDownward") @react.component
+    external make: () => React.element = "default"
+}

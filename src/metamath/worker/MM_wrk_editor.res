@@ -128,6 +128,52 @@ let uncheckAllStmts = st => {
     }
 }
 
+let deleteCheckedStmts = st => {
+    {
+        ...st,
+        stmts: st.stmts->Js_array2.filter(stmt => !isStmtChecked(st,stmt.id)),
+        checkedStmtIds: []
+    }
+}
+
+let canMoveCheckedStmts = (st, up) => {
+    let len = st.stmts->Js_array2.length
+    len != 0 && st.checkedStmtIds->Js_array2.length != 0 && (
+        (up && !isStmtChecked(st,st.stmts[0].id)) || (!up && !isStmtChecked(st,st.stmts[len-1].id))
+    )
+}
+
+let moveCheckedStmts = (st,up) => {
+    if (!canMoveCheckedStmts(st,up)) {
+        st
+    } else {
+        let len = st.stmts->Js_array2.length
+        let res = st.stmts->Js.Array2.copy
+        if up {
+            let maxI = len-2
+            for i in 0 to maxI {
+                if (!isStmtChecked(st,res[i].id) && isStmtChecked(st,res[i+1].id)) {
+                    let tmp = res[i]
+                    res[i] = res[i+1]
+                    res[i+1] = tmp
+                }
+            }
+        } else {
+            for i in len-1 downto 1 {
+                if (isStmtChecked(st,res[i-1].id) && !isStmtChecked(st,res[i].id)) {
+                    let tmp = res[i]
+                    res[i] = res[i-1]
+                    res[i-1] = tmp
+                }
+            }
+        }
+        {
+            ...st,
+            stmts: res,
+        }
+    }
+}
+
 let addNewStmt = st => {
     let newId = st.nextStmtId->Belt_Int.toString
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
