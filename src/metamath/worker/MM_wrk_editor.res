@@ -96,10 +96,35 @@ let updateStmt = (st,id,update) => {
     }
 }
 
-let checkStmt = (st,id) => {
+let isStmtChecked = (st,id) => {
+    st.checkedStmtIds->Js.Array2.includes(id)
+}
+
+let toggleStmtChecked = (st,id) => {
+    if (isStmtChecked(st,id)) {
+        {
+            ...st,
+            checkedStmtIds: st.checkedStmtIds->Js_array2.filter(checkedId => checkedId != id)
+        }
+    } else {
+        {
+            ...st,
+            checkedStmtIds: st.checkedStmtIds->Js_array2.concat([id])
+        }
+    }
+}
+
+let checkAllStmts = st => {
     {
         ...st,
-        checkedStmtIds: st.checkedStmtIds->Js_array2.concat([id])
+        checkedStmtIds: st.stmts->Js.Array2.map(stmt => stmt.id)
+    }
+}
+
+let uncheckAllStmts = st => {
+    {
+        ...st,
+        checkedStmtIds: []
     }
 }
 
