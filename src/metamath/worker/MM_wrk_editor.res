@@ -1,8 +1,22 @@
 open MM_wrk_client
 open MM_parser
 open MM_context
+open MM_context
+open Expln_React_common
+open Expln_React_Mui
+open MM_wrk_FindParens
+open Modal
+open Expln_utils_promise
+open MM_cmp_settings
+open MM_id_generator
+open MM_parser
+open MM_syntax_tree
 
 let procName = "MM_wrk_editor"
+
+type stmtCont =
+    | Text({text:string, syntaxError: option<string>})
+    | Tree(syntaxTreeNode)
 
 type userStmtType = [ #e | #a | #p ]
 
@@ -18,26 +32,27 @@ let userStmtTypeFromStr = str => {
 type userStmt = {
     id: string,
 
-    settingsV:int,
-    ctxV:int,
-    prevText: string,
+    // settingsV:int,
+    // ctxV:int,
+    // prevText: string,
 
     typ: userStmtType,
-    text: option<string>,
-    syntaxTree: option<syntaxTreeNode>,
-    syntaxError: option<string>,
+    cont: stmtCont,
     
     proof: string,
     proofError: option<string>,
 }   
 
 let createEmptyUserStmt = (id, typ) => {
-    { id, typ, text: "" }
+    { id, typ, cont:Text({text:"", syntaxError:None}), proof:"", proofError:None }
 }
 
 type state = {
     settingsV:int,
     settings:settings,
+
+    ctxV: int,
+    ctx: mmContext,
 
     constsText: string,
     constsErr:option<string>,
@@ -47,23 +62,30 @@ type state = {
     varsErr: option<string>,
     vars: Belt_MapString.t<string>,
 
-    ctx: mmContext,
-    varTypes: Belt_MapString.t<string>,
-
     nextStmtId: int,
     stmts: array<userStmt>,
-    focusedStmtId: string,
+    checkedStmtIds: array<string>,
 }
 
 let initialState = {
     {
-        consts: [],
-        vars: Belt_MapString.empty,
+        settingsV:-1,
+        settings:createDefaultSettings(),
+
+        ctxV: -1,
         ctx: createContext(()),
-        varTypes: Belt_MapString.empty,
+
+        constsText: "",
+        constsErr:None,
+        consts: [],
+
+        varsText: "",
+        varsErr: None,
+        vars: Belt_MapString.empty,
+
         nextStmtId: 0,
         stmts: [],
-        focusedStmtId: "-1",
+        checkedStmtIds: [],
     }
 }
 
@@ -74,33 +96,31 @@ let updateStmt = (st,id,update) => {
     }
 }
 
-let focusStmt = (st,id) => {
+let checkStmt = (st,id) => {
     {
         ...st,
-        focusedStmtId: id
+        checkedStmtIds: st.checkedStmtIds->Js_array2.concat([id])
     }
 }
 
-let addNewStmt = (st, ~beforeId=?, ~afterId=?, ()) => {
+let addNewStmt = st => {
     let newId = st.nextStmtId->Belt_Int.toString
+    let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
     {
         ...st,
         nextStmtId: st.nextStmtId+1,
         stmts: 
-            if (beforeId->Belt_Option.isSome || afterId->Belt_Option.isSome) {
-                st.stmts->Js_array2.map(stmt => {
-                    switch beforeId {
-                        | Some(beforeId) if stmt.id == beforeId => [createEmptyUserStmt(newId,Provable), stmt]
-                        | _ => {
-                            switch afterId {
-                                | Some(afterId) if stmt.id == afterId => [stmt, createEmptyUserStmt(newId,Provable)]
-                                | _ => [stmt]
-                            }
+            switch idToAddBefore {
+                | Some(idToAddBefore) => {
+                    st.stmts->Js_array2.map(stmt => {
+                        if (stmt.id == idToAddBefore) {
+                            [createEmptyUserStmt(newId,#p), stmt]
+                        } else {
+                            [stmt]
                         }
-                    }
-                })->Belt_Array.concatMany
-            } else {
-                st.stmts->Js_array2.concat([createEmptyUserStmt(newId, Provable)])
+                    })->Belt_Array.concatMany
+                }
+                | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p)])
             }
     }
 }
