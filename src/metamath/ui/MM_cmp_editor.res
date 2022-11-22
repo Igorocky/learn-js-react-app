@@ -30,6 +30,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
 
     let actAddNewStmt = () => setState(addNewStmt)
+    let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
     let actToggleStmtChecked = id => setState(toggleStmtChecked(_,id))
     let actToggleMainCheckbox = () => {
         switch mainCheckboxState {
@@ -39,6 +40,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
+    let actDuplicateStmt = () => setState(duplicateCheckedStmt)
 
     let rndButtons = () => {
         <Row>
@@ -50,6 +52,18 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
             <IconButton disabled={!canMoveCheckedStmts(state,false)} onClick={_ => actMoveCheckedStmtsDown()}> <Icons2.ArrowDownward/> </IconButton>
             <IconButton disabled={!canMoveCheckedStmts(state,true)} onClick={_ => actMoveCheckedStmtsUp()}> <Icons2.ArrowUpward/> </IconButton>
             <IconButton onClick={_ => actAddNewStmt()}> <Icons2.Add/> </IconButton>
+            <IconButton 
+                disabled={!(mainCheckboxState->Belt.Option.getWithDefault(true))} 
+                onClick={_ => actDeleteCheckedStmts()}
+            > 
+                <Icons2.DeleteForever/> 
+            </IconButton>
+            <IconButton 
+                disabled={!isSingleStmtChecked(state)} 
+                onClick={_ => actDuplicateStmt()}
+            > 
+                <Icons2.FilterNone/> 
+            </IconButton>
         </Row>
     }
 

@@ -196,6 +196,30 @@ let addNewStmt = st => {
     }
 }
 
+let isSingleStmtChecked = st => st.checkedStmtIds->Js_array2.length == 1
+
+let duplicateCheckedStmt = st => {
+    if (!isSingleStmtChecked(st)) {
+        st
+    } else {
+        let newId = st.nextStmtId->Belt_Int.toString
+        let idToAddAfter = st.checkedStmtIds[0]
+        {
+            ...st,
+            nextStmtId: st.nextStmtId+1,
+            stmts: 
+                st.stmts->Js_array2.map(stmt => {
+                    if (stmt.id == idToAddAfter) {
+                        [stmt, {...stmt, id:newId}]
+                    } else {
+                        [stmt]
+                    }
+                })->Belt_Array.concatMany,
+            checkedStmtIds: [newId],
+        }
+    }
+}
+
 type request = 
     | Req
 

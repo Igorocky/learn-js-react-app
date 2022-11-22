@@ -22,3 +22,13 @@ module ArrowDownward = {
     @module("@mui/icons-material/ArrowDownward") @react.component
     external make: () => React.element = "default"
 }
+
+module DeleteForever = {
+    @module("@mui/icons-material/DeleteForever") @react.component
+    external make: () => React.element = "default"
+}
+
+module FilterNone = {
+    @module("@mui/icons-material/FilterNone") @react.component
+    external make: () => React.element = "default"
+}
