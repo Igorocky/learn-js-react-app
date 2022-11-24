@@ -32,3 +32,8 @@ module FilterNone = {
     @module("@mui/icons-material/FilterNone") @react.component
     external make: () => React.element = "default"
 }
+
+module ControlPointDuplicate = {
+    @module("@mui/icons-material/ControlPointDuplicate") @react.component
+    external make: () => React.element = "default"
+}

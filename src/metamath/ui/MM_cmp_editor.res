@@ -42,29 +42,25 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
 
+    let rndIconButon = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
+        <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+    }
+
     let rndButtons = () => {
-        <Row>
-            <Checkbox
-                indeterminate={mainCheckboxState->Belt_Option.isNone}
-                checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
-                onChange={_ => actToggleMainCheckbox()}
-            />
-            <IconButton disabled={!canMoveCheckedStmts(state,false)} onClick={_ => actMoveCheckedStmtsDown()}> <Icons2.ArrowDownward/> </IconButton>
-            <IconButton disabled={!canMoveCheckedStmts(state,true)} onClick={_ => actMoveCheckedStmtsUp()}> <Icons2.ArrowUpward/> </IconButton>
-            <IconButton onClick={_ => actAddNewStmt()}> <Icons2.Add/> </IconButton>
-            <IconButton 
-                disabled={!(mainCheckboxState->Belt.Option.getWithDefault(true))} 
-                onClick={_ => actDeleteCheckedStmts()}
-            > 
-                <Icons2.DeleteForever/> 
-            </IconButton>
-            <IconButton 
-                disabled={!isSingleStmtChecked(state)} 
-                onClick={_ => actDuplicateStmt()}
-            > 
-                <Icons2.FilterNone/> 
-            </IconButton>
-        </Row>
+        <Paper>
+            <Row>
+                <Checkbox
+                    indeterminate={mainCheckboxState->Belt_Option.isNone}
+                    checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
+                    onChange={_ => actToggleMainCheckbox()}
+                />
+                {rndIconButon(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active=canMoveCheckedStmts(state,false))}
+                {rndIconButon(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active=canMoveCheckedStmts(state,true))}
+                {rndIconButon(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active=true)}
+                {rndIconButon(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, ~active=mainCheckboxState->Belt.Option.getWithDefault(true))}
+                {rndIconButon(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active=isSingleStmtChecked(state))}
+            </Row>
+        </Paper>
     }
 
     let rndStmt = stmt => {

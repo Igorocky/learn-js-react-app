@@ -9,7 +9,10 @@ let make = (~top:int=0, ~header:reElem, ~content:int=>reElem) => {
     useClientHeightObserver(headerRef, headerHeight => setContentTop(_ => top + headerHeight))
 
     <>
-        <div ref=ReactDOM.Ref.domRef(headerRef) style=ReactDOM.Style.make(~position="sticky", ~top=`${top->Belt_Int.toString}px`, ())>
+        <div 
+            ref=ReactDOM.Ref.domRef(headerRef) 
+            style=ReactDOM.Style.make(~position="sticky", ~top=`${top->Belt_Int.toString}px`, ~zIndex="1000", ~background="white", ())
+        >
             {header}
         </div>
         {content(contentTop)}
