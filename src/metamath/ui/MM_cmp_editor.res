@@ -14,7 +14,7 @@ open Expln_React_Mui
 
 
 @react.component
-let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~ctx:mmContext) => {
+let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~ctx:mmContext, ~top:int) => {
     let (state, setState) = React.useState(_ => initialState)
 
     let mainCheckboxState = {
@@ -85,8 +85,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         </Col>
     }
 
-    <Col>
-        {rndButtons()}
+    <>
+        <div style=ReactDOM.Style.make(~position="sticky", ~top=`${top->Belt_Int.toString}px`, ())>
+            {rndButtons()}
+        </div>
         {rndStmts()}
-    </Col>
+    </>
 }
