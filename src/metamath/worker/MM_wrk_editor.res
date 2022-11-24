@@ -15,7 +15,7 @@ open MM_syntax_tree
 let procName = "MM_wrk_editor"
 
 type stmtCont =
-    | Text({text:string, syntaxError: option<string>})
+    | Text({text:array<string>, syntaxError: option<string>})
     | Tree(syntaxTreeNode)
 
 type userStmtType = [ #e | #a | #p ]
@@ -44,7 +44,7 @@ type userStmt = {
 }   
 
 let createEmptyUserStmt = (id, typ) => {
-    { id, typ, cont:Text({text:"", syntaxError:None}), proof:"", proofError:None }
+    { id, typ, cont:Text({text:[], syntaxError:None}), proof:"", proofError:None }
 }
 
 type state = {

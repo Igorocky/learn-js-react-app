@@ -96,3 +96,12 @@ let buildSyntaxTree = (ctx, tbl, targetIdx):syntaxTreeNode => {
     }
     buildSyntaxTreeInner(idSeq, ctx, tbl, None, tbl[targetIdx])
 }
+
+let rec syntaxTreeToSymbols: syntaxTreeNode => array<string> = node => {
+    node.children->Js_array2.map(childNode => {
+        switch childNode {
+            | Subtree(node) => syntaxTreeToSymbols(node)
+            | Symbol({sym}) => [sym]
+        }
+    })->Belt_Array.concatMany
+}

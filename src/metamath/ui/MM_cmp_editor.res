@@ -12,6 +12,9 @@ open MM_wrk_editor
 open Expln_React_common
 open Expln_React_Mui
 
+let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
+    <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+}
 
 @react.component
 let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~ctx:mmContext, ~top:int) => {
@@ -42,10 +45,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
 
-    let rndIconButon = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
-        <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
-    }
-
     let rndButtons = () => {
         <Paper>
             <Row>
@@ -54,11 +53,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                     checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
                     onChange={_ => actToggleMainCheckbox()}
                 />
-                {rndIconButon(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active=canMoveCheckedStmts(state,false))}
-                {rndIconButon(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active=canMoveCheckedStmts(state,true))}
-                {rndIconButon(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active=true)}
-                {rndIconButon(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, ~active=mainCheckboxState->Belt.Option.getWithDefault(true))}
-                {rndIconButon(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active=isSingleStmtChecked(state))}
+                {rndIconButton(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active=canMoveCheckedStmts(state,false))}
+                {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active=canMoveCheckedStmts(state,true))}
+                {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active=true)}
+                {rndIconButton(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, ~active=mainCheckboxState->Belt.Option.getWithDefault(true))}
+                {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active=isSingleStmtChecked(state))}
             </Row>
         </Paper>
     }

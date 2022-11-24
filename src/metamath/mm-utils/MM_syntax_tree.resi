@@ -12,3 +12,4 @@ and childNode =
     | Symbol({id:string, sym:string})
 
 let buildSyntaxTree: (mmContext, proofTable, int) => syntaxTreeNode
+let syntaxTreeToSymbols: syntaxTreeNode => array<string>
