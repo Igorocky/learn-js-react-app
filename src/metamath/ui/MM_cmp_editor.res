@@ -85,10 +85,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         </Col>
     }
 
-    <>
-        <div style=ReactDOM.Style.make(~position="sticky", ~top=`${top->Belt_Int.toString}px`, ())>
-            {rndButtons()}
-        </div>
-        {rndStmts()}
-    </>
+    <ContentWithStickyHeader 
+        top
+        header={rndButtons()}
+        content={_ => {
+            rndStmts()
+        }}
+    />
 }

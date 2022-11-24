@@ -2,7 +2,6 @@ open Expln_React_Mui
 open MM_context
 open MM_cmp_settings
 open Modal
-open UseResizeObserver
 
 type tabData =
     | Settings
@@ -48,33 +47,6 @@ let make = () => {
     let modalRef = useModalRef()
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
     let (state, setState) = React.useState(_ => createInitialState())
-    let (tabContentTop, setTabContentTop) = React.useState(_ => 0)
-
-    let headerRef = React.useRef(Js.Nullable.null)
-    useClientHeightObserver(headerRef, clientHeight => setTabContentTop(_ => clientHeight))
-
-    // React.useEffect1(() => {
-    //     switch headerRef.current->Js.Nullable.toOption {
-    //         | Some(domElem) => {
-    //             // Js.Console.log2("domElem", domElem)
-    //             let observer = makeMutationObserver(mutations => {
-    //                 // Js.Console.log2("mutations", mutations)
-    //                 if (mutations->Js.Array2.length != 0) {
-    //                     let clientHeight = mutations[0]["target"]["clientHeight"]
-    //                     Js.Console.log2("clientHeight", clientHeight)
-    //                     setTabContentTop(_ => clientHeight)
-    //                 }
-    //             })
-    //             observer["observe"](. domElem, {
-    //                 // "subtree": true,
-    //                 // "attributeFilter": ["clientHeight"],
-    //                 "attributes": true,
-    //             })->ignore
-    //             Some(() => observer["disconnect"](.))
-    //         }
-    //         | None => None
-    //     }
-    // }, [headerRef.current])
 
     let onContextWasUpdated = newCtx => {
         setState(setCtx(_,newCtx))
@@ -101,7 +73,7 @@ let make = () => {
         None
     })
 
-    let rndTabContent = (tab:UseTabs.tab<'a>) => {
+    let rndTabContent = (top:int, tab:UseTabs.tab<'a>) => {
         <div key=tab.id style=ReactDOM.Style.make(~display=if (tab.id == activeTabId) {"block"} else {"none"}, ())>
             {
                 switch tab.data {
@@ -114,7 +86,7 @@ let make = () => {
                         />
                     | Editor => 
                         <MM_cmp_editor
-                            top=tabContentTop
+                            top
                             modalRef
                             settings=state.settings
                             settingsV=state.settingsV
@@ -128,30 +100,19 @@ let make = () => {
         </div>
     }
 
-
-    <>
-        <Col gridRef=ReactDOM.Ref.domRef(headerRef) style=ReactDOM.Style.make(~position="sticky", ~top="0px", ())>
-            <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />
-            {renderTabs()}
-        </Col>
-        <Col>
-            {React.array(tabs->Js_array2.map(rndTabContent))}
-            <Modal modalRef />
-        </Col>
-    </>
-    /* <Col>
-        // {rndAppBar(
-        //     React.array([
-        //         <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />,
-        //         {renderTabs()},
-        //     ])
-        // )}
-        <AppBar2/*  ref=ReactDOM.Ref.domRef(appBarRef) */>
-            <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />
-            {renderTabs()}
-        </AppBar2>
-        // <div style=ReactDOM.Style.make(~height=`${appBarHeight}px`, ())>{React.string("DIV------------")}</div>
-        {React.array(tabs->Js_array2.map(rndTabContent))}
-        <Modal modalRef />
-    </Col> */
+    <ContentWithStickyHeader 
+        top=0
+        header={
+            <Col>
+                <MM_cmp_context_selector onChange=onContextWasUpdated modalRef />
+                {renderTabs()}
+            </Col>
+        }
+        content={contentTop => {
+            <Col>
+                {React.array(tabs->Js_array2.map(rndTabContent(contentTop, _)))}
+                <Modal modalRef />
+            </Col>
+        }}
+    />
 }
