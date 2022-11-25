@@ -72,7 +72,9 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                 <MM_cmp_user_stmt
                     label=stmt.label
                     cont=stmt.cont
-                    onContentChange={newCont => setState(updateStmt(_, stmt.id, prev => {...prev, cont:newCont}))}
+                    editMode=stmt.editMode
+                    onEditBegin={() => setState(updateStmt(_,stmt.id,stmtSetEditMode(_, true)))}
+                    onEditDone={newCont => setState(completeEditModeForStmt(_,stmt.id,newCont))}
                 />
             </Row>
         </Paper>

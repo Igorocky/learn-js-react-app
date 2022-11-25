@@ -18,6 +18,13 @@ type stmtCont =
     | Text({text:array<string>, syntaxError: option<string>})
     | Tree(syntaxTreeNode)
 
+let contIsEmpty = cont => {
+    switch cont {
+        | Text({text}) => text->Js.Array2.length == 0
+        | Tree(syntaxTreeNode) => syntaxTreeIsEmpty(syntaxTreeNode)
+    }
+}
+
 type userStmtType = [ #e | #a | #p ]
 
 let userStmtTypeFromStr = str => {
@@ -39,13 +46,21 @@ type userStmt = {
     label: string,
     typ: userStmtType,
     cont: stmtCont,
+    editMode: bool,
     
     proof: string,
     proofError: option<string>,
 }   
 
 let createEmptyUserStmt = (id, typ) => {
-    { id, label:"label", typ, cont:Text({text:[], syntaxError:None}), proof:"", proofError:None }
+    { id, label:"label", typ, cont:Text({text:[], syntaxError:None}), editMode:true, proof:"", proofError:None }
+}
+
+let stmtSetEditMode = (stmt, editMode) => {
+    {
+        ...stmt,
+        editMode
+    }
 }
 
 type state = {
@@ -95,6 +110,16 @@ let updateStmt = (st,id,update) => {
         ...st,
         stmts: st.stmts->Js_array2.map(stmt => if stmt.id == id {update(stmt)} else {stmt})
     }
+}
+
+let completeEditModeForStmt = (st, stmtId, newCont) => {
+    updateStmt(st, stmtId, stmt => {
+        {
+            ...stmt,
+            cont:newCont,
+            editMode: contIsEmpty(newCont)
+        }
+    })
 }
 
 let isStmtChecked = (st,id) => {

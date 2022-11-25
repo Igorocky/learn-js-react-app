@@ -16,16 +16,13 @@ let contToStr = cont => {
 
 let strToCont = str => {
     Text({
-        text: str->Js_string2.split(" ")->Js_array2.map(s => s->Js_string2.trim)->Js_array2.filter(s => s != ""),
+        text: 
+            str
+            ->Js_string2.splitByRe(%re("/[\s\n]/"))
+            ->Js_array2.map(so => so->Belt_Option.map(s=>s->Js_string2.trim)->Belt_Option.getWithDefault(""))
+            ->Js_array2.filter(s => s != ""),
         syntaxError: None
     })
-}
-
-let contIsEmpty = cont => {
-    switch cont {
-        | Text({text}) => text->Js.Array2.length == 0
-        | Tree(syntaxTreeNode) => syntaxTreeIsEmpty(syntaxTreeNode)
-    }
 }
 
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
@@ -33,84 +30,68 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
 }
 
 type state = {
-    newContText: option<string>,
+    newContText: string,
 }
 
-let makeInitialState = (cont:stmtCont) => {
+let makeInitialState = () => {
     {
-        newContText: if contIsEmpty(cont) {Some("")} else {None}
+        newContText: ""
     }
 }
 
-let setNewContText = (st,text) => {
+let setNewContText = (st,text):state => {
     {
-        ...st,
         newContText:text
     }
 }
 
 @react.component
-let make = (~label:string, ~cont:stmtCont, ~onContentChange:stmtCont=>unit) => {
-    let (state, setState) = React.useState(_ => makeInitialState(cont))
-
-    let actEdit = () => {
-        setState(st => {
-            if (st.newContText->Belt_Option.isNone) {
-                setNewContText(st, Some(contToStr(cont)))
-            } else {
-                st
-            }
-        })
-    }
+let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditBegin:unit=>unit, ~onEditDone:stmtCont=>unit) => {
+    let (state, setState) = React.useState(_ => makeInitialState())
 
     React.useEffect1(() => {
-        if (contIsEmpty(cont)) {
-            actEdit()
+        if (editMode) {
+            setState(setNewContText(_,contToStr(cont)))
         }
         None
-    }, [cont])
+    }, [editMode])
+
+    let actEdit = () => {
+        setState(setNewContText(_,contToStr(cont)))
+        onEditBegin()
+    }
 
     let actContTextUpdated = newContText => {
-        setState(setNewContText(_, Some(newContText)))
+        setState(setNewContText(_, newContText))
     }
     
     let actOnEditDone = () => {
-        switch state.newContText {
-            | Some(newContText) => {
-                onContentChange(strToCont(newContText))
-                setState(setNewContText(_, None))
-            }
-            | _ => ()
-        }
-        
+        onEditDone(strToCont(state.newContText))
     }
 
     let rndCont = () => {
-        switch state.newContText {
-            | Some(newContText) => {
-                <TextField 
-                    size=#small
-                    style=ReactDOM.Style.make(~width="600px", ())
-                    autoFocus=true
-                    multiline=true
-                    label
-                    value=newContText
-                    onChange=evt2str(actContTextUpdated)
-                    onKeyDown={evt => {
-                        if (evt->ReactEvent.Keyboard.ctrlKey) {
-                            let keyCode = evt->ReactEvent.Keyboard.keyCode
-                            if (keyCode == 13) {
-                                actOnEditDone()
-                            }
+        if (editMode) {
+            <TextField 
+                size=#small
+                style=ReactDOM.Style.make(~width="600px", ())
+                autoFocus=true
+                multiline=true
+                label
+                value=state.newContText
+                onChange=evt2str(actContTextUpdated)
+                onKeyDown={evt => {
+                    if (evt->ReactEvent.Keyboard.ctrlKey) {
+                        let keyCode = evt->ReactEvent.Keyboard.keyCode
+                        if (keyCode == 13) {
+                            actOnEditDone()
                         }
-                    }}
-                />
-            }
-            | None => {
-                switch cont {
-                    | Text({text}) => React.string(text->Js_array2.joinWith(" "))
-                    | Tree(syntaxTreeNode) => React.string(syntaxTreeToSymbols(syntaxTreeNode)->Js_array2.joinWith(" "))
-                }
+                    }
+                }}
+            />
+        } else {
+            switch cont {
+                | Text({text}) => React.string(text->Js_array2.joinWith(" "))
+                | Tree(syntaxTreeNode) => React.string(syntaxTreeToSymbols(syntaxTreeNode)->Js_array2.joinWith(" "))
             }
         }
     }
