@@ -69,7 +69,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                     checked={state->isStmtChecked(stmt.id)}
                     onChange={_ => actToggleStmtChecked(stmt.id)}
                 />
-                {stmt.id->React.string}
+                <MM_cmp_user_stmt
+                    label=stmt.label
+                    cont=stmt.cont
+                    onContentChange={newCont => setState(updateStmt(_, stmt.id, prev => {...prev, cont:newCont}))}
+                />
             </Row>
         </Paper>
     }

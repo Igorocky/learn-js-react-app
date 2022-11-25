@@ -105,3 +105,7 @@ let rec syntaxTreeToSymbols: syntaxTreeNode => array<string> = node => {
         }
     })->Belt_Array.concatMany
 }
+
+let syntaxTreeIsEmpty: syntaxTreeNode => bool = node => {
+    node.children->Js_array2.length == 0
+}

@@ -13,3 +13,4 @@ and childNode =
 
 let buildSyntaxTree: (mmContext, proofTable, int) => syntaxTreeNode
 let syntaxTreeToSymbols: syntaxTreeNode => array<string>
+let syntaxTreeIsEmpty: syntaxTreeNode => bool

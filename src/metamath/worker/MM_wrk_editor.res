@@ -36,6 +36,7 @@ type userStmt = {
     // ctxV:int,
     // prevText: string,
 
+    label: string,
     typ: userStmtType,
     cont: stmtCont,
     
@@ -44,7 +45,7 @@ type userStmt = {
 }   
 
 let createEmptyUserStmt = (id, typ) => {
-    { id, typ, cont:Text({text:[], syntaxError:None}), proof:"", proofError:None }
+    { id, label:"label", typ, cont:Text({text:[], syntaxError:None}), proof:"", proofError:None }
 }
 
 type state = {
