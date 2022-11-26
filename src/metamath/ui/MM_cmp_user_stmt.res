@@ -30,75 +30,122 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
 }
 
 type state = {
-    newContText: string,
+    newText: string,
 }
 
 let makeInitialState = () => {
     {
-        newContText: ""
+        newText: ""
     }
 }
 
-let setNewContText = (st,text):state => {
+let setNewText = (st,text):state => {
     {
-        newContText:text
+        newText:text
     }
 }
 
 @react.component
-let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditRequested:unit=>unit, ~onEditDone:stmtCont=>unit) => {
+let make = (
+    ~label:string, ~labelEditMode:bool, ~onLabelEditRequested:unit=>unit, ~onLabelEditDone:string=>unit,
+    ~typ:userStmtType, ~typEditMode:bool, ~onTypEditRequested:unit=>unit, ~onTypEditDone:userStmtType=>unit,
+    ~cont:stmtCont, ~contEditMode:bool, ~onContEditRequested:unit=>unit, ~onContEditDone:stmtCont=>unit,
+    ~proof: string, ~proofEditMode:bool, ~onProofEditRequested:unit=>unit, ~onProofEditDone:string=>unit,
+) => {
     let (state, setState) = React.useState(_ => makeInitialState())
 
     React.useEffect1(() => {
-        if (editMode) {
-            setState(setNewContText(_,contToStr(cont)))
+        if (labelEditMode) {
+            setState(setNewText(_,label))
+        } else if (typEditMode) {
+            setState(setNewText(_,typ :> string))
+        } else if (contEditMode) {
+            setState(setNewText(_,contToStr(cont)))
+        } else if (proofEditMode) {
+            setState(setNewText(_,proof))
         }
         None
-    }, [editMode])
+    }, [labelEditMode, typEditMode, contEditMode, proofEditMode])
 
-    let actContTextUpdated = newContText => {
-        setState(setNewContText(_, newContText))
+    let actNewTextUpdated = newText => {
+        setState(setNewText(_, newText))
     }
     
-    let actOnEditDone = () => {
-        onEditDone(strToCont(state.newContText))
+    let actLabelEditDone = () => {
+        onLabelEditDone(state.newText)
+    }
+    
+    let actTypEditDone = () => {
+        onTypEditDone(userStmtTypeFromStr(state.newText))
+    }
+    
+    let actContEditDone = () => {
+        onContEditDone(strToCont(state.newText))
+    }
+    
+    let actProofEditDone = () => {
+        onProofEditDone(state.newText)
+    }
+
+    let ctrlEnterHnd = (kbrdEvt, clbk) => {
+        if (kbrdEvt->ReactEvent.Keyboard.ctrlKey && kbrdEvt->ReactEvent.Keyboard.keyCode == 13) {
+            clbk()
+        }
+    }
+
+    let shiftLeftClickHnd = (mouseEvt, clbk) => {
+        if (mouseEvt->ReactEvent.Mouse.button == 0 && mouseEvt->ReactEvent.Mouse.shiftKey) {
+            clbk()
+        }
+    }
+
+    let rndLabel = () => {
+        if (labelEditMode) {
+            <TextField 
+                size=#small
+                style=ReactDOM.Style.make(~width="100px", ())
+                autoFocus=true
+                value=state.newText
+                onChange=evt2str(actNewTextUpdated)
+                onKeyDown=ctrlEnterHnd(_, actLabelEditDone)
+            />
+        } else {
+            <span onClick=shiftLeftClickHnd(_, onContEditRequested) >
+                {React.string(label)}
+            </span>
+        }
     }
 
     let rndCont = () => {
-        if (editMode) {
+        if (contEditMode) {
             <TextField 
                 size=#small
                 style=ReactDOM.Style.make(~width="600px", ())
                 autoFocus=true
                 multiline=true
                 label
-                value=state.newContText
-                onChange=evt2str(actContTextUpdated)
-                onKeyDown={evt => {
-                    if (evt->ReactEvent.Keyboard.ctrlKey) {
-                        let keyCode = evt->ReactEvent.Keyboard.keyCode
-                        if (keyCode == 13) {
-                            actOnEditDone()
-                        }
-                    }
-                }}
+                value=state.newText
+                onChange=evt2str(actNewTextUpdated)
+                onKeyDown=ctrlEnterHnd(_, actContEditDone)
             />
         } else {
-            switch cont {
-                | Text({text}) => React.string(text->Js_array2.joinWith(" "))
-                | Tree(syntaxTreeNode) => React.string(syntaxTreeToSymbols(syntaxTreeNode)->Js_array2.joinWith(" "))
+            <Paper onClick=shiftLeftClickHnd(_, onContEditRequested) >
+            {
+                switch cont {
+                    | Text({text}) => React.string(text->Js_array2.joinWith(" "))
+                    | Tree(syntaxTreeNode) => React.string(syntaxTreeToSymbols(syntaxTreeNode)->Js_array2.joinWith(" "))
+                }
             }
+            </Paper>
         }
     }
 
-    <Paper
-        style=ReactDOM.Style.make(~width="100%", ())
-        onClick={evt=>{
-            if (evt->ReactEvent.Mouse.button == 0) {
-                onEditRequested()
-            }
-        }}
-    >
-        {rndCont()}
-    </Paper>
+    <Col>
+        <Row>
+            <Col>
+                {rndLabel()}
+                {rndCont()}
+            </Col>
+        </Row>
+    </Col>
 }

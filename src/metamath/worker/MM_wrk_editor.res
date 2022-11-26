@@ -44,22 +44,45 @@ type userStmt = {
     // prevText: string,
 
     label: string,
+    labelEditMode: bool,
     typ: userStmtType,
+    typEditMode: bool,
     cont: stmtCont,
-    editMode: bool,
+    contEditMode: bool,
     
     proof: string,
+    proofEditMode: bool,
     proofError: option<string>,
 }   
 
 let createEmptyUserStmt = (id, typ) => {
-    { id, label:"label", typ, cont:Text({text:[], syntaxError:None}), editMode:true, proof:"", proofError:None }
+    { 
+        id, 
+        label:"label", labelEditMode:false, 
+        typ, typEditMode:false, 
+        cont:Text({text:[], syntaxError:None}), contEditMode:true, 
+        proof:"", proofEditMode:false,  proofError:None 
+    }
 }
 
-let stmtSetEditMode = (stmt, editMode) => {
+let stmtSetContEditMode = (stmt, contEditMode) => {
     {
         ...stmt,
-        editMode
+        contEditMode
+    }
+}
+
+let stmtSetLabelEditMode = (stmt, labelEditMode) => {
+    {
+        ...stmt,
+        labelEditMode
+    }
+}
+
+let stmtSetProofEditMode = (stmt, proofEditMode) => {
+    {
+        ...stmt,
+        proofEditMode
     }
 }
 
@@ -112,12 +135,12 @@ let updateStmt = (st,id,update) => {
     }
 }
 
-let completeEditModeForStmt = (st, stmtId, newCont) => {
+let completeContEditModeForStmt = (st, stmtId, newCont) => {
     updateStmt(st, stmtId, stmt => {
         {
             ...stmt,
             cont:newCont,
-            editMode: contIsEmpty(newCont)
+            contEditMode: contIsEmpty(newCont)
         }
     })
 }
