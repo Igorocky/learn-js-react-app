@@ -46,7 +46,7 @@ let setNewContText = (st,text):state => {
 }
 
 @react.component
-let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditBegin:unit=>unit, ~onEditDone:stmtCont=>unit) => {
+let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditRequested:unit=>unit, ~onEditDone:stmtCont=>unit) => {
     let (state, setState) = React.useState(_ => makeInitialState())
 
     React.useEffect1(() => {
@@ -55,11 +55,6 @@ let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditBegin:unit=>un
         }
         None
     }, [editMode])
-
-    let actEdit = () => {
-        setState(setNewContText(_,contToStr(cont)))
-        onEditBegin()
-    }
 
     let actContTextUpdated = newContText => {
         setState(setNewContText(_, newContText))
@@ -100,7 +95,7 @@ let make = (~label:string, ~cont:stmtCont, ~editMode:bool, ~onEditBegin:unit=>un
         style=ReactDOM.Style.make(~width="100%", ())
         onClick={evt=>{
             if (evt->ReactEvent.Mouse.button == 0) {
-                actEdit()
+                onEditRequested()
             }
         }}
     >

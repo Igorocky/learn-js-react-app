@@ -73,7 +73,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                     label=stmt.label
                     cont=stmt.cont
                     editMode=stmt.editMode
-                    onEditBegin={() => setState(updateStmt(_,stmt.id,stmtSetEditMode(_, true)))}
+                    onEditRequested={() => setState(updateStmt(_,stmt.id,stmtSetEditMode(_, true)))}
                     onEditDone={newCont => setState(completeEditModeForStmt(_,stmt.id,newCont))}
                 />
             </Row>
