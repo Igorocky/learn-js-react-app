@@ -265,6 +265,25 @@ let completeConstsEditMode = (st, newConstsText) => {
     }
 }
 
+let setVarsEditMode = st => {
+    {
+        ...st,
+        varsEditMode: true
+    }
+}
+
+let completeVarsEditMode = (st, newVarsText) => {
+    if (newVarsText->Js_string2.trim != "") {
+        {
+            ...st,
+            varsText:newVarsText,
+            varsEditMode: false
+        }
+    } else {
+        st
+    }
+}
+
 let setLabelEditMode = (st, stmtId) => {
     if (canGoEditModeForStmt(st, stmtId)) {
         updateStmt(st, stmtId, stmt => {...stmt, labelEditMode:true})

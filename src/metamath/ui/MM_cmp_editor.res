@@ -33,7 +33,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
 
     let editIsActive = 
-        state.constsEditMode ||
+        state.constsEditMode || state.varsEditMode ||
         state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode )
 
     let actAddNewStmt = () => setState(addNewStmt)
@@ -48,7 +48,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
-    let actBeginEditConsts = setter => {
+    let actBeginEdit0 = setter => {
         if (!editIsActive) {
             setState(setter)
         }
@@ -105,12 +105,27 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
 
     let rndConsts = () => {
-        <MM_cmp_user_consts
-            constsText=state.constsText
-            constsEditMode=state.constsEditMode
-            onConstsEditRequested={() => actBeginEditConsts(setConstsEditMode)}
-            onConstsEditDone={newConstsText => setState(completeConstsEditMode(_,newConstsText))}
-        />
+        <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
+            {React.string("Constants")}
+            <MM_cmp_user_consts
+                constsText=state.constsText
+                constsEditMode=state.constsEditMode
+                onConstsEditRequested={() => actBeginEdit0(setConstsEditMode)}
+                onConstsEditDone={newConstsText => setState(completeConstsEditMode(_,newConstsText))}
+            />
+        </Row>
+    }
+
+    let rndVars = () => {
+        <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
+            {React.string("Variables")}
+            <MM_cmp_multiline_text
+                text=state.varsText
+                editMode=state.varsEditMode
+                onEditRequested={() => actBeginEdit0(setVarsEditMode)}
+                onEditDone={newText => setState(completeVarsEditMode(_,newText))}
+            />
+        </Row>
     }
 
     let rndStmts = () => {
@@ -125,6 +140,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         content={_ => {
             <Col>
                 {rndConsts()}
+                {rndVars()}
                 {rndStmts()}
             </Col>
         }}
