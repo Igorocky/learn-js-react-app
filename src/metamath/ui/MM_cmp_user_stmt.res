@@ -148,7 +148,7 @@ let make = (
                 onKeyDown=ctrlEnterHnd(_, actContEditDone)
             />
         } else {
-            <Paper onClick=altLeftClickHnd(_, onContEditRequested) >
+            <Paper onClick=altLeftClickHnd(_, onContEditRequested) style=ReactDOM.Style.make(~padding="1px 10px", ()) >
             {
                 switch stmt.cont {
                     | Text({text}) => React.string(text->Js_array2.joinWith(" "))

@@ -32,6 +32,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         }
     }
 
+    let editIsActive = state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode )
+
     let actAddNewStmt = () => setState(addNewStmt)
     let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
     let actToggleStmtChecked = id => setState(toggleStmtChecked(_,id))
@@ -44,20 +46,28 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
+    let actBeginEdit = (setter, stmtId) => {
+        if (!editIsActive) {
+            setState(setter(_,stmtId))
+        }
+    }
 
     let rndButtons = () => {
         <Paper>
             <Row>
                 <Checkbox
+                    disabled=editIsActive
                     indeterminate={mainCheckboxState->Belt_Option.isNone}
                     checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
                     onChange={_ => actToggleMainCheckbox()}
                 />
-                {rndIconButton(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active=canMoveCheckedStmts(state,false))}
-                {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active=canMoveCheckedStmts(state,true))}
-                {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active=true)}
-                {rndIconButton(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, ~active=mainCheckboxState->Belt.Option.getWithDefault(true))}
-                {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active=isSingleStmtChecked(state))}
+                {rndIconButton(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active= !editIsActive && canMoveCheckedStmts(state,false))}
+                {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active= !editIsActive && canMoveCheckedStmts(state,true))}
+                {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active= !editIsActive)}
+                {rndIconButton(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, 
+                    ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
+                )}
+                {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
             </Row>
         </Paper>
     }
@@ -65,6 +75,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let rndStmt = stmt => {
         <Row alignItems=#"flex-start" key=stmt.id>
             <Checkbox
+                disabled=editIsActive
                 checked={state->isStmtChecked(stmt.id)}
                 onChange={_ => actToggleStmtChecked(stmt.id)}
             />
@@ -72,19 +83,19 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                 stmt
 
                 labelEditMode=stmt.labelEditMode
-                onLabelEditRequested={() => setState(setLabelEditMode(_,stmt.id))}
+                onLabelEditRequested={() => actBeginEdit(setLabelEditMode,stmt.id)}
                 onLabelEditDone={newLabel => setState(completeLabelEditMode(_,stmt.id,newLabel))}
 
                 typEditMode=stmt.typEditMode
-                onTypEditRequested={() => setState(setTypEditMode(_,stmt.id))}
+                onTypEditRequested={() => actBeginEdit(setTypEditMode,stmt.id)}
                 onTypEditDone={newTyp => setState(completeTypEditMode(_,stmt.id,newTyp))}
 
                 contEditMode=stmt.contEditMode
-                onContEditRequested={() => setState(setContEditMode(_,stmt.id))}
+                onContEditRequested={() => actBeginEdit(setContEditMode,stmt.id)}
                 onContEditDone={newCont => setState(completeContEditMode(_,stmt.id,newCont))}
                 
                 proofEditMode=stmt.proofEditMode 
-                onProofEditRequested={() => setState(setProofEditMode(_,stmt.id))}
+                onProofEditRequested={() => actBeginEdit(setProofEditMode,stmt.id)}
                 onProofEditDone={newProof => setState(completeProofEditMode(_,stmt.id,newProof))}
             />
         </Row>
