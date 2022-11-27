@@ -69,11 +69,22 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                 onChange={_ => actToggleStmtChecked(stmt.id)}
             />
             <MM_cmp_user_stmt
-                label=stmt.label
-                cont=stmt.cont
-                editMode=stmt.editMode
-                onEditRequested={() => setState(updateStmt(_,stmt.id,stmtSetEditMode(_, true)))}
-                onEditDone={newCont => setState(completeEditModeForStmt(_,stmt.id,newCont))}
+                label=stmt.label 
+                    labelEditMode=stmt.labelEditMode 
+                    onLabelEditRequested={() => setState(setLabelEditMode(_,stmt.id))}
+                    onLabelEditDone={newLabel => setState(completeLabelEditMode(_,stmt.id,newLabel))}
+                typ=stmt.typ 
+                    typEditMode=stmt.typEditMode 
+                    onTypEditRequested={() => setState(setTypEditMode(_,stmt.id))}
+                    onTypEditDone={newTyp => setState(completeTypEditMode(_,stmt.id,newTyp))}
+                cont=stmt.cont 
+                    contEditMode=stmt.contEditMode 
+                    onContEditRequested={() => setState(setContEditMode(_,stmt.id))}
+                    onContEditDone={newCont => setState(completeContEditMode(_,stmt.id,newCont))}
+                proof=stmt.proof 
+                    proofEditMode=stmt.proofEditMode 
+                    onProofEditRequested={() => setState(setProofEditMode(_,stmt.id))}
+                    onProofEditDone={newProof => setState(completeProofEditMode(_,stmt.id,newProof))}
             />
         </Row>
     }

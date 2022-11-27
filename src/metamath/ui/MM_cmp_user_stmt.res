@@ -110,7 +110,7 @@ let make = (
                 onKeyDown=ctrlEnterHnd(_, actLabelEditDone)
             />
         } else {
-            <span onClick=shiftLeftClickHnd(_, onContEditRequested) >
+            <span onClick=shiftLeftClickHnd(_, onLabelEditRequested) >
                 {React.string(label)}
             </span>
         }
@@ -123,7 +123,6 @@ let make = (
                 style=ReactDOM.Style.make(~width="600px", ())
                 autoFocus=true
                 multiline=true
-                label
                 value=state.newText
                 onChange=evt2str(actNewTextUpdated)
                 onKeyDown=ctrlEnterHnd(_, actContEditDone)

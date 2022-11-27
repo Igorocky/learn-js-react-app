@@ -65,27 +65,6 @@ let createEmptyUserStmt = (id, typ) => {
     }
 }
 
-let stmtSetContEditMode = (stmt, contEditMode) => {
-    {
-        ...stmt,
-        contEditMode
-    }
-}
-
-let stmtSetLabelEditMode = (stmt, labelEditMode) => {
-    {
-        ...stmt,
-        labelEditMode
-    }
-}
-
-let stmtSetProofEditMode = (stmt, proofEditMode) => {
-    {
-        ...stmt,
-        proofEditMode
-    }
-}
-
 type state = {
     settingsV:int,
     settings:settings,
@@ -133,16 +112,6 @@ let updateStmt = (st,id,update) => {
         ...st,
         stmts: st.stmts->Js_array2.map(stmt => if stmt.id == id {update(stmt)} else {stmt})
     }
-}
-
-let completeContEditModeForStmt = (st, stmtId, newCont) => {
-    updateStmt(st, stmtId, stmt => {
-        {
-            ...stmt,
-            cont:newCont,
-            contEditMode: contIsEmpty(newCont)
-        }
-    })
 }
 
 let isStmtChecked = (st,id) => {
@@ -267,6 +236,90 @@ let duplicateCheckedStmt = st => {
             checkedStmtIds: [newId],
         }
     }
+}
+
+let canGoEditModeForStmt = (st,stmtId) => {
+    !(st.stmts->Js_array2.some(stmt => stmt.id == stmtId && (stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode)))
+}
+
+let setLabelEditMode = (st, stmtId) => {
+    if (canGoEditModeForStmt(st, stmtId)) {
+        updateStmt(st, stmtId, stmt => {...stmt, labelEditMode:true})
+    } else {
+        st
+    }
+}
+
+let completeLabelEditMode = (st, stmtId, newLabel) => {
+    updateStmt(st, stmtId, stmt => {
+        if (newLabel->Js_string2.trim != "") {
+            {
+                ...stmt,
+                label:newLabel,
+                labelEditMode: false
+            }
+        } else {
+            stmt
+        }
+    })
+}
+
+let setContEditMode = (st, stmtId) => {
+    if (canGoEditModeForStmt(st, stmtId)) {
+        updateStmt(st, stmtId, stmt => {...stmt, contEditMode:true})
+    } else {
+        st
+    }
+}
+
+let completeContEditMode = (st, stmtId, newCont) => {
+    updateStmt(st, stmtId, stmt => {
+        if (contIsEmpty(newCont)) {
+            stmt
+        } else {
+            {
+                ...stmt,
+                cont:newCont,
+                contEditMode: false
+            }
+        }
+    })
+}
+
+let setTypEditMode = (st, stmtId) => {
+    if (canGoEditModeForStmt(st, stmtId)) {
+        updateStmt(st, stmtId, stmt => {...stmt, typEditMode:true})
+    } else {
+        st
+    }
+}
+
+let completeTypEditMode = (st, stmtId, newTyp) => {
+    updateStmt(st, stmtId, stmt => {
+        {
+            ...stmt,
+            typ:newTyp,
+            typEditMode: false
+        }
+    })
+}
+
+let setProofEditMode = (st, stmtId) => {
+    if (canGoEditModeForStmt(st, stmtId)) {
+        updateStmt(st, stmtId, stmt => {...stmt, proofEditMode:true})
+    } else {
+        st
+    }
+}
+
+let completeProofEditMode = (st, stmtId, newProof) => {
+    updateStmt(st, stmtId, stmt => {
+        {
+            ...stmt,
+            proof:newProof,
+            proofEditMode: false
+        }
+    })
 }
 
 type request = 
