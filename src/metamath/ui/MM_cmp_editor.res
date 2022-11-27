@@ -63,14 +63,14 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
 
     let rndStmt = stmt => {
-        <Row key=stmt.id style=ReactDOM.Style.make(~marginTop="5px", ())>
+        <Row alignItems=#"flex-start" key=stmt.id style=ReactDOM.Style.make(~marginTop="5px", ())>
             <Checkbox
                 checked={state->isStmtChecked(stmt.id)}
                 onChange={_ => actToggleStmtChecked(stmt.id)}
             />
             <MM_cmp_user_stmt
                 stmt
-                
+
                 labelEditMode=stmt.labelEditMode
                 onLabelEditRequested={() => setState(setLabelEditMode(_,stmt.id))}
                 onLabelEditDone={newLabel => setState(completeLabelEditMode(_,stmt.id,newLabel))}

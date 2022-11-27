@@ -213,14 +213,12 @@ let make = (
         }
     }
 
-    <Col spacing=1.>
-        <Row>
-            {rndTyp()}
-            <Col>
-                {rndLabel()}
-                {rndCont()}
-            </Col>
-        </Row>
-        {rndProof()}
-    </Col>
+    <Row spacing=1. style=ReactDOM.Style.make(~marginTop="5px", ())>
+        {rndTyp()}
+        <Col>
+            {rndLabel()}
+            {rndCont()}
+            {rndProof()}
+        </Col>
+    </Row>
 }
