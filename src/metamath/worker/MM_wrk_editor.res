@@ -29,8 +29,8 @@ type userStmtType = [ #e | #a | #p ]
 
 let userStmtTypeFromStr = str => {
     switch str {
-        | "e" => #e
         | "a" => #a
+        | "e" => #e
         | "p" => #p
         | _ => raise(MmException({msg:`Cannot convert '${str}' to userStmtType`}))
     }
@@ -73,12 +73,14 @@ type state = {
     ctx: mmContext,
 
     constsText: string,
-    constsErr:option<string>,
     consts: array<string>,
+    constsErr: option<string>,
+    constsEditMode: bool,
 
     varsText: string,
+    vars: array<stmt>,
     varsErr: option<string>,
-    vars: Belt_MapString.t<string>,
+    varsEditMode: bool,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -94,12 +96,14 @@ let initialState = {
         ctx: createContext(()),
 
         constsText: "",
-        constsErr:None,
         consts: [],
+        constsErr: None,
+        constsEditMode: false,
 
         varsText: "",
+        vars: [],
         varsErr: None,
-        vars: Belt_MapString.empty,
+        varsEditMode: false,
 
         nextStmtId: 0,
         stmts: [],
@@ -240,6 +244,25 @@ let duplicateCheckedStmt = st => {
 
 let canGoEditModeForStmt = (st,stmtId) => {
     !(st.stmts->Js_array2.some(stmt => stmt.id == stmtId && (stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode)))
+}
+
+let setConstsEditMode = st => {
+    {
+        ...st,
+        constsEditMode: true
+    }
+}
+
+let completeConstsEditMode = (st, newConstsText) => {
+    if (newConstsText->Js_string2.trim != "") {
+        {
+            ...st,
+            constsText:newConstsText,
+            constsEditMode: false
+        }
+    } else {
+        st
+    }
 }
 
 let setLabelEditMode = (st, stmtId) => {

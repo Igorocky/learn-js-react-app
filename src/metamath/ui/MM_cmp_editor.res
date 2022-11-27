@@ -32,7 +32,9 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         }
     }
 
-    let editIsActive = state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode )
+    let editIsActive = 
+        state.constsEditMode ||
+        state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode )
 
     let actAddNewStmt = () => setState(addNewStmt)
     let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
@@ -46,6 +48,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
+    let actBeginEditConsts = setter => {
+        if (!editIsActive) {
+            setState(setter)
+        }
+    }
     let actBeginEdit = (setter, stmtId) => {
         if (!editIsActive) {
             setState(setter(_,stmtId))
@@ -82,23 +89,28 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
             <MM_cmp_user_stmt
                 stmt
 
-                labelEditMode=stmt.labelEditMode
                 onLabelEditRequested={() => actBeginEdit(setLabelEditMode,stmt.id)}
                 onLabelEditDone={newLabel => setState(completeLabelEditMode(_,stmt.id,newLabel))}
 
-                typEditMode=stmt.typEditMode
                 onTypEditRequested={() => actBeginEdit(setTypEditMode,stmt.id)}
                 onTypEditDone={newTyp => setState(completeTypEditMode(_,stmt.id,newTyp))}
 
-                contEditMode=stmt.contEditMode
                 onContEditRequested={() => actBeginEdit(setContEditMode,stmt.id)}
                 onContEditDone={newCont => setState(completeContEditMode(_,stmt.id,newCont))}
                 
-                proofEditMode=stmt.proofEditMode 
                 onProofEditRequested={() => actBeginEdit(setProofEditMode,stmt.id)}
                 onProofEditDone={newProof => setState(completeProofEditMode(_,stmt.id,newProof))}
             />
         </Row>
+    }
+
+    let rndConsts = () => {
+        <MM_cmp_user_consts
+            constsText=state.constsText
+            constsEditMode=state.constsEditMode
+            onConstsEditRequested={() => actBeginEditConsts(setConstsEditMode)}
+            onConstsEditDone={newConstsText => setState(completeConstsEditMode(_,newConstsText))}
+        />
     }
 
     let rndStmts = () => {
@@ -111,7 +123,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         top
         header={rndButtons()}
         content={_ => {
-            rndStmts()
+            <Col>
+                {rndConsts()}
+                {rndStmts()}
+            </Col>
         }}
     />
 }

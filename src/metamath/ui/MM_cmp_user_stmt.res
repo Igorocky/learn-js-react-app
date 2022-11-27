@@ -58,21 +58,21 @@ let setProofExpanded = (st,proofExpanded):state => {
 @react.component
 let make = (
     ~stmt:userStmt, 
-    ~labelEditMode:bool, ~onLabelEditRequested:unit=>unit, ~onLabelEditDone:string=>unit,
-    ~typEditMode:bool, ~onTypEditRequested:unit=>unit, ~onTypEditDone:userStmtType=>unit,
-    ~contEditMode:bool, ~onContEditRequested:unit=>unit, ~onContEditDone:stmtCont=>unit,
-    ~proofEditMode:bool, ~onProofEditRequested:unit=>unit, ~onProofEditDone:string=>unit,
+    ~onLabelEditRequested:unit=>unit, ~onLabelEditDone:string=>unit,
+    ~onTypEditRequested:unit=>unit, ~onTypEditDone:userStmtType=>unit,
+    ~onContEditRequested:unit=>unit, ~onContEditDone:stmtCont=>unit,
+    ~onProofEditRequested:unit=>unit, ~onProofEditDone:string=>unit,
 ) => {
     let (state, setState) = React.useState(_ => makeInitialState())
 
     React.useEffect1(() => {
-        if (labelEditMode) {
+        if (stmt.labelEditMode) {
             setState(setNewText(_,stmt.label))
-        } else if (typEditMode) {
+        } else if (stmt.typEditMode) {
             setState(setNewText(_,stmt.typ :> string))
-        } else if (contEditMode) {
+        } else if (stmt.contEditMode) {
             setState(setNewText(_,contToStr(stmt.cont)))
-        } else if (proofEditMode) {
+        } else if (stmt.proofEditMode) {
             setState(setNewText(_,stmt.proof))
         }
         None
@@ -166,8 +166,8 @@ let make = (
                     value=""
                     onChange=evt2str(newTypStr => onTypEditDone(userStmtTypeFromStr(newTypStr)))
                 >
-                    <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="a">{React.string("A")}</MenuItem>
+                    <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>
                 </Select>
             </FormControl>
