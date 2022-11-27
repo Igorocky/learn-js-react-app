@@ -185,7 +185,7 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
         setState(changeColor(_,idx,newColor))
     }
 
-    let disregardChanges = () => {
+    let discardChanges = () => {
         setState(_ => prevState)
     }
 
@@ -224,8 +224,8 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
                     <Button disabled={!isValid(state)} onClick={_=>applyChanges()} variant=#contained>
                         {React.string("Apply changes")}
                     </Button>
-                    <Button onClick={_ => disregardChanges()}>
-                        {React.string("Disregard changes")}
+                    <Button onClick={_ => discardChanges()}>
+                        {React.string("Discard changes")}
                     </Button>
                 </Row>
             } else {
