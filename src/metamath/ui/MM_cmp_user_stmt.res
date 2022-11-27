@@ -178,47 +178,51 @@ let make = (
         }
     }
 
-    let rndProof = () => {
+    let rndProofInfo = () => {
         if (stmt.typ == #p) {
-            <Col>
-                <span onClick={_ => actToggleProofExpanded()} style=ReactDOM.Style.make(~cursor="pointer", ())>
-                    {React.string("Proof")}
-                </span>
-                {
-                    if (state.proofExpanded || stmt.proofEditMode) {
-                        if (stmt.proofEditMode) {
-                            <TextField
-                                size=#small
-                                style=ReactDOM.Style.make(~width="600px", ())
-                                autoFocus=true
-                                multiline=true
-                                value=state.newText
-                                onChange=evt2str(actNewTextUpdated)
-                                onKeyDown=ctrlEnterHnd(_, actProofEditDone)
-                            />
-                        } else {
-                            <Paper variant=#outlined onClick=altLeftClickHnd(_, onProofEditRequested)>
-                                <pre>
-                                    {React.string(stmt.proof)}
-                                </pre>
-                            </Paper>
-                        }
-                    } else {
-                        React.null
-                    }
-                }
-            </Col>
+            <span onClick={_ => actToggleProofExpanded()} style=ReactDOM.Style.make(~cursor="pointer", ())>
+                {React.string("Proof")}
+            </span>
         } else {
             React.null
         }
     }
 
-    <Row spacing=1. style=ReactDOM.Style.make(~marginTop="5px", ())>
-        {rndTyp()}
-        <Col>
+    let rndProofBody = () => {
+        if (stmt.typ == #p) {
+            if (state.proofExpanded || stmt.proofEditMode) {
+                if (stmt.proofEditMode) {
+                    <TextField
+                        size=#small
+                        style=ReactDOM.Style.make(~width="600px", ())
+                        autoFocus=true
+                        multiline=true
+                        value=state.newText
+                        onChange=evt2str(actNewTextUpdated)
+                        onKeyDown=ctrlEnterHnd(_, actProofEditDone)
+                    />
+                } else {
+                    <Paper variant=#outlined onClick=altLeftClickHnd(_, onProofEditRequested)>
+                        <pre>
+                            {React.string(stmt.proof)}
+                        </pre>
+                    </Paper>
+                }
+            } else {
+                React.null
+            }
+        } else {
+            React.null
+        }
+    }
+
+    <Col spacing=1.>
+        <Row style=ReactDOM.Style.make(~marginTop="5px", ())>
             {rndLabel()}
+            {rndTyp()}
             {rndCont()}
-            {rndProof()}
-        </Col>
-    </Row>
+            {rndProofInfo()}
+        </Row>
+        {rndProofBody()}
+    </Col>
 }

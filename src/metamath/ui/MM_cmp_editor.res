@@ -63,7 +63,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     }
 
     let rndStmt = stmt => {
-        <Row alignItems=#"flex-start" key=stmt.id style=ReactDOM.Style.make(~marginTop="5px", ())>
+        <Row alignItems=#"flex-start" key=stmt.id>
             <Checkbox
                 checked={state->isStmtChecked(stmt.id)}
                 onChange={_ => actToggleStmtChecked(stmt.id)}
