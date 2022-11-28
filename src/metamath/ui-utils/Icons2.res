@@ -37,3 +37,8 @@ module ControlPointDuplicate = {
     @module("@mui/icons-material/ControlPointDuplicate") @react.component
     external make: () => React.element = "default"
 }
+
+module Save = {
+    @module("@mui/icons-material/Save") @react.component
+    external make: () => React.element = "default"
+}

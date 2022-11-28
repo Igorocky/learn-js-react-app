@@ -107,11 +107,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let rndConsts = () => {
         <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
             {React.string("Constants")}
-            <MM_cmp_user_consts
-                constsText=state.constsText
-                constsEditMode=state.constsEditMode
-                onConstsEditRequested={() => actBeginEdit0(setConstsEditMode)}
-                onConstsEditDone={newConstsText => setState(completeConstsEditMode(_,newConstsText))}
+            <MM_cmp_multiline_text
+                text=state.constsText
+                editMode=state.constsEditMode
+                onEditRequested={() => actBeginEdit0(setConstsEditMode)}
+                onEditDone={newText => setState(completeConstsEditMode(_,newText))}
             />
         </Row>
     }

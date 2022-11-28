@@ -17,6 +17,10 @@ let setNewText = (st,text):state => {
     }
 }
 
+let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
+    <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+}
+
 @react.component
 let make = (
     ~text:string, 
@@ -53,15 +57,18 @@ let make = (
 
     let rndText = () => {
         if (editMode) {
-            <TextField
-                size=#small
-                style=ReactDOM.Style.make(~width="600px", ())
-                autoFocus=true
-                multiline=true
-                value=state.newText
-                onChange=evt2str(actNewTextUpdated)
-                onKeyDown=ctrlEnterHnd(_, actEditDone)
-            />
+            <Row>
+                <TextField
+                    size=#small
+                    style=ReactDOM.Style.make(~width="600px", ())
+                    autoFocus=true
+                    multiline=true
+                    value=state.newText
+                    onChange=evt2str(actNewTextUpdated)
+                    onKeyDown=ctrlEnterHnd(_, actEditDone)
+                />
+                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actEditDone)}
+            </Row>
         } else {
             let style = if (text->Js.String2.trim == "") {
                 ReactDOM.Style.make(~padding="4px", ())

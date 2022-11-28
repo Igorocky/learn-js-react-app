@@ -254,14 +254,10 @@ let setConstsEditMode = st => {
 }
 
 let completeConstsEditMode = (st, newConstsText) => {
-    if (newConstsText->Js_string2.trim != "") {
-        {
-            ...st,
-            constsText:newConstsText,
-            constsEditMode: false
-        }
-    } else {
-        st
+    {
+        ...st,
+        constsText:newConstsText,
+        constsEditMode: false
     }
 }
 
@@ -273,14 +269,10 @@ let setVarsEditMode = st => {
 }
 
 let completeVarsEditMode = (st, newVarsText) => {
-    if (newVarsText->Js_string2.trim != "") {
-        {
-            ...st,
-            varsText:newVarsText,
-            varsEditMode: false
-        }
-    } else {
-        st
+    {
+        ...st,
+        varsText:newVarsText,
+        varsEditMode: false
     }
 }
 

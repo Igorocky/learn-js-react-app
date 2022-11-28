@@ -121,14 +121,17 @@ let make = (
 
     let rndLabel = () => {
         if (stmt.labelEditMode) {
-            <TextField 
-                size=#small
-                style=ReactDOM.Style.make(~width="100px", ())
-                autoFocus=true
-                value=state.newText
-                onChange=evt2str(actNewTextUpdated)
-                onKeyDown=ctrlEnterHnd(_, actLabelEditDone)
-            />
+            <Row>
+                <TextField 
+                    size=#small
+                    style=ReactDOM.Style.make(~width="100px", ())
+                    autoFocus=true
+                    value=state.newText
+                    onChange=evt2str(actNewTextUpdated)
+                    onKeyDown=ctrlEnterHnd(_, actLabelEditDone)
+                />
+                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actLabelEditDone)}
+            </Row>
         } else {
             <span onClick=altLeftClickHnd(_, onLabelEditRequested) >
                 {React.string(stmt.label)}
@@ -138,15 +141,18 @@ let make = (
 
     let rndCont = () => {
         if (stmt.contEditMode) {
-            <TextField 
-                size=#small
-                style=ReactDOM.Style.make(~width="600px", ())
-                autoFocus=true
-                multiline=true
-                value=state.newText
-                onChange=evt2str(actNewTextUpdated)
-                onKeyDown=ctrlEnterHnd(_, actContEditDone)
-            />
+            <Row>
+                <TextField 
+                    size=#small
+                    style=ReactDOM.Style.make(~width="600px", ())
+                    autoFocus=true
+                    multiline=true
+                    value=state.newText
+                    onChange=evt2str(actNewTextUpdated)
+                    onKeyDown=ctrlEnterHnd(_, actContEditDone)
+                />
+                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actContEditDone)}
+            </Row>
         } else {
             <Paper onClick=altLeftClickHnd(_, onContEditRequested) style=ReactDOM.Style.make(~padding="1px 10px", ()) >
             {
@@ -192,15 +198,18 @@ let make = (
         if (stmt.typ == #p) {
             if (state.proofExpanded || stmt.proofEditMode) {
                 if (stmt.proofEditMode) {
-                    <TextField
-                        size=#small
-                        style=ReactDOM.Style.make(~width="600px", ())
-                        autoFocus=true
-                        multiline=true
-                        value=state.newText
-                        onChange=evt2str(actNewTextUpdated)
-                        onKeyDown=ctrlEnterHnd(_, actProofEditDone)
-                    />
+                    <Row>
+                        <TextField
+                            size=#small
+                            style=ReactDOM.Style.make(~width="600px", ())
+                            autoFocus=true
+                            multiline=true
+                            value=state.newText
+                            onChange=evt2str(actNewTextUpdated)
+                            onKeyDown=ctrlEnterHnd(_, actProofEditDone)
+                        />
+                        {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actProofEditDone)}
+                    </Row>
                 } else {
                     <Paper variant=#outlined onClick=altLeftClickHnd(_, onProofEditRequested)>
                         <pre>
