@@ -6,7 +6,7 @@ type settings
 let createDefaultSettings: unit => settings
 let settingsReadFromLocStor: string => option<settings>
 let getParens: settings => array<string>
-let getSyntaxTypes: settings => array<string>
+let getNonSyntaxTypes: settings => array<string>
 let getTypeColors: settings => Belt_MapString.t<string>
 
 @react.component

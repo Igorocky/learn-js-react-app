@@ -38,11 +38,7 @@ let contToStr = cont => {
 
 let strToCont = str => {
     Text({
-        text: 
-            str
-            ->Js_string2.splitByRe(%re("/[\s\n]/"))
-            ->Js_array2.map(so => so->Belt_Option.map(s=>s->Js_string2.trim)->Belt_Option.getWithDefault(""))
-            ->Js_array2.filter(s => s != ""),
+        text: getSpaceSeparatedValuesAsArray(str),
         syntaxError: None
     })
 }

@@ -357,3 +357,11 @@ let stmtToStrRec: mmAstNode => array<string> = stmt => {
     )
     result
 }
+
+let whitespaceDelimRegex = %re("/[\s\n\r]/")
+let getSpaceSeparatedValuesAsArray = str => {
+    str
+        ->Js_string2.splitByRe(whitespaceDelimRegex)
+        ->Js_array2.map(so => so->Belt_Option.map(s=>s->Js_string2.trim)->Belt_Option.getWithDefault(""))
+        ->Js_array2.filter(s => s != "")
+}

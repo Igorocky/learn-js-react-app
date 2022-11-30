@@ -1,3 +1,4 @@
+open MM_parser
 open MM_context
 open Expln_React_common
 open Expln_React_Mui
@@ -14,7 +15,7 @@ let allColors = [
 type settings = {
     parens: string,
     parensIsValid: bool,
-    syntaxTypes: string,
+    nonSyntaxTypes: string,
     types: array<string>,
     colors: array<string>,
 }
@@ -23,7 +24,7 @@ let createDefaultSettings = () => {
     {
         parens: "( ) [ ] { }",
         parensIsValid: true,
-        syntaxTypes: "wff class",
+        nonSyntaxTypes: "|-",
         types:  [ "wff",     "term",    "setvar",  "class"],
         colors: [ "#4363d8", "#000000", "#e6194B", "#f032e6"],
     }
@@ -42,7 +43,7 @@ let settingsReadFromLocStor = (key:string):option<settings> => {
                 {
                     parens: d->str("parens"),
                     parensIsValid: d->bool("parensIsValid"),
-                    syntaxTypes: d->str("syntaxTypes"),
+                    nonSyntaxTypes: d->str("nonSyntaxTypes"),
                     types: d->arr("types", asStr),
                     colors: d->arr("colors", asStr),
                 }
@@ -55,21 +56,17 @@ let settingsReadFromLocStor = (key:string):option<settings> => {
     }
 }
 
-let getSpaceSeparatedValuesAsArray = str => {
-    str->Js_string2.split(" ")->Js_array2.map(Js_string2.trim)->Js_array2.filter(str => str != "")
-}
-
 let getParensAsArray = st => {
     st.parens->getSpaceSeparatedValuesAsArray
 }
 
-let getSyntaxTypesAsArray = st => {
-    st.syntaxTypes->getSpaceSeparatedValuesAsArray
+let getNonSyntaxTypesAsArray = st => {
+    st.nonSyntaxTypes->getSpaceSeparatedValuesAsArray
 }
 
 let getParens: settings => array<string> = st => st->getParensAsArray
 
-let getSyntaxTypes: settings => array<string> = st => st->getSyntaxTypesAsArray
+let getNonSyntaxTypes: settings => array<string> = st => st->getNonSyntaxTypesAsArray
 
 let getCorrectedTypesAndColors = st => {
     let correctedTypes = []
@@ -98,10 +95,10 @@ let setParens = (st, str) => {
     }
 }
 
-let setSyntaxTypes = (st, str) => {
+let setNonSyntaxTypes = (st, str) => {
     {
         ...st,
-        syntaxTypes: str
+        nonSyntaxTypes: str
     }
 }
 
@@ -134,12 +131,12 @@ let changeColor = (st,idx,newColor) => {
 
 let correctAndValidate = st => {
     let parensArr = st->getParensAsArray
-    let syntaxTypesArr = st->getSyntaxTypesAsArray
+    let syntaxTypesArr = st->getNonSyntaxTypesAsArray
     let (types, colors) = getCorrectedTypesAndColors(st)
     {
         parens: parensArr->Js_array2.joinWith(" "),
         parensIsValid: parensArr->Js_array2.length->mod(_,2) == 0,
-        syntaxTypes: syntaxTypesArr->Js_array2.joinWith(" "),
+        nonSyntaxTypes: syntaxTypesArr->Js_array2.joinWith(" "),
         types,
         colors,
     }
@@ -151,7 +148,7 @@ let isValid = st => {
 
 let eqState = (st1, st2) => {
     getParensAsArray(st1) == getParensAsArray(st2) && 
-        getSyntaxTypesAsArray(st1) == getSyntaxTypesAsArray(st2) && 
+        getNonSyntaxTypesAsArray(st1) == getNonSyntaxTypesAsArray(st2) && 
         st1.types == st2.types && st1.colors == st2.colors
 }
 
@@ -182,7 +179,7 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
     }
 
     let onSyntaxTypesChange = newSyntaxTypes => {
-        setState(setSyntaxTypes(_, newSyntaxTypes))
+        setState(setNonSyntaxTypes(_, newSyntaxTypes))
     }
 
     let rndFindParensProgress = (pct) => {
@@ -242,8 +239,8 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
         <TextField 
             size=#small
             style=ReactDOM.Style.make(~width="400px", ())
-            label="Syntax types" 
-            value=state.syntaxTypes
+            label="Non-syntax types" 
+            value=state.nonSyntaxTypes
             onChange=evt2str(onSyntaxTypesChange)
         />
         <MM_cmp_colors
