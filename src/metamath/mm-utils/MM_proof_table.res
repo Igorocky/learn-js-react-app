@@ -105,7 +105,6 @@ let markProved: proofTable => unit = tbl => {
                 switch validProof {
                     | None => ()
                     | Some(_) => {
-                        proofRec.branches = None
                         proofRec.proof = validProof
                         thereIsNewProvedExpr.contents = true
                         provedIdxs->Belt_MutableSetInt.add(proofRecIdx)
@@ -122,25 +121,33 @@ let updateDist: (proofTable,int) => unit = (tbl,targetIdx) => {
     tbl[targetIdx].dist = 0
     let queue = Belt_MutableQueue.make()
     queue->Belt_MutableQueue.add(tbl[targetIdx])
+
+    let addExprSourceToQueue = (childDist, src) => {
+        switch src {
+            | Assertion({args}) => {
+                args->Js_array2.forEach(argIdx => {
+                    let child = tbl[argIdx]
+                    child.dist = childDist
+                    queue->Belt_MutableQueue.add(child)
+                })
+            }
+            | _ => ()
+        }
+    }
+
     while (!(queue->Belt_MutableQueue.isEmpty)) {
         let parent = queue->Belt_MutableQueue.pop->Belt_Option.getExn
         let childDist = parent.dist+1
-        switch parent.branches {
-            | None => ()
-            | Some(branches) => {
-                branches->Js_array2.forEach(branch => {
-                    switch branch {
-                        | Assertion({args}) => {
-                            args->Js_array2.forEach(argIdx => {
-                                let child = tbl[argIdx]
-                                child.dist = childDist
-                                queue->Belt_MutableQueue.add(child)
-                            })
-                        }
-                        | _ => ()
+        switch parent.proof {
+            | None => {
+                switch parent.branches {
+                    | None => ()
+                    | Some(branches) => {
+                        branches->Js_array2.forEach(addExprSourceToQueue(childDist, _))
                     }
-                })
+                }
             }
+            | Some(proof) => addExprSourceToQueue(childDist, proof)
         }
     }
 }
