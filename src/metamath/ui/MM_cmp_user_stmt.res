@@ -3,28 +3,6 @@ open MM_syntax_tree
 open Expln_React_common
 open Expln_React_Mui
 
-let contToArrStr = cont => {
-    switch cont {
-        | Text({text}) => text
-        | Tree(syntaxTreeNode) => syntaxTreeToSymbols(syntaxTreeNode)
-    }
-}
-
-let contToStr = cont => {
-    cont->contToArrStr->Js_array2.joinWith(" ")
-}
-
-let strToCont = str => {
-    Text({
-        text: 
-            str
-            ->Js_string2.splitByRe(%re("/[\s\n]/"))
-            ->Js_array2.map(so => so->Belt_Option.map(s=>s->Js_string2.trim)->Belt_Option.getWithDefault(""))
-            ->Js_array2.filter(s => s != ""),
-        syntaxError: None
-    })
-}
-
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
 }

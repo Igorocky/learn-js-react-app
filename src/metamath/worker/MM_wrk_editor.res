@@ -25,6 +25,28 @@ let contIsEmpty = cont => {
     }
 }
 
+let contToArrStr = cont => {
+    switch cont {
+        | Text({text}) => text
+        | Tree(syntaxTreeNode) => syntaxTreeToSymbols(syntaxTreeNode)
+    }
+}
+
+let contToStr = cont => {
+    cont->contToArrStr->Js_array2.joinWith(" ")
+}
+
+let strToCont = str => {
+    Text({
+        text: 
+            str
+            ->Js_string2.splitByRe(%re("/[\s\n]/"))
+            ->Js_array2.map(so => so->Belt_Option.map(s=>s->Js_string2.trim)->Belt_Option.getWithDefault(""))
+            ->Js_array2.filter(s => s != ""),
+        syntaxError: None
+    })
+}
+
 type userStmtType = [ #e | #a | #p ]
 
 let userStmtTypeFromStr = str => {
@@ -39,10 +61,6 @@ let userStmtTypeFromStr = str => {
 type userStmt = {
     id: string,
 
-    // settingsV:int,
-    // ctxV:int,
-    // prevText: string,
-
     label: string,
     labelEditMode: bool,
     typ: userStmtType,
@@ -53,6 +71,16 @@ type userStmt = {
     proof: string,
     proofEditMode: bool,
     proofError: option<string>,
+}
+
+type userStmtLocStor = {
+    id: string,
+
+    label: string,
+    typ: string,
+    cont: string,
+    
+    proof: string,
 }   
 
 let createEmptyUserStmt = (id, typ) => {
@@ -87,31 +115,110 @@ type state = {
     checkedStmtIds: array<string>,
 }
 
-let initialState = {
+type stateLocStor = {
+    constsText: string,
+
+    varsText: string,
+
+    nextStmtId: int,
+    stmts: array<userStmtLocStor>,
+}
+
+let userStmtLocStorToUserStmt = (userStmtLocStor:userStmtLocStor):userStmt => {
     {
-        settingsV:-1,
-        settings:createDefaultSettings(),
+        id: userStmtLocStor.id,
 
-        ctxV: -1,
-        ctx: createContext(()),
+        label: userStmtLocStor.label,
+        labelEditMode: false,
+        typ: userStmtTypeFromStr(userStmtLocStor.typ),
+        typEditMode: false,
+        cont: strToCont(userStmtLocStor.cont),
+        contEditMode: false,
+        
+        proof: userStmtLocStor.proof,
+        proofEditMode: false,
+        proofError: None,
+    }
+}
 
-        constsText: "",
+let createInitialState = (settingsV, settings, ctxV, ctx, stateLocStor:option<stateLocStor>) => {
+    {
+        settingsV,
+        settings,
+
+        ctxV,
+        ctx,
+
+        constsText: stateLocStor->Belt.Option.map(obj => obj.constsText)->Belt.Option.getWithDefault(""),
         consts: [],
         constsErr: None,
         constsEditMode: false,
 
-        varsText: "",
+        varsText: stateLocStor->Belt.Option.map(obj => obj.varsText)->Belt.Option.getWithDefault(""),
         vars: [],
         varsErr: None,
         varsEditMode: false,
 
-        nextStmtId: 0,
-        stmts: [],
+        nextStmtId: stateLocStor->Belt.Option.map(obj => obj.nextStmtId)->Belt.Option.getWithDefault(0),
+        stmts: 
+            stateLocStor
+                ->Belt.Option.map(obj => obj.stmts->Js_array2.map(userStmtLocStorToUserStmt))
+                ->Belt.Option.getWithDefault([]),
         checkedStmtIds: [],
     }
 }
 
-let updateStmt = (st,id,update) => {
+let stateToStateLocStor = (state:state):stateLocStor => {
+    {
+        constsText: state.constsText,
+        varsText: state.varsText,
+        nextStmtId: state.nextStmtId,
+        stmts: state.stmts->Js_array2.map(stmt => {
+            {
+                id: stmt.id,
+                label: stmt.label,
+                typ: (stmt.typ :> string),
+                cont: contToStr(stmt.cont),
+                proof: stmt.proof,
+            }
+        }),
+    }
+}
+
+let editorSaveStateToLocStor = (key:string, state:state) => {
+    Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(state->stateToStateLocStor))
+}
+
+let editorReadStateFromLocStor = (key:string):option<stateLocStor> => {
+    switch Dom_storage2.localStorage->Dom_storage2.getItem(key) {
+        | None => None
+        | Some(stateLocStorStr) => {
+            open Expln_utils_jsonParse
+            let parseResult = parseObj(stateLocStorStr, d=>{
+                {
+                    constsText: d->str("constsText"),
+                    varsText: d->str("varsText"),
+                    nextStmtId: d->int("nextStmtId"),
+                    stmts: d->arr("stmts", d=>{
+                        {
+                            id: d->str("id"),
+                            label: d->str("label"),
+                            typ: d->str("typ"),
+                            cont: d->str("cont"),
+                            proof: d->str("proof")
+                        }
+                    })
+                }
+            })
+            switch parseResult {
+                | Error(_) => None
+                | Ok(res) => Some(res)
+            }
+        }
+    }
+}
+
+let updateStmt = (st:state,id,update):state => {
     {
         ...st,
         stmts: st.stmts->Js_array2.map(stmt => if stmt.id == id {update(stmt)} else {stmt})
@@ -136,36 +243,39 @@ let toggleStmtChecked = (st,id) => {
     }
 }
 
-let checkAllStmts = st => {
+let checkAllStmts = (st:state):state => {
     {
         ...st,
         checkedStmtIds: st.stmts->Js.Array2.map(stmt => stmt.id)
     }
 }
 
-let uncheckAllStmts = st => {
+let uncheckAllStmts = (st:state):state => {
     {
         ...st,
         checkedStmtIds: []
     }
 }
 
-let deleteCheckedStmts = st => {
+let deleteCheckedStmts = (st:state):state => {
+    let newStmts = st.stmts->Js_array2.filter(stmt => !isStmtChecked(st,stmt.id))
+    let newNextStmtId = if (newStmts->Js_array2.length == 0) { 0 } else { st.nextStmtId }
     {
         ...st,
-        stmts: st.stmts->Js_array2.filter(stmt => !isStmtChecked(st,stmt.id)),
-        checkedStmtIds: []
+        stmts: newStmts,
+        checkedStmtIds: [],
+        nextStmtId: newNextStmtId,
     }
 }
 
-let canMoveCheckedStmts = (st, up) => {
+let canMoveCheckedStmts = (st:state, up):bool => {
     let len = st.stmts->Js_array2.length
     len != 0 && st.checkedStmtIds->Js_array2.length != 0 && (
         (up && !isStmtChecked(st,st.stmts[0].id)) || (!up && !isStmtChecked(st,st.stmts[len-1].id))
     )
 }
 
-let moveCheckedStmts = (st,up) => {
+let moveCheckedStmts = (st:state,up):state => {
     if (!canMoveCheckedStmts(st,up)) {
         st
     } else {
@@ -196,7 +306,7 @@ let moveCheckedStmts = (st,up) => {
     }
 }
 
-let addNewStmt = st => {
+let addNewStmt = (st:state):state => {
     let newId = st.nextStmtId->Belt_Int.toString
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
     {
@@ -242,7 +352,7 @@ let duplicateCheckedStmt = st => {
     }
 }
 
-let canGoEditModeForStmt = (st,stmtId) => {
+let canGoEditModeForStmt = (st:state,stmtId) => {
     !(st.stmts->Js_array2.some(stmt => stmt.id == stmtId && (stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode)))
 }
 
@@ -276,7 +386,7 @@ let completeVarsEditMode = (st, newVarsText) => {
     }
 }
 
-let setLabelEditMode = (st, stmtId) => {
+let setLabelEditMode = (st:state, stmtId) => {
     if (canGoEditModeForStmt(st, stmtId)) {
         updateStmt(st, stmtId, stmt => {...stmt, labelEditMode:true})
     } else {

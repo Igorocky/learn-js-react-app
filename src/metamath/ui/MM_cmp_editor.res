@@ -16,9 +16,19 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
 }
 
+let stateLocStorKey = "editor-state"
+
 @react.component
 let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~ctx:mmContext, ~top:int) => {
-    let (state, setState) = React.useState(_ => initialState)
+    let (state, setStatePriv) = React.useState(_ => createInitialState(settingsV, settings, ctxV, ctx, editorReadStateFromLocStor(stateLocStorKey)))
+
+    let setState = update => {
+        setStatePriv(prev => {
+            let new = update(prev)
+            editorSaveStateToLocStor(stateLocStorKey, new)
+            new
+        })
+    }
 
     let mainCheckboxState = {
         let atLeastOneStmtIsChecked = state.checkedStmtIds->Js.Array2.length != 0
@@ -79,7 +89,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         </Paper>
     }
 
-    let rndStmt = stmt => {
+    let rndStmt = (stmt:userStmt) => {
         <Row alignItems=#"flex-start" key=stmt.id>
             <Checkbox
                 disabled=editIsActive
