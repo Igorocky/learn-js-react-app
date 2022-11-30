@@ -11,7 +11,7 @@ let allColors = [
     "#000000"
 ]
 
-type rec settings = {
+type settings = {
     parens: string,
     parensIsValid: bool,
     syntaxTypes: string,
@@ -26,6 +26,32 @@ let createDefaultSettings = () => {
         syntaxTypes: "wff class",
         types:  [ "wff",     "term",    "setvar",  "class"],
         colors: [ "#4363d8", "#000000", "#e6194B", "#f032e6"],
+    }
+}
+
+let settingsSaveToLocStor = (settings, key) => {
+    Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(settings))
+}
+
+let settingsReadFromLocStor = (key:string):option<settings> => {
+    switch Dom_storage2.localStorage->Dom_storage2.getItem(key) {
+        | None => None
+        | Some(settingsLocStorStr) => {
+            open Expln_utils_jsonParse
+            let parseResult = parseObj(settingsLocStorStr, d=>{
+                {
+                    parens: d->str("parens"),
+                    parensIsValid: d->bool("parensIsValid"),
+                    syntaxTypes: d->str("syntaxTypes"),
+                    types: d->arr("types", asStr),
+                    colors: d->arr("colors", asStr),
+                }
+            })
+            switch parseResult {
+                | Error(_) => None
+                | Ok(res) => Some(res)
+            }
+        }
     }
 }
 
@@ -129,10 +155,20 @@ let eqState = (st1, st2) => {
         st1.types == st2.types && st1.colors == st2.colors
 }
 
+let stateLocStorKey = "settings"
+
 @react.component
 let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onChange: settings => unit) => {
     let (prevState, setPrevState) = React.useState(_ => initialSettings)
-    let (state, setState) = React.useState(_ => initialSettings)
+    let (state, setStatePriv) = React.useState(_ => initialSettings)
+
+    let setState = update => {
+        setStatePriv(prev => {
+            let new = update(prev)
+            new->settingsSaveToLocStor(stateLocStorKey)
+            new
+        })
+    }
 
     let onParensChange = newParens => {
         setState(st=>{

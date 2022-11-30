@@ -25,7 +25,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
     let setState = update => {
         setStatePriv(prev => {
             let new = update(prev)
-            editorSaveStateToLocStor(stateLocStorKey, new)
+            new->editorSaveStateToLocStor(stateLocStorKey)
             new
         })
     }

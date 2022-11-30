@@ -16,10 +16,10 @@ type state = {
     settingsV: int,
 }
 
-let createInitialState = () => {
+let createInitialState = (~settingsLocStor:option<settings>) => {
     ctx: createContext(()),
     ctxV: 0,
-    settings: createDefaultSettings(),
+    settings: settingsLocStor->Belt_Option.getWithDefault(createDefaultSettings()),
     settingsV: 0,
 }
 
@@ -46,7 +46,7 @@ let setSettings = (st,settings) => {
 let make = () => {
     let modalRef = useModalRef()
     let {tabs, addTab, openTab, removeTab, renderTabs, updateTabs, activeTabId} = UseTabs.useTabs()
-    let (state, setState) = React.useState(_ => createInitialState())
+    let (state, setState) = React.useState(_ => createInitialState(~settingsLocStor=settingsReadFromLocStor("settings")))
 
     let onContextWasUpdated = newCtx => {
         setState(setCtx(_,newCtx))

@@ -185,7 +185,7 @@ let stateToStateLocStor = (state:state):stateLocStor => {
     }
 }
 
-let editorSaveStateToLocStor = (key:string, state:state) => {
+let editorSaveStateToLocStor = (state:state, key:string) => {
     Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(state->stateToStateLocStor))
 }
 
