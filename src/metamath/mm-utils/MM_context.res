@@ -72,6 +72,12 @@ let mutableMapStrMakeFromArray = arr => {
     map
 }
 
+let mutableMapStrClone = (orig:mutableMapStr<'v>, cloneValue:'v=>'v) => {
+    let map = mutableMapStrMake()
+    orig->mutableMapStrForEach((k,v) => map->mutableMapStrPut(k,cloneValue(v)))
+    map
+}
+
 let mutableMapIntMake = () => {
     Belt.HashMap.Int.make(~hintSize=16)
 }
@@ -116,6 +122,12 @@ let mutableMapIntToArr = (map, valueMapper) => {
     res
 }
 
+let mutableMapIntClone = (orig:mutableMapInt<'v>, cloneValue:'v=>'v) => {
+    let map = mutableMapIntMake()
+    orig->mutableMapIntForEach((k,v) => map->mutableMapIntPut(k,cloneValue(v)))
+    map
+}
+
 let mutableSetIntMake = () => {
     Belt.HashSet.Int.make(~hintSize=16)
 }
@@ -158,6 +170,12 @@ let mutableSetIntToArray = set => {
         i.contents = i.contents + 1
     })
     arr
+}
+
+let mutableSetIntClone = (orig:mutableSetInt) => {
+    let set = mutableSetIntMake()
+    orig->mutableSetIntForEach(set->mutableSetIntAdd)
+    set
 }
 
 let addDisjPairToMap = (disjMap:mutableMapInt<mutableSetInt>, n, m) => {
@@ -477,6 +495,26 @@ let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int> 
 
     foundParens
 }
+
+let rec cloneContextPriv: mmContextContents => mmContextContents = ctx => {
+    {
+        parent: ctx.parent->Belt_Option.map(cloneContextPriv),
+        consts: ctx.consts->Js_array2.copy,
+        varsBaseIdx: ctx.varsBaseIdx,
+        vars: ctx.vars->Js_array2.copy,
+        symToInt: ctx.symToInt->mutableMapStrClone(x=>x),
+        disj: ctx.disj->mutableMapIntClone(mutableSetIntClone),
+        hyps: ctx.hyps->Js_array2.copy,
+        symToHyp: ctx.symToHyp->mutableMapStrClone(x=>x),
+        lastComment: ctx.lastComment,
+        frames: ctx.frames->mutableMapStrClone(x=>x),
+    }
+}
+
+let cloneContext: mmContext => mmContext = ctx => {
+    ref(ctx.contents->cloneContextPriv)
+}
+
 // cdblk #update ===========================================================================================
 
 let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {

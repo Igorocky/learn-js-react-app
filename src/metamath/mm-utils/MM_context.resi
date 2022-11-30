@@ -28,6 +28,7 @@ let createContext: (~parent:mmContext=?, ()) => mmContext
 let applySingleStmt: (mmContext, stmt) => unit
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
+let cloneContext: mmContext => mmContext
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, 
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext
 
