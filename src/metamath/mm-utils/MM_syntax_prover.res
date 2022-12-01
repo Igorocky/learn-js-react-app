@@ -8,40 +8,36 @@ type frameProofDataRec = {
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
+    numOfVarsInAsrt:int,
 }
 
 type frameProofData = array<frameProofDataRec>
 
-let isDirectFrame = frm => {
-    let numOfVarsInAsrt = frm.asrt
-        ->Js_array2.filter(i => i >= 0)
-        ->Expln_utils_common.arrIntDistinct
-        ->Js_array2.length
-    numOfVarsInAsrt == frm.numOfVars
-}
-
 let prepareFrameProofData = ctx => {
     let frames = []
     ctx->forEachFrame(frm => {
-        if (isDirectFrame(frm)) {
-            let frmConstParts = createConstParts(frm.asrt)
-            let constParts = createMatchingConstParts(frmConstParts)
-            let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
-            let subs = {
-                size: frm.numOfVars,
-                begins: Belt_Array.make(frm.numOfVars, 0),
-                ends: Belt_Array.make(frm.numOfVars, 0),
-                exprs: Belt_Array.make(frm.numOfVars, []),
-                isDefined: Belt_Array.make(frm.numOfVars, false),
-            }
-            frames->Js_array2.push({
-                frame:frm,
-                frmConstParts,
-                constParts,
-                varGroups,
-                subs
-            })->ignore
+        let numOfVarsInAsrt = frm.asrt
+            ->Js_array2.filter(i => i >= 0)
+            ->Expln_utils_common.arrIntDistinct
+            ->Js_array2.length
+        let frmConstParts = createConstParts(frm.asrt)
+        let constParts = createMatchingConstParts(frmConstParts)
+        let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
+        let subs = {
+            size: frm.numOfVars,
+            begins: Belt_Array.make(frm.numOfVars, 0),
+            ends: Belt_Array.make(frm.numOfVars, 0),
+            exprs: Belt_Array.make(frm.numOfVars, []),
+            isDefined: Belt_Array.make(frm.numOfVars, false),
         }
+        frames->Js_array2.push({
+            frame:frm,
+            frmConstParts,
+            constParts,
+            varGroups,
+            subs,
+            numOfVarsInAsrt,
+        })->ignore
         None
     })->ignore
     frames
@@ -83,25 +79,27 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
         | None => {
             let branches = []
             frameData->Js_array2.forEach(frmData => {
-                iterateSubstitutions(
-                    ~frmExpr = frmData.frame.asrt, 
-                    ~expr = exprToProve, 
-                    ~frmConstParts = frmData.frmConstParts, 
-                    ~constParts = frmData.constParts, 
-                    ~varGroups = frmData.varGroups,
-                    ~subs = frmData.subs,
-                    ~parenCnt,
-                    ~consumer = subs => {
-                        if (subs.isDefined->Js_array2.every(b=>b)) {
-                            let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
-                            branches->Js_array2.push(Assertion({
-                                args,
-                                label: frmData.frame.label
-                            }))->ignore
+                if (frmData.numOfVarsInAsrt == frmData.frame.numOfVars) {
+                    iterateSubstitutions(
+                        ~frmExpr = frmData.frame.asrt,
+                        ~expr = exprToProve,
+                        ~frmConstParts = frmData.frmConstParts, 
+                        ~constParts = frmData.constParts, 
+                        ~varGroups = frmData.varGroups,
+                        ~subs = frmData.subs,
+                        ~parenCnt,
+                        ~consumer = subs => {
+                            if (subs.isDefined->Js_array2.every(b=>b)) {
+                                let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
+                                branches->Js_array2.push(Assertion({
+                                    args,
+                                    label: frmData.frame.label
+                                }))->ignore
+                            }
+                            Continue
                         }
-                        Continue
-                    }
-                )
+                    )
+                }
             })
             recToProve.branches = Some(branches)
         }
