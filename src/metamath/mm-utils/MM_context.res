@@ -256,6 +256,13 @@ let getFramePriv = (ctx:mmContextContents,label):option<frame> => {
 
 let getFrame = (ctx:mmContext,label):option<frame> => getFramePriv(ctx.contents,label)
 
+let getLocalVars: mmContext => array<string> = ctx => {
+    ctx.contents.vars->Js_array2.map(x=>x)
+}
+let getLocalHyps: mmContext => array<hypothesis> = ctx => {
+    ctx.contents.hyps->Js_array2.map(x=>x)
+}
+
 let getTypeOfVar = (ctx:mmContextContents,v):option<int> => {
     ctx->forEachCtxInReverseOrder(ctx => {
         ctx.hyps->Js_array2.find(hyp => hyp.typ == F && hyp.expr[1] == v)
@@ -552,6 +559,13 @@ let closeChildContext: mmContext => unit = ctx => {
             ctx.contents.frames->mutableMapStrForEach((k,v) => parent.frames->mutableMapStrPut(k,v))
             parent
         }
+    }
+}
+
+let resetToParentContext: mmContext => unit = ctx => {
+    ctx.contents = switch ctx.contents.parent {
+        | None => raise(MmException({msg:`Cannot reset the root context.`}))
+        | Some(parent) => parent
     }
 }
 

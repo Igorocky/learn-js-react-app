@@ -1,8 +1,15 @@
 open MM_progress_tracker
 
+type parserProofTableRec = {
+    id:string,
+    args:array<string>,
+    label:string
+}
+
 type proof =
     | Uncompressed({labels:array<string>})
     | Compressed({labels:array<string>, compressedProofBlock:string})
+    | Table(array<parserProofTableRec>)
 
 type rec mmAstNode = {
     begin: int,
@@ -297,7 +304,6 @@ let traverseAst: (
     )
 
 let stmtToStr: mmAstNode => string = node => {
-    open Expln_utils_common
     switch node {
         | {stmt:Block({level})} => `block(level=${level->Belt_Int.toString})`
         | {stmt:Comment({text})} => "$( " ++ text ++ " $)"

@@ -257,6 +257,7 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     switch proof {
         | Compressed({labels, compressedProofBlock}) => applyCompressedProof(ctx, expr, stack, labels, compressedProofBlock)
         | Uncompressed({labels}) => applyUncompressedProof(ctx, stack, labels)
+        | Table(_) => raise(MmException({msg:`Table proofs are not supported by this proof verifier.`}))
     }
     if (stack->Js_array2.length != 1) {
         raise(MmException({msg:`stack->Js_array2.length is ${stack->Js_array2.length->Belt_Int.toString} but must be 1.`}))

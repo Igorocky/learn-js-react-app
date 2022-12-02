@@ -28,6 +28,7 @@ let createContext: (~parent:mmContext=?, ()) => mmContext
 let applySingleStmt: (mmContext, stmt) => unit
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
+let resetToParentContext: mmContext => unit
 let cloneContext: mmContext => mmContext
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, 
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext
@@ -37,6 +38,8 @@ let isVar: (mmContext,string) => bool
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
+let getLocalVars: mmContext => array<string>
+let getLocalHyps: mmContext => array<hypothesis>
 let makeExprExn: (mmContext,array<string>) => expr
 let ctxIntToStrExn: (mmContext, int) => string
 let ctxExprToStrExn: (mmContext, expr) => string
