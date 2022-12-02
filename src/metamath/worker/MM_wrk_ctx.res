@@ -17,18 +17,18 @@ type settings = {
     nonSyntaxTypes: array<int>,
 }
 
-let rootCtxVer = ref(-1)
-let rootCtx = ref(createContext(()))
+let wrkCtxVer = ref("")
+let wrkCtx = ref(createContext(()))
 let settingsVer = ref(-1)
 let settings = ref({parens:[], nonSyntaxTypes:[]})
 
 type request = 
-    | CheckVersionsAreUpToDate({ctxVer:int, settingsVer:int})
-    | SetCtx({ver:int, ctx:mmContext})
+    | CheckVersionsAreUpToDate({ctxVer:string, settingsVer:int})
+    | SetCtx({ver:string, ctx:mmContext})
     | SetSettings({ver:int, settings:settings})
 
 type response =
-    | GetCtx({ver:int})
+    | GetCtx({ver:string})
     | GetSettings({ver:int})
     | Ok
 
@@ -36,7 +36,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
     switch req {
         | CheckVersionsAreUpToDate({ctxVer:newCtxVer, settingsVer:newSettingsVer}) => {
             let updateIsRequired = ref(false)
-            if (rootCtxVer.contents != newCtxVer) {
+            if (wrkCtxVer.contents != newCtxVer) {
                 updateIsRequired.contents = true
                 sendToClient(GetCtx({ver:newCtxVer}))
             }
@@ -49,8 +49,8 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             }
         }
         | SetCtx({ver, ctx}) => {
-            rootCtxVer.contents = ver
-            rootCtx.contents = ctx
+            wrkCtxVer.contents = ver
+            wrkCtx.contents = ctx
         }
         | SetSettings({ver, settings:newSettings}) => {
             settingsVer.contents = ver
@@ -60,7 +60,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
 }
 
 let beginWorkerInteractionUsingCtx = (
-    ~ctxVer:int,
+    ~ctxVer:string,
     ~ctx:mmContext,
     ~settingsVer:int,
     ~settings:settings,

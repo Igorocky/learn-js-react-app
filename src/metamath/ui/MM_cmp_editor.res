@@ -407,6 +407,14 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
 }
 
+let setSettings = (st, settingsV, settings) => {
+    { ...st, settingsV, settings }
+}
+
+let setCtx = (st, ctxV, ctx) => {
+    { ...st, ctxV, ctx }
+}
+
 let stateLocStorKey = "editor-state"
 
 @react.component
@@ -420,6 +428,24 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
             new
         })
     }
+
+    let actSettingsUpdated = (settingsV, settings) => {
+        setState(setSettings(_, settingsV, settings))
+    }
+
+    React.useEffect1(() => {
+        actSettingsUpdated(settingsV, settings)
+        None
+    }, [settingsV])
+
+    let actCtxUpdated = (ctxV, ctx) => {
+        setState(setCtx(_, ctxV, ctx))
+    }
+
+    React.useEffect1(() => {
+        actCtxUpdated(ctxV, ctx)
+        None
+    }, [ctxV])
 
     let mainCheckboxState = {
         let atLeastOneStmtIsChecked = state.checkedStmtIds->Js.Array2.length != 0
