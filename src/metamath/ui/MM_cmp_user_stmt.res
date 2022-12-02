@@ -1,7 +1,61 @@
-open MM_wrk_editor
 open MM_syntax_tree
 open Expln_React_common
 open Expln_React_Mui
+open MM_parser
+
+type stmtCont =
+    | Text({text:array<string>, syntaxError: option<string>})
+    | Tree(syntaxTreeNode)
+
+let contIsEmpty = cont => {
+    switch cont {
+        | Text({text}) => text->Js.Array2.length == 0
+        | Tree(syntaxTreeNode) => syntaxTreeIsEmpty(syntaxTreeNode)
+    }
+}
+
+let contToArrStr = cont => {
+    switch cont {
+        | Text({text}) => text
+        | Tree(syntaxTreeNode) => syntaxTreeToSymbols(syntaxTreeNode)
+    }
+}
+
+let contToStr = cont => {
+    cont->contToArrStr->Js_array2.joinWith(" ")
+}
+
+let strToCont = str => {
+    Text({
+        text: getSpaceSeparatedValuesAsArray(str),
+        syntaxError: None
+    })
+}
+
+type userStmtType = [ #e | #p ]
+
+let userStmtTypeFromStr = str => {
+    switch str {
+        | "e" => #e
+        | "p" => #p
+        | _ => raise(MmException({msg:`Cannot convert '${str}' to userStmtType`}))
+    }
+}
+
+type userStmt = {
+    id: string,
+
+    label: string,
+    labelEditMode: bool,
+    typ: userStmtType,
+    typEditMode: bool,
+    cont: stmtCont,
+    contEditMode: bool,
+    
+    proof: string,
+    proofEditMode: bool,
+    proofError: option<string>,
+}
 
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
@@ -150,7 +204,6 @@ let make = (
                     value=""
                     onChange=evt2str(newTypStr => onTypEditDone(userStmtTypeFromStr(newTypStr)))
                 >
-                    <MenuItem value="a">{React.string("A")}</MenuItem>
                     <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>
                 </Select>

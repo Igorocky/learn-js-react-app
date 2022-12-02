@@ -24,6 +24,10 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
         MM_wrk_FindParens.procName, 
         toRequestProcessor(MM_wrk_FindParens.processOnWorkerSide)
     ),
+    (
+        MM_wrk_ctx.procName, 
+        toRequestProcessor(MM_wrk_ctx.processOnWorkerSide)
+    ),
 ])
 
 let processRequest: workerRequest => unit = req => {

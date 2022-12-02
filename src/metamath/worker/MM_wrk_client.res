@@ -58,17 +58,23 @@ webworker->Belt_Option.forEach(webworker => {
 let beginWorkerInteraction = (
     ~procName:string,
     ~initialRequest:'req, 
-    ~onResponse:(~resp:'resp,~endWorkerInteraction:unit=>unit)=>unit,
+    ~onResponse:(~resp:'resp, ~sendToWorker:'req=>unit, ~endWorkerInteraction:unit=>unit)=>unit,
 ) => {
     let id = ref(-1)
+    let localSendToWorker = ref(_=>())
     id.contents = regWorkerListener(resp => {
         if (resp.senderId == id.contents) {
 //            Js.Console.log(`[senderId=${resp.senderId->Belt_Int.toString}] client receved a response`)
-            onResponse(~resp=deserialize(resp.body),~endWorkerInteraction= _=>unregWorkerListener(id.contents))
+            onResponse(
+                ~resp=deserialize(resp.body),
+                ~sendToWorker=localSendToWorker.contents,
+                ~endWorkerInteraction= _=>unregWorkerListener(id.contents)
+            )
             StopPropagation
         } else {
             ContinuePropagation
         }
     })
+    localSendToWorker.contents = req => sendToWorker({senderId:id.contents, procName, body:serialize(req)})
     sendToWorker({senderId:id.contents, procName, body:serialize(initialRequest)})
 }
