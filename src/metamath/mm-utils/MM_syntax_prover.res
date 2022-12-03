@@ -4,11 +4,11 @@ open MM_proof_table
 
 type frameProofDataRec = {
     frame: frame,
+    hypsE: array<hypothesis>,
     frmConstParts:constParts,
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
-    numberOfEssentials:int,
 }
 
 type frameProofData = array<frameProofDataRec>
@@ -16,12 +16,7 @@ type frameProofData = array<frameProofDataRec>
 let prepareFrameProofData = ctx => {
     let frames = []
     ctx->forEachFrame(frm => {
-        let numberOfEssentials = ref(0)
-        frm.hyps->Js.Array2.forEach(hyp => {
-            if (hyp.typ == E) {
-                numberOfEssentials.contents = numberOfEssentials.contents + 1
-            }
-        })
+        let hypsE = frm.hyps->Js.Array2.filter(hyp => hyp.typ == E)
         let frmConstParts = createConstParts(frm.asrt)
         let constParts = createMatchingConstParts(frmConstParts)
         let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
@@ -34,11 +29,11 @@ let prepareFrameProofData = ctx => {
         }
         frames->Js_array2.push({
             frame:frm,
+            hypsE,
             frmConstParts,
             constParts,
             varGroups,
             subs,
-            numberOfEssentials:numberOfEssentials.contents,
         })->ignore
         None
     })->ignore
@@ -81,7 +76,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
         | None => {
             let branches = []
             frameData->Js_array2.forEach(frmData => {
-                if (frmData.numberOfEssentials == 0) {
+                if (frmData.hypsE->Js.Array2.length == 0) {
                     iterateSubstitutions(
                         ~frmExpr = frmData.frame.asrt,
                         ~expr = exprToProve,
