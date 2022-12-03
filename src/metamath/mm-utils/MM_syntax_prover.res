@@ -8,7 +8,7 @@ type frameProofDataRec = {
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
-    numOfVarsInAsrt:int,
+    numberOfEssentials:int,
 }
 
 type frameProofData = array<frameProofDataRec>
@@ -16,10 +16,12 @@ type frameProofData = array<frameProofDataRec>
 let prepareFrameProofData = ctx => {
     let frames = []
     ctx->forEachFrame(frm => {
-        let numOfVarsInAsrt = frm.asrt
-            ->Js_array2.filter(i => i >= 0)
-            ->Expln_utils_common.arrIntDistinct
-            ->Js_array2.length
+        let numberOfEssentials = ref(0)
+        frm.hyps->Js.Array2.forEach(hyp => {
+            if (hyp.typ == E) {
+                numberOfEssentials.contents = numberOfEssentials.contents + 1
+            }
+        })
         let frmConstParts = createConstParts(frm.asrt)
         let constParts = createMatchingConstParts(frmConstParts)
         let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
@@ -36,7 +38,7 @@ let prepareFrameProofData = ctx => {
             constParts,
             varGroups,
             subs,
-            numOfVarsInAsrt,
+            numberOfEssentials:numberOfEssentials.contents,
         })->ignore
         None
     })->ignore
@@ -79,7 +81,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
         | None => {
             let branches = []
             frameData->Js_array2.forEach(frmData => {
-                if (frmData.numOfVarsInAsrt == frmData.frame.numOfVars) {
+                if (frmData.numberOfEssentials == 0) {
                     iterateSubstitutions(
                         ~frmExpr = frmData.frame.asrt,
                         ~expr = exprToProve,
