@@ -1,5 +1,4 @@
 open MM_wrk_client
-open MM_parser
 open MM_context
 
 let procName = "MM_wrk_FindParens"

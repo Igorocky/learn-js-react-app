@@ -2,44 +2,6 @@ open MM_context
 open MM_substitution
 open MM_proof_table
 
-type frameProofDataRec = {
-    frame: frame,
-    hypsE: array<hypothesis>,
-    frmConstParts:constParts,
-    constParts:constParts,
-    varGroups:array<varGroup>,
-    subs:subs,
-}
-
-type frameProofData = array<frameProofDataRec>
-
-let prepareFrameProofData = ctx => {
-    let frames = []
-    ctx->forEachFrame(frm => {
-        let hypsE = frm.hyps->Js.Array2.filter(hyp => hyp.typ == E)
-        let frmConstParts = createConstParts(frm.asrt)
-        let constParts = createMatchingConstParts(frmConstParts)
-        let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
-        let subs = {
-            size: frm.numOfVars,
-            begins: Belt_Array.make(frm.numOfVars, 0),
-            ends: Belt_Array.make(frm.numOfVars, 0),
-            exprs: Belt_Array.make(frm.numOfVars, []),
-            isDefined: Belt_Array.make(frm.numOfVars, false),
-        }
-        frames->Js_array2.push({
-            frame:frm,
-            hypsE,
-            frmConstParts,
-            constParts,
-            varGroups,
-            subs,
-        })->ignore
-        None
-    })->ignore
-    frames
-}
-
 let applySubs = (expr, subs): expr => {
     let resultSize = ref(0)
     expr->Js_array2.forEach(s => {

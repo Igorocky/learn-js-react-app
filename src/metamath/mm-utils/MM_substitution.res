@@ -26,6 +26,7 @@ type subs = {
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
+    lock: array<bool>,
 }
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
@@ -409,6 +410,7 @@ let createSubs: (~numOfVars:int) => subs = (~numOfVars) => {
         ends: Belt_Array.make(numOfVars, 0),
         exprs: Belt_Array.make(numOfVars, []),
         isDefined: Belt_Array.make(numOfVars, false),
+        lock: Belt_Array.make(numOfVars, false),
     }
 }
 
@@ -431,6 +433,38 @@ let createSubs: (~numOfVars:int) => subs = (~numOfVars) => {
 //}
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
+
+type frameProofDataRec = {
+    frame: frame,
+    hypsE: array<hypothesis>,
+    frmConstParts:constParts,
+    constParts:constParts,
+    varGroups:array<varGroup>,
+    subs:subs,
+}
+
+type frameProofData = array<frameProofDataRec>
+
+let prepareFrameProofData = ctx => {
+    let frames = []
+    ctx->forEachFrame(frm => {
+        let hypsE = frm.hyps->Js.Array2.filter(hyp => hyp.typ == E)
+        let frmConstParts = createConstParts(frm.asrt)
+        let constParts = createMatchingConstParts(frmConstParts)
+        let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
+        let subs = createSubs(~numOfVars=frm.numOfVars)
+        frames->Js_array2.push({
+            frame:frm,
+            hypsE,
+            frmConstParts,
+            constParts,
+            varGroups,
+            subs,
+        })->ignore
+        None
+    })->ignore
+    frames
+}
 
 let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {
     let constPartsToArr = (constParts:constParts) => {

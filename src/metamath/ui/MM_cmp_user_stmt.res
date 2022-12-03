@@ -126,8 +126,8 @@ let make = (
         onLabelEditDone(state.newText)
     }
     
-    let actTypEditDone = () => {
-        onTypEditDone(userStmtTypeFromStr(state.newText))
+    let actTypEditDone = newTypStr => {
+        onTypEditDone(userStmtTypeFromStr(newTypStr))
     }
     
     let actContEditDone = () => {
@@ -202,7 +202,7 @@ let make = (
             <FormControl size=#small >
                 <Select
                     value=""
-                    onChange=evt2str(newTypStr => onTypEditDone(userStmtTypeFromStr(newTypStr)))
+                    onChange=evt2str(actTypEditDone)
                 >
                     <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>

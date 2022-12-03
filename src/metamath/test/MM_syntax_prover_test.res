@@ -3,6 +3,7 @@ open MM_parser
 open MM_context
 open MM_syntax_prover
 open MM_parenCounter
+open MM_substitution
 
 let testCanFindProof = (~mmFile, ~exprStr) => {
     //given

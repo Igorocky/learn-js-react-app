@@ -5,6 +5,7 @@ open MM_syntax_prover
 open MM_proof_table
 open MM_proof_verifier
 open MM_parenCounter
+open MM_substitution
 
 let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     //given

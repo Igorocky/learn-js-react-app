@@ -4,6 +4,7 @@ open MM_context
 open MM_syntax_prover
 open MM_parenCounter
 open MM_syntax_tree
+open MM_substitution
 
 type rec syntaxTreeNodeTest = {
     label:string,

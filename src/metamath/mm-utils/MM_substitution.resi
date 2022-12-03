@@ -25,6 +25,7 @@ type subs = {
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
+    lock: array<bool>,
 }
 
 let createConstParts: expr => constParts
@@ -41,6 +42,17 @@ let iterateSubstitutions: (
     ~parenCnt:parenCnt,
     ~consumer: subs => contunieInstruction
 ) => unit
+
+type frameProofDataRec = {
+    frame: frame,
+    hypsE: array<hypothesis>,
+    frmConstParts:constParts,
+    constParts:constParts,
+    varGroups:array<varGroup>,
+    subs:subs,
+}
+type frameProofData = array<frameProofDataRec>
+let prepareFrameProofData: mmContext => frameProofData
 
 //------------------------- TEST ---------------------------
 
