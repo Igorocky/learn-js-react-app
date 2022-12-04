@@ -132,7 +132,7 @@ let testApplyAssertions = (
     ~stopBefore:string="",
     ~stopAfter:string="",
     ~additionalStatements:array<stmt>,
-    ~statements:array<labeledExpr>,
+    ~statements:array<(string,string)>,
     ~fileWithExpectedResult:string,
     ()
 ) => {
@@ -191,10 +191,10 @@ let testApplyAssertions = (
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
     let tmpCtx = createContext(~parent=ctx, ())
-    statements->Js_array2.forEach(({label,expr}) => {
+    statements->Js_array2.forEach(((label,exprStr)) => {
         tmpCtx->applySingleStmt(Provable({
             label, 
-            expr:expr->Js_array2.map(tmpCtx->ctxIntToStrExn), 
+            expr:exprStr->getSpaceSeparatedValuesAsArray, 
             proof:Table([])
         }))
     })
@@ -204,7 +204,12 @@ let testApplyAssertions = (
     applyAssertions(
         ~frms,
         ~nonSyntaxTypes = ctx->makeExprExn(["|-"]),
-        ~statements = [ ],
+        ~statements = statements->Js_array2.map(((label,exprStr)) => {
+            {
+                label, 
+                expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(tmpCtx,_)
+            }
+        }),
         ~parenCnt,
         // ~frameFilter=frame=>frame.label=="mp",
         ~onMatchFound = res => {
@@ -247,6 +252,18 @@ describe("applyAssertions", _ => {
             ~additionalStatements = [],
             ~statements = [],
             ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-no-statements.txt",
+            ()
+        )
+    })
+    it("applies assertions when there is one statement", _ => {
+        testApplyAssertions(
+            ~mmFilePath = demo0,
+            ~stopAfter = "th1",
+            ~additionalStatements = [],
+            ~statements = [
+                ("p1","|- ( t + 0 ) = t")
+            ],
+            ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement.txt",
             ()
         )
     })
