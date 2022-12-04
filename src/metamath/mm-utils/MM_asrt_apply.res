@@ -88,7 +88,7 @@ let updateSubsWithWorkVars = (
     let newVars = []
     let newVarTypes = []
     let newExprWithWorkVars = applySubs(
-        ~frmExpr=frm.hypsE[hypIdx].expr,
+        ~frmExpr = if (hypIdx < frm.hypsE->Js.Array2.length) {frm.hypsE[hypIdx].expr} else {frm.frame.asrt},
         ~subs=frm.subs,
         ~createWorkVar = frmVar => {
             switch frmVars->Js_array2.indexOf(frmVar) {
@@ -186,14 +186,14 @@ let rec iterateSubstitutionsForHyps = (
 }
 
 let applyAssertions = (
-    ~frames:frameProofData,
+    ~frms:frameProofData,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<expr>,
     ~parenCnt:parenCnt,
     ~onMatchFound:frameProofDataRec=>contunieInstruction,
 ):unit => {
     let numOfStmts = statements->Js_array2.length
-    frames->Js_array2.forEach(frm => {
+    frms->Js_array2.forEach(frm => {
         if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0])) {
             let numOfHyps = frm.hypsE->Js_array2.length
             iterateCombinations(
@@ -219,7 +219,10 @@ let applyAssertions = (
                         ~statements,
                         ~comb,
                         ~hypIdx=0,
-                        ~onMatchFound
+                        ~onMatchFound = frm => {
+                            // checkTypesInSubs(frm)
+                            onMatchFound(frm)
+                        }
                     )
                 },
             )

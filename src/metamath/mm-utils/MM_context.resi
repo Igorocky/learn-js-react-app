@@ -35,6 +35,8 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, 
 
 let isConst: (mmContext,string) => bool
 let isVar: (mmContext,string) => bool
+let isHyp: (mmContext,string) => bool
+let isAsrt: (mmContext,string) => bool
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
@@ -51,5 +53,7 @@ let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) =
 let createFrame: (mmContext, string, array<string>) => frame
 let getNestingLevel: mmContext => int
 let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
+let generateWorkVarNames: (mmContext, array<int>) => array<string>
+let generateLabels: (mmContext, ~prefix:string, ~amount:int) => array<string>
 
 let exprEq: (expr,expr) => bool

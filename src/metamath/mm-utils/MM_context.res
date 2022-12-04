@@ -240,6 +240,22 @@ let isVarPriv: (mmContextContents,string) => bool = (ctx, sym) => {
 
 let isVar: (mmContext,string) => bool = (ctx, sym) => isVarPriv(ctx.contents, sym)
 
+let isHypPriv: (mmContextContents,string) => bool = (ctx, label) => {
+    ctx->forEachCtxInReverseOrder(ctx => {
+        ctx.symToHyp->mutableMapStrGet(label)
+    })->Belt_Option.isSome
+}
+
+let isHyp: (mmContext,string) => bool = (ctx, label) => isHypPriv(ctx.contents, label)
+
+let isAsrtPriv: (mmContextContents,string) => bool = (ctx, label) => {
+    ctx->forEachCtxInReverseOrder(ctx => {
+        ctx.frames->mutableMapStrGet(label)
+    })->Belt_Option.isSome
+}
+
+let isAsrt: (mmContext,string) => bool = (ctx, label) => isAsrtPriv(ctx.contents, label)
+
 let getHypothesisPriv = (ctx:mmContextContents,label):option<hypothesis> => {
     ctx->forEachCtxInReverseOrder(ctx => {
         ctx.symToHyp->mutableMapStrGet(label)
@@ -839,4 +855,37 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
         ()
     )
     ctx
+}
+
+let generateWorkVarNames = (ctx:mmContext, types:array<int>): array<string> => {
+    let maxI = types->Js.Array2.length - 1
+    let cnt = ref(0)
+    let res = []
+    for i in 0 to maxI {
+        let typeStr = ctx->ctxIntToStrExn(types[i])
+        cnt.contents = cnt.contents + 1
+        let newName = ref(typeStr ++ cnt.contents->Belt_Int.toString)
+        while (ctx->isConst(newName.contents) || ctx->isVar(newName.contents)) {
+            cnt.contents = cnt.contents + 1
+            newName.contents = typeStr ++ cnt.contents->Belt_Int.toString
+        }
+        res->Js.Array2.push(newName.contents)->ignore
+    }
+    res
+}
+
+let generateLabels = (ctx:mmContext, ~prefix:string, ~amount:int): array<string> => {
+    let maxI = amount - 1
+    let cnt = ref(0)
+    let res = []
+    for i in 0 to maxI {
+        cnt.contents = cnt.contents + 1
+        let newName = ref(prefix ++ cnt.contents->Belt_Int.toString)
+        while (ctx->isHyp(newName.contents) || ctx->isAsrt(newName.contents)) {
+            cnt.contents = cnt.contents + 1
+            newName.contents = prefix ++ cnt.contents->Belt_Int.toString
+        }
+        res->Js.Array2.push(newName.contents)->ignore
+    }
+    res
 }

@@ -1,4 +1,8 @@
 open Expln_test
+open MM_parser
+open MM_context
+open MM_substitution
+open MM_parenCounter
 open MM_asrt_apply
 
 describe("iterateCombinations", _ => {
@@ -120,5 +124,42 @@ describe("iterateCombinations", _ => {
 
         //then
         assertEq( res, [ ] )
+    })
+})
+
+describe("applyAssertions", _ => {
+    it("applies assertions when there are no statements", _ => {
+        //given
+        let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/demo0.mm")
+        let (ast, _) = parseMmFile(mmFileText, ())
+        let ctx = loadContext(ast, ~stopBefore="th2", ())
+        let frms = prepareFrameProofData(ctx)
+        let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
+
+
+        let printFrmWithWorkVars = (frm:frameProofDataRec) => {
+            let workVarNames = ctx->generateWorkVarNames(frm.workVars.types)
+            let workVars = frm.workVars.types->Js_array2.mapi((t,i) => {
+                ctx->ctxIntToStrExn(t) ++ " " ++ workVarNames[i]
+            })->Js_array2.joinWith("\n")
+            workVars
+        }
+
+        //when
+        applyAssertions(
+            ~frms,
+            ~nonSyntaxTypes = ctx->makeExprExn(["|-"]),
+            ~statements = [ ],
+            ~parenCnt,
+            ~onMatchFound = frm => {
+                // Js.Console.log("onMatchFound ------------------------------------")
+                // Js.Console.log2("printFrmWithWorkVars(frm)", printFrmWithWorkVars(frm))
+                // Js.Console.log("onMatchFound ------------------------------------")
+                Continue
+            }
+        )
+
+        //then
+        // assertEq( res, [ ] )
     })
 })

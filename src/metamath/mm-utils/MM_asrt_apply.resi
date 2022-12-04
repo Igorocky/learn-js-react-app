@@ -10,7 +10,7 @@ let iterateCombinations: (
 ) => unit
 
 let applyAssertions: (
-    ~frames:frameProofData,
+    ~frms:frameProofData,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<expr>,
     ~parenCnt:parenCnt,
