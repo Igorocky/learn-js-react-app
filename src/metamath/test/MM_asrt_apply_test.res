@@ -128,12 +128,12 @@ describe("iterateCombinations", _ => {
 })
 
 let testApplyAssertions = (
-    ~filePath:string,
+    ~mmFilePath:string,
     ~stopBefore:string="",
     ~stopAfter:string="",
     ~additionalStatements:array<stmt>,
     ~statements:array<labeledExpr>,
-    ~expectedSearchResults:string,
+    ~fileWithExpectedResult:string,
     ()
 ) => {
     let printApplyAssertionResult = (ctx, res:applyAssertionResult):string => {
@@ -183,7 +183,7 @@ let testApplyAssertions = (
     }
 
     //given
-    let mmFileText = Expln_utils_files.readStringFromFile(filePath)
+    let mmFileText = Expln_utils_files.readStringFromFile(mmFilePath)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ~stopBefore, ~stopAfter, ())
     additionalStatements->Js_array2.forEach(ctx->applySingleStmt)
@@ -229,20 +229,24 @@ let testApplyAssertions = (
             }
         })
         ->Js_array2.joinWith("\n")
-    // assertEq( 
-    //     actualResultsStr, 
-    //     expectedSearchResults 
-    // )
+    let expectedResultStr = Expln_utils_files.readStringFromFile(fileWithExpectedResult)
+        ->Js.String2.replaceByRe(%re("/\r/g"), "")
+    if (actualResultsStr != expectedResultStr) {
+        let fileWithActualResult = fileWithExpectedResult ++ ".actual"
+        Expln_utils_files.writeStringToFile(fileWithActualResult, actualResultsStr)
+        assertEq( fileWithActualResult, fileWithExpectedResult )
+    }
 }
 
 describe("applyAssertions", _ => {
+    let demo0 = "./src/metamath/test/resources/demo0.mm"
     it("applies assertions when there are no statements", _ => {
         testApplyAssertions(
-            ~filePath = "./src/metamath/test/resources/demo0.mm",
+            ~mmFilePath = demo0,
             ~stopAfter = "th1",
             ~additionalStatements = [],
             ~statements = [],
-            ~expectedSearchResults = ``,
+            ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-no-statements.txt",
             ()
         )
     })
