@@ -532,7 +532,7 @@ let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
             r.contents = r.contents + 1
         } else if (subs.isDefined[s]) {
             let subExpr = subs.exprs[s]
-            let len = subExpr->Js_array2.length
+            let len = (subs.ends[s]-subs.begins[s]+1)
             Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=subs.begins[s], ~dst=res, ~dstFromIdx=r.contents, ~len)
             r.contents = r.contents + len
         } else {
