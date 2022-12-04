@@ -137,12 +137,20 @@ describe("applyAssertions", _ => {
         let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
 
-        let printFrmWithWorkVars = (frm:frameProofDataRec) => {
-            let workVarNames = ctx->generateWorkVarNames(frm.workVars.types)
-            let workVars = frm.workVars.types->Js_array2.mapi((t,i) => {
-                ctx->ctxIntToStrExn(t) ++ " " ++ workVarNames[i]
-            })->Js_array2.joinWith("\n")
-            workVars
+        let printApplyAssertionResult = (res:applyAssertionResult):string => {
+            ctx->openChildContext
+            let workVarHypLabels = ctx->generateLabels(~prefix="workVar", ~amount=res.workVarTypes->Js_array2.length)
+            let workVarTypes = res.workVarTypes->Js_array2.map(ctx->ctxIntToStrExn)
+            let workVarNames = ctx->generateWorkVarNames(res.workVarTypes)
+            ctx->applySingleStmt(Var({symbols:workVarNames}))
+            workVarHypLabels->Js.Array2.forEachi((label,i) => {
+                ctx->applySingleStmt(Floating({label, expr:[workVarTypes[i], workVarNames[i]]}))
+            })
+            let workVarsStr = workVarHypLabels->Js.Array2.mapi((label,i) => {
+                `${label} ${workVarTypes[i]} ${workVarNames[i]}`
+            })->Js_array2.joinWith(", ")
+            ctx->resetToParentContext
+            workVarsStr
         }
 
         //when
@@ -151,12 +159,14 @@ describe("applyAssertions", _ => {
             ~nonSyntaxTypes = ctx->makeExprExn(["|-"]),
             ~statements = [ ],
             ~parenCnt,
-            ~onMatchFound = frm => {
-                // Js.Console.log("onMatchFound ------------------------------------")
-                // Js.Console.log2("printFrmWithWorkVars(frm)", printFrmWithWorkVars(frm))
+            // ~frameFilter=frame=>frame.label=="mp",
+            ~onMatchFound = res => {
+                Js.Console.log("onMatchFound ------------------------------------")
+                Js.Console.log(printApplyAssertionResult(res))
                 // Js.Console.log("onMatchFound ------------------------------------")
                 Continue
-            }
+            },
+            ()
         )
 
         //then

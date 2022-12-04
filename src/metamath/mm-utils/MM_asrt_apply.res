@@ -1,6 +1,21 @@
 open MM_substitution
 open MM_context
 open MM_parenCounter
+open MM_parser
+
+type labeledExpr = {
+    label:string,
+    expr:expr
+}
+
+type applyAssertionResult = {
+    workVars: array<int>,
+    workVarTypes: array<int>,
+    argLabels: array<option<string>>,
+    argExprs: array<option<expr>>,
+    asrtLabel: string,
+    asrtExpr: expr,
+}
 
 let rec iterateCombinationsRec = (
     ~candidatesPerHyp:array<array<int>>,
@@ -117,14 +132,14 @@ let updateSubsWithWorkVars = (
 
         frm.workVars.vars->Js_array2.push(workVar)->ignore
         frm.workVars.types->Js_array2.push(workVarType)->ignore
-        frm.workVars.hypIdxToExprWithWorkVars[hypIdx] = Some(newExprWithWorkVars)
     }
+    frm.workVars.hypIdxToExprWithWorkVars[hypIdx] = Some(newExprWithWorkVars)
 }
 
 let rec iterateSubstitutionsForHyps = (
     ~frm:frameProofDataRec,
     ~parenCnt:parenCnt,
-    ~statements:array<expr>,
+    ~statements:array<labeledExpr>,
     ~comb:array<int>,
     ~hypIdx:int,
     ~onMatchFound: frameProofDataRec => contunieInstruction
@@ -148,7 +163,7 @@ let rec iterateSubstitutionsForHyps = (
         let res = ref(Continue)
         iterateSubstitutions(
             ~frmExpr = frm.hypsE[hypIdx].expr,
-            ~expr = statements[comb[hypIdx]],
+            ~expr = statements[comb[hypIdx]].expr,
             ~frmConstParts = frm.frmConstParts, 
             ~constParts = frm.constParts, 
             ~varGroups = frm.varGroups,
@@ -188,13 +203,15 @@ let rec iterateSubstitutionsForHyps = (
 let applyAssertions = (
     ~frms:frameProofData,
     ~nonSyntaxTypes:array<int>,
-    ~statements:array<expr>,
+    ~statements:array<labeledExpr>,
     ~parenCnt:parenCnt,
-    ~onMatchFound:frameProofDataRec=>contunieInstruction,
+    ~frameFilter:frame=>bool=_=>true,
+    ~onMatchFound:applyAssertionResult=>contunieInstruction,
+    ()
 ):unit => {
     let numOfStmts = statements->Js_array2.length
     frms->Js_array2.forEach(frm => {
-        if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0])) {
+        if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0]) && frameFilter(frm.frame)) {
             let numOfHyps = frm.hypsE->Js_array2.length
             iterateCombinations(
                 ~numOfStmts,
@@ -205,7 +222,7 @@ let applyAssertions = (
                     } else {
                         stmtCanMatchHyp(
                             ~frmData=frm,
-                            ~stmt = statements[s],
+                            ~stmt = statements[s].expr,
                             ~hyp = frm.hypsE[h].expr,
                             ~parenCnt,
                         )
@@ -221,7 +238,19 @@ let applyAssertions = (
                         ~hypIdx=0,
                         ~onMatchFound = frm => {
                             // checkTypesInSubs(frm)
-                            onMatchFound(frm)
+                            let numOfArgs = frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.length - 1
+                            let res = {
+                                workVars: frm.workVars.vars->Js.Array2.copy,
+                                workVarTypes: frm.workVars.types->Js.Array2.copy,
+                                argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
+                                argExprs: frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfArgs),
+                                asrtLabel: frm.frame.label,
+                                asrtExpr: switch frm.workVars.hypIdxToExprWithWorkVars[numOfArgs] {
+                                    | None => raise(MmException({msg:`frm.workVars.hypIdxToExprWithWorkVars doesn't have asrtExpr.`}))
+                                    | Some(expr) => expr
+                                },
+                            }
+                            onMatchFound(res)
                         }
                     )
                 },
