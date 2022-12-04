@@ -259,8 +259,13 @@ let getFrame = (ctx:mmContext,label):option<frame> => getFramePriv(ctx.contents,
 let getLocalVars: mmContext => array<string> = ctx => {
     ctx.contents.vars->Js_array2.map(x=>x)
 }
+
 let getLocalHyps: mmContext => array<hypothesis> = ctx => {
     ctx.contents.hyps->Js_array2.map(x=>x)
+}
+
+let getNumOfVars = ctx => {
+    ctx.contents.varsBaseIdx + ctx.contents.vars->Js_array2.length
 }
 
 let getTypeOfVar = (ctx:mmContextContents,v):option<int> => {

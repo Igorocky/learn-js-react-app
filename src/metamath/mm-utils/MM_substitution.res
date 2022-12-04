@@ -20,13 +20,64 @@ type varGroup = {
     mutable exprEndIdx:int
 }
 
+type workVars = {
+    numOfCtxVars: int,
+    vars: array<int>,
+    types: array<int>,
+    hypIdxToExprWithWorkVars: array<option<expr>>,
+}
+
 type subs = {
     size: int,
     begins: array<int>,
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
-    lock: array<bool>,
+    lockedByHypE: array<int>,
+}
+
+type frameProofDataRec = {
+    frame: frame,
+    hypsE: array<hypothesis>,
+    frmConstParts:constParts,
+    constParts:constParts,
+    varGroups:array<varGroup>,
+    subs:subs,
+    workVars:workVars,
+}
+
+type frameProofData = array<frameProofDataRec>
+
+let subsLockDefined = (subs, ~lockLevel:int):unit => {
+    for v in 0 to subs.size-1 {
+        if (subs.isDefined[v] && subs.lockedByHypE[v] == -1) {
+            subs.lockedByHypE[v] = lockLevel
+        }
+    }
+}
+
+let subsUndefineForLevel = (subs, ~lockLevelToUndefineFrom:int) => {
+    for v in 0 to subs.size-1 {
+        if (lockLevelToUndefineFrom <= subs.lockedByHypE[v]) {
+            subs.isDefined[v] = false
+            subs.lockedByHypE[v] = -1
+        }
+    }
+}
+
+let subsUndefineAll = subs => {
+    for v in 0 to subs.size-1 {
+        subs.isDefined[v] = false
+        subs.lockedByHypE[v] = -1
+    }
+}
+
+let subsUndefineUnlocked = subs => {
+    for v in 0 to subs.size-1 {
+        if (subs.lockedByHypE[v] == -1) {
+            subs.isDefined[v] = false
+        }
+    }
 }
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
@@ -385,9 +436,7 @@ let iterateSubstitutions = (
             ~parenCnt,
             ~consumer = constParts => {
                 initVarGroups(~varGroups, ~constParts, ~expr)
-                for i in 0 to subs.size-1 {
-                    subs.isDefined[i] = false
-                }
+                subsUndefineUnlocked(subs)
                 iterateVarGroups(
                     ~expr,
                     ~subs,
@@ -403,14 +452,14 @@ let iterateSubstitutions = (
     }
 }
 
-let createSubs: (~numOfVars:int) => subs = (~numOfVars) => {
+let createSubs = (~numOfVars:int) => {
     {
         size: numOfVars,
         begins: Belt_Array.make(numOfVars, 0),
         ends: Belt_Array.make(numOfVars, 0),
         exprs: Belt_Array.make(numOfVars, []),
         isDefined: Belt_Array.make(numOfVars, false),
-        lock: Belt_Array.make(numOfVars, false),
+        lockedByHypE: Belt_Array.make(numOfVars, -1),
     }
 }
 
@@ -434,19 +483,9 @@ let createSubs: (~numOfVars:int) => subs = (~numOfVars) => {
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
 
-type frameProofDataRec = {
-    frame: frame,
-    hypsE: array<hypothesis>,
-    frmConstParts:constParts,
-    constParts:constParts,
-    varGroups:array<varGroup>,
-    subs:subs,
-}
-
-type frameProofData = array<frameProofDataRec>
-
 let prepareFrameProofData = ctx => {
     let frames = []
+    let numOfCtxVars = ctx->getNumOfVars
     ctx->forEachFrame(frm => {
         let hypsE = frm.hyps->Js.Array2.filter(hyp => hyp.typ == E)
         let frmConstParts = createConstParts(frm.asrt)
@@ -460,11 +499,52 @@ let prepareFrameProofData = ctx => {
             constParts,
             varGroups,
             subs,
+            workVars: {
+                numOfCtxVars,
+                vars: [],
+                types: [],
+                hypIdxToExprWithWorkVars: Belt_Array.make(hypsE->Js_array2.length+1, None)
+            }
         })->ignore
         None
     })->ignore
     frames
 }
+
+let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
+    let resultSize = ref(0)
+    frmExpr->Js_array2.forEach(s => {
+        if (s < 0) {
+            resultSize.contents = resultSize.contents + 1
+        } else if (subs.isDefined[s]) {
+            resultSize.contents = resultSize.contents + (subs.ends[s]-subs.begins[s]+1)
+        } else {
+            resultSize.contents = resultSize.contents + 1
+        }
+    })
+    let res = Expln_utils_common.createArray(resultSize.contents)
+    let e = ref(0)
+    let r = ref(0)
+    while (r.contents < resultSize.contents) {
+        let s = frmExpr[e.contents]
+        if (s < 0) {
+            res[r.contents] = s
+            r.contents = r.contents + 1
+        } else if (subs.isDefined[s]) {
+            let subExpr = subs.exprs[s]
+            let len = subExpr->Js_array2.length
+            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=subs.begins[s], ~dst=res, ~dstFromIdx=r.contents, ~len)
+            r.contents = r.contents + len
+        } else {
+            res[r.contents] = createWorkVar(s)
+            r.contents = r.contents + 1
+        }
+        e.contents = e.contents + 1
+    }
+    res
+}
+
+//------------------------- TEST ---------------------------
 
 let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {
     let constPartsToArr = (constParts:constParts) => {

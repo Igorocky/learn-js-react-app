@@ -1,34 +1,7 @@
 open MM_context
 open MM_substitution
 open MM_proof_table
-
-let applySubs = (expr, subs): expr => {
-    let resultSize = ref(0)
-    expr->Js_array2.forEach(s => {
-        if (s < 0) {
-            resultSize.contents = resultSize.contents + 1
-        } else {
-            resultSize.contents = resultSize.contents + (subs.ends[s]-subs.begins[s]+1)
-        }
-    })
-    let res = Expln_utils_common.createArray(resultSize.contents)
-    let e = ref(0)
-    let r = ref(0)
-    while (r.contents < resultSize.contents) {
-        let s = expr[e.contents]
-        if (s < 0) {
-            res[r.contents] = s
-            r.contents = r.contents + 1
-        } else {
-            let subExpr = subs.exprs[s]
-            let len = subExpr->Js_array2.length
-            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=subs.begins[s], ~dst=res, ~dstFromIdx=r.contents, ~len)
-            r.contents = r.contents + len
-        }
-        e.contents = e.contents + 1
-    }
-    res
-}
+open MM_parser
 
 let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
     let exprToProve = recToProve.expr
@@ -49,7 +22,15 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                         ~parenCnt,
                         ~consumer = subs => {
                             if (subs.isDefined->Js_array2.every(b=>b)) {
-                                let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => tbl->addExprToProve(applySubs(hyp.expr, subs)))
+                                let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => {
+                                    let exprToProve = applySubs(
+                                        ~frmExpr = hyp.expr, 
+                                        ~subs,
+                                        ~createWorkVar = 
+                                            _ => raise(MmException({msg:`Work variables are not supported in the syntax prover.`}))
+                                    )
+                                    tbl->addExprToProve(exprToProve)
+                                })
                                 branches->Js_array2.push(Assertion({
                                     args,
                                     label: frmData.frame.label

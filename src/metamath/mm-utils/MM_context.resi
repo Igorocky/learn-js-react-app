@@ -40,6 +40,7 @@ let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
 let getLocalVars: mmContext => array<string>
 let getLocalHyps: mmContext => array<hypothesis>
+let getNumOfVars: mmContext => int
 let makeExprExn: (mmContext,array<string>) => expr
 let ctxIntToStrExn: (mmContext, int) => string
 let ctxExprToStrExn: (mmContext, expr) => string

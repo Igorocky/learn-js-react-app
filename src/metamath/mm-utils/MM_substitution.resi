@@ -19,13 +19,20 @@ type varGroup = {
     mutable exprEndIdx:int
 }
 
+type workVars = {
+    numOfCtxVars: int,
+    vars: array<int>,
+    types: array<int>,
+    hypIdxToExprWithWorkVars: array<option<expr>>,
+}
+
 type subs = {
     size: int,
     begins: array<int>,
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
-    lock: array<bool>,
+    lockedByHypE: array<int>,
 }
 
 let createConstParts: expr => constParts
@@ -50,9 +57,15 @@ type frameProofDataRec = {
     constParts:constParts,
     varGroups:array<varGroup>,
     subs:subs,
+    workVars:workVars,
 }
 type frameProofData = array<frameProofDataRec>
 let prepareFrameProofData: mmContext => frameProofData
+let subsLockDefined: (subs, ~lockLevel:int) => unit
+let subsUndefineForLevel: (subs, ~lockLevelToUndefineFrom:int) => unit
+let subsUndefineAll: subs => unit
+let subsUndefineUnlocked: subs => unit
+let applySubs: (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int) => expr
 
 //------------------------- TEST ---------------------------
 
