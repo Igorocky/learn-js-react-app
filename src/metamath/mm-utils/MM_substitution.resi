@@ -67,6 +67,7 @@ let subsUndefineForLevel: (subs, ~lockLevelToUndefineFrom:int) => unit
 let subsUndefineAll: subs => unit
 let subsUndefineUnlocked: subs => unit
 let applySubs: (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int) => expr
+let verifyDisjoints: (~ctx:mmContext, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs) => bool
 
 //------------------------- TEST ---------------------------
 

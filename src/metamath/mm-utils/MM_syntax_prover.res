@@ -22,19 +22,21 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                         ~parenCnt,
                         ~consumer = subs => {
                             if (subs.isDefined->Js_array2.every(b=>b)) {
-                                let args: array<int> = frm.frame.hyps->Js_array2.map(hyp => {
-                                    let exprToProve = applySubs(
-                                        ~frmExpr = hyp.expr, 
-                                        ~subs,
-                                        ~createWorkVar = 
-                                            _ => raise(MmException({msg:`Work variables are not supported in the syntax prover.`}))
-                                    )
-                                    tbl->addExprToProve(exprToProve)
-                                })
-                                branches->Js_array2.push(Assertion({
-                                    args,
-                                    label: frm.frame.label
-                                }))->ignore
+                                if (verifyDisjoints(~ctx, ~frmDisj=frm.frame.disj, ~subs)) {
+                                    let args: array<int> = frm.frame.hyps->Js_array2.map(hyp => {
+                                        let exprToProve = applySubs(
+                                            ~frmExpr = hyp.expr, 
+                                            ~subs,
+                                            ~createWorkVar = 
+                                                _ => raise(MmException({msg:`Work variables are not supported in the syntax prover.`}))
+                                        )
+                                        tbl->addExprToProve(exprToProve)
+                                    })
+                                    branches->Js_array2.push(Assertion({
+                                        args,
+                                        label: frm.frame.label
+                                    }))->ignore
+                                }
                             }
                             Continue
                         }

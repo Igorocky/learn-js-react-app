@@ -564,6 +564,44 @@ let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
     res
 }
 
+let verifyDisjoints = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs) => {
+    let maxVarNum = subs.size-1
+    let res = ref(true)
+    for n in 0 to maxVarNum {
+        if (res.contents) {
+            switch frmDisj->Belt_MapInt.get(n) {
+                | Some(set) => {
+                    set->Belt_SetInt.forEach(m => {
+                        if (res.contents) {
+                            let nExprBegin = subs.begins[n]
+                            let nExprEnd = subs.ends[n]
+                            let mExprBegin = subs.begins[m]
+                            let mExprEnd = subs.ends[m]
+                            for ni in nExprBegin to nExprEnd {
+                                if (res.contents) {
+                                    let ns = subs.exprs[n][ni]
+                                    if (ns >= 0) {
+                                        for mi in mExprBegin to mExprEnd {
+                                            if (res.contents) {
+                                                let ms = subs.exprs[m][mi]
+                                                if (ms >= 0) {
+                                                    res.contents = ns != ms && ctx->isDisj(ns,ms)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+                }
+                | None => ()
+            }
+        }
+    }
+    res.contents
+}
+
 //------------------------- TEST ---------------------------
 
 let test_iterateConstParts: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => (array<(int,int)>, array<array<(int,int)>>) = (~ctx,~frmExpr,~expr) => {

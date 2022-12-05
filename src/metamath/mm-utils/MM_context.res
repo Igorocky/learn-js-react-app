@@ -179,9 +179,10 @@ let mutableSetIntClone = (orig:mutableSetInt) => {
 }
 
 let addDisjPairToMap = (disjMap:mutableMapInt<mutableSetInt>, n, m) => {
-    switch disjMap->mutableMapIntGet(n) {
-        | None => disjMap->mutableMapIntPut(n, mutableSetIntMakeFromArray([m]))
-        | Some(set) => set->mutableSetIntAdd(m)
+    let (min,max) = if (n <= m) {(n,m)} else {(m,n)}
+    switch disjMap->mutableMapIntGet(min) {
+        | None => disjMap->mutableMapIntPut(min, mutableSetIntMakeFromArray([max]))
+        | Some(set) => set->mutableSetIntAdd(max)
     }
 }
 
@@ -255,6 +256,22 @@ let isAsrtPriv: (mmContextContents,string) => bool = (ctx, label) => {
 }
 
 let isAsrt: (mmContext,string) => bool = (ctx, label) => isAsrtPriv(ctx.contents, label)
+
+let isDisj = (ctx,n,m) => {
+    let (min,max) = if (n <= m) {(n,m)} else {(m,n)}
+    ctx.contents->forEachCtxInReverseOrder(ctx => {
+        switch ctx.disj->mutableMapIntGet(min) {
+            | Some(ms) => {
+                if (ms->mutableSetIntHas(max)) {
+                    Some(true)
+                } else {
+                    None
+                }
+            }
+            | None => None
+        }
+    })->Belt_Option.getWithDefault(false)
+}
 
 let getHypothesisPriv = (ctx:mmContextContents,label):option<hypothesis> => {
     ctx->forEachCtxInReverseOrder(ctx => {
@@ -627,10 +644,7 @@ let addDisj: (mmContext,array<string>) => unit = (ctx, vars) => {
             let maxIdx = varInts->Js_array2.length - 1
             for i in 0 to maxIdx {
                 for j in i+1 to maxIdx {
-                    let n = varInts[i]
-                    let m = varInts[j]
-                    ctx->addDisjPair(n,m)
-                    ctx->addDisjPair(m,n)
+                    ctx->addDisjPair(varInts[i],varInts[j])
                 }
             }
         }

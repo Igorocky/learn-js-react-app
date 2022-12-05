@@ -37,6 +37,7 @@ let isConst: (mmContext,string) => bool
 let isVar: (mmContext,string) => bool
 let isHyp: (mmContext,string) => bool
 let isAsrt: (mmContext,string) => bool
+let isDisj: (mmContext,int,int) => bool
 let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getFrame: (mmContext,string) => option<frame>
