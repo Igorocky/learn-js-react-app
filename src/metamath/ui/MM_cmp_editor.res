@@ -43,6 +43,11 @@ type state = {
     varsErr: option<string>,
     varsEditMode: bool,
 
+    disjText: string,
+    disj: Belt_MapInt.t<Belt_SetInt.t>,
+    disjErr: option<string>,
+    disjEditMode: bool,
+
     nextStmtId: int,
     stmts: array<userStmt>,
     checkedStmtIds: array<string>,
@@ -50,8 +55,8 @@ type state = {
 
 type stateLocStor = {
     constsText: string,
-
     varsText: string,
+    disjText: string,
 
     nextStmtId: int,
     stmts: array<userStmtLocStor>,
@@ -92,6 +97,11 @@ let createInitialState = (settingsV, settings, ctxV, ctx, stateLocStor:option<st
         varsErr: None,
         varsEditMode: false,
 
+        disjText: stateLocStor->Belt.Option.map(obj => obj.disjText)->Belt.Option.getWithDefault(""),
+        disj: Belt_MapInt.fromArray([]),
+        disjErr: None,
+        disjEditMode: false,
+
         nextStmtId: stateLocStor->Belt.Option.map(obj => obj.nextStmtId)->Belt.Option.getWithDefault(0),
         stmts: 
             stateLocStor
@@ -105,6 +115,7 @@ let stateToStateLocStor = (state:state):stateLocStor => {
     {
         constsText: state.constsText,
         varsText: state.varsText,
+        disjText: state.disjText,
         nextStmtId: state.nextStmtId,
         stmts: state.stmts->Js_array2.map(stmt => {
             {
@@ -129,8 +140,9 @@ let editorReadStateFromLocStor = (key:string):option<stateLocStor> => {
             open Expln_utils_jsonParse
             let parseResult = parseObj(stateLocStorStr, d=>{
                 {
-                    constsText: d->str("constsText"),
-                    varsText: d->str("varsText"),
+                    constsText: d->strOpt("constsText")->Belt_Option.getWithDefault(""),
+                    varsText: d->strOpt("varsText")->Belt_Option.getWithDefault(""),
+                    disjText: d->strOpt("disjText")->Belt_Option.getWithDefault(""),
                     nextStmtId: d->int("nextStmtId"),
                     stmts: d->arr("stmts", d=>{
                         {
@@ -316,6 +328,21 @@ let completeVarsEditMode = (st, newVarsText) => {
         ...st,
         varsText:newVarsText,
         varsEditMode: false
+    }
+}
+
+let setDisjEditMode = st => {
+    {
+        ...st,
+        disjEditMode: true
+    }
+}
+
+let completeDisjEditMode = (st, newDisjText) => {
+    {
+        ...st,
+        disjText:newDisjText,
+        disjEditMode: false
     }
 }
 
@@ -551,19 +578,32 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         </Row>
     }
 
+    let rndDisj = () => {
+        <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
+            {React.string("Disjoints")}
+            <MM_cmp_multiline_text
+                text=state.disjText
+                editMode=state.disjEditMode
+                onEditRequested={() => actBeginEdit0(setDisjEditMode)}
+                onEditDone={newText => setState(completeDisjEditMode(_,newText))}
+            />
+        </Row>
+    }
+
     let rndStmts = () => {
         <Col>
             { state.stmts->Js_array2.map(rndStmt)->React.array }
         </Col>
     }
 
-    <ContentWithStickyHeader 
+    <ContentWithStickyHeader
         top
         header={rndButtons()}
         content={_ => {
             <Col>
                 {rndConsts()}
                 {rndVars()}
+                {rndDisj()}
                 {rndStmts()}
             </Col>
         }}

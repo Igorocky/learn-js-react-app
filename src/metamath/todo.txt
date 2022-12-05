@@ -5,3 +5,4 @@
 - use uncurried functions everywhere
 - replace a[i] with a->Js_array2.unsafe_get(i), or open Belt and replace with Option.getExn
 - dynamic length of user statement content in edit mode
+- in editorReadStateFromLocStor: make nextStmtId and stmts optional, and check/update nextStmtId after reading
