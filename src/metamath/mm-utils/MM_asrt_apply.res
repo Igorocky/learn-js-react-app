@@ -201,8 +201,19 @@ let rec iterateSubstitutionsForHyps = (
     }
 }
 
+// let checkTypesInFloatingHyps = (
+//     ~ctx:mmContext, 
+//     ~frmsSyntax:frameProofData, 
+//     ~frm:frameProofDataRec,
+//     ~parenCnt:parenCnt, 
+//     ~proofTbl:proofTable
+// ) => {
+
+// }
+
 let applyAssertions = (
     ~frms:frameProofData,
+//    ~frmsSyntax:frameProofData,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<labeledExpr>,
     ~parenCnt:parenCnt,
@@ -239,7 +250,6 @@ let applyAssertions = (
                         ~comb,
                         ~hypIdx=0,
                         ~onMatchFound = frm => {
-                            // checkTypesInSubs(frm)
                             let numOfArgs = frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.length - 1
                             let res = {
                                 workVars: frm.workVars.vars->Js.Array2.copy,
@@ -252,6 +262,7 @@ let applyAssertions = (
                                     | Some(expr) => expr
                                 },
                             }
+                            // checkTypesInFloatingHyps(res)
                             onMatchFound(res)
                         }
                     )

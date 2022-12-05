@@ -18,6 +18,7 @@ type applyAssertionResult = {
 
 let applyAssertions: (
     ~frms:frameProofData,
+//    ~frmsSyntax:frameProofData,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<labeledExpr>,
     ~parenCnt:parenCnt,
