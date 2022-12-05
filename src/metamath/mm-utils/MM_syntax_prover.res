@@ -10,19 +10,19 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
         | Some(hyp) => recToProve.branches = Some([Hypothesis({label:hyp.label})])
         | None => {
             let branches = []
-            frameData->Js_array2.forEach(frmData => {
-                if (frmData.hypsE->Js.Array2.length == 0) {
+            frameData->Js_array2.forEach(frm => {
+                if (frm.numOfHypsE == 0) {
                     iterateSubstitutions(
-                        ~frmExpr = frmData.frame.asrt,
+                        ~frmExpr = frm.frame.asrt,
                         ~expr = exprToProve,
-                        ~frmConstParts = frmData.frmConstParts, 
-                        ~constParts = frmData.constParts, 
-                        ~varGroups = frmData.varGroups,
-                        ~subs = frmData.subs,
+                        ~frmConstParts = frm.frmConstParts[frm.numOfHypsE], 
+                        ~constParts = frm.constParts[frm.numOfHypsE], 
+                        ~varGroups = frm.varGroups[frm.numOfHypsE],
+                        ~subs = frm.subs,
                         ~parenCnt,
                         ~consumer = subs => {
                             if (subs.isDefined->Js_array2.every(b=>b)) {
-                                let args: array<int> = frmData.frame.hyps->Js_array2.map(hyp => {
+                                let args: array<int> = frm.frame.hyps->Js_array2.map(hyp => {
                                     let exprToProve = applySubs(
                                         ~frmExpr = hyp.expr, 
                                         ~subs,
@@ -33,7 +33,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                                 })
                                 branches->Js_array2.push(Assertion({
                                     args,
-                                    label: frmData.frame.label
+                                    label: frm.frame.label
                                 }))->ignore
                             }
                             Continue

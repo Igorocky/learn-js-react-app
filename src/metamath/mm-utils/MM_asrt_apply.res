@@ -72,7 +72,8 @@ let iterateCombinations = (
 }
 
 let stmtCanMatchHyp = (
-    ~frmData:frameProofDataRec,
+    ~frm:frameProofDataRec,
+    ~hypIdx:int,
     ~stmt:expr,
     ~hyp:expr,
     ~parenCnt:parenCnt,
@@ -81,10 +82,10 @@ let stmtCanMatchHyp = (
     iterateSubstitutions(
         ~frmExpr = hyp,
         ~expr = stmt,
-        ~frmConstParts = frmData.frmConstParts, 
-        ~constParts = frmData.constParts, 
-        ~varGroups = frmData.varGroups,
-        ~subs = frmData.subs,
+        ~frmConstParts = frm.frmConstParts[hypIdx], 
+        ~constParts = frm.constParts[hypIdx], 
+        ~varGroups = frm.varGroups[hypIdx],
+        ~subs = frm.subs,
         ~parenCnt,
         ~consumer = subs => {
             res.contents = true
@@ -164,9 +165,9 @@ let rec iterateSubstitutionsForHyps = (
         iterateSubstitutions(
             ~frmExpr = frm.hypsE[hypIdx].expr,
             ~expr = statements[comb[hypIdx]].expr,
-            ~frmConstParts = frm.frmConstParts, 
-            ~constParts = frm.constParts, 
-            ~varGroups = frm.varGroups,
+            ~frmConstParts = frm.frmConstParts[hypIdx], 
+            ~constParts = frm.constParts[hypIdx], 
+            ~varGroups = frm.varGroups[hypIdx],
             ~subs = frm.subs,
             ~parenCnt,
             ~consumer = subs => {
@@ -221,7 +222,8 @@ let applyAssertions = (
                         true
                     } else {
                         stmtCanMatchHyp(
-                            ~frmData=frm,
+                            ~frm,
+                            ~hypIdx=h,
                             ~stmt = statements[s].expr,
                             ~hyp = frm.hypsE[h].expr,
                             ~parenCnt,

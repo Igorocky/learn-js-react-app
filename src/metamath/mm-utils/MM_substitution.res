@@ -39,9 +39,10 @@ type subs = {
 type frameProofDataRec = {
     frame: frame,
     hypsE: array<hypothesis>,
-    frmConstParts:constParts,
-    constParts:constParts,
-    varGroups:array<varGroup>,
+    numOfHypsE:int,
+    frmConstParts:array<constParts>,
+    constParts:array<constParts>,
+    varGroups:array<array<varGroup>>,
     subs:subs,
     workVars:workVars,
 }
@@ -486,18 +487,37 @@ let createSubs = (~numOfVars:int) => {
 let prepareFrameProofData = ctx => {
     let frames = []
     let numOfCtxVars = ctx->getNumOfVars
-    ctx->forEachFrame(frm => {
-        let hypsE = frm.hyps->Js.Array2.filter(hyp => hyp.typ == E)
-        let frmConstParts = createConstParts(frm.asrt)
+    ctx->forEachFrame(frame => {
+        let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
+
+        let frmConstPartsArr:array<constParts> = []
+        let constPartsArr:array<constParts> = []
+        let varGroupsArr:array<array<varGroup>> = []
+
+        hypsE->Js_array2.forEach(hyp => {
+            let frmConstParts = createConstParts(hyp.expr)
+            let constParts = createMatchingConstParts(frmConstParts)
+            let varGroups = createVarGroups(~frmExpr=hyp.expr, ~frmConstParts)
+            frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
+            constPartsArr->Js.Array2.push(constParts)->ignore
+            varGroupsArr->Js.Array2.push(varGroups)->ignore
+        })
+
+        let frmConstParts = createConstParts(frame.asrt)
         let constParts = createMatchingConstParts(frmConstParts)
-        let varGroups = createVarGroups(~frmExpr=frm.asrt, ~frmConstParts)
-        let subs = createSubs(~numOfVars=frm.numOfVars)
+        let varGroups = createVarGroups(~frmExpr=frame.asrt, ~frmConstParts)
+        frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
+        constPartsArr->Js.Array2.push(constParts)->ignore
+        varGroupsArr->Js.Array2.push(varGroups)->ignore
+
+        let subs = createSubs(~numOfVars=frame.numOfVars)
         frames->Js_array2.push({
-            frame:frm,
+            frame,
             hypsE,
-            frmConstParts,
-            constParts,
-            varGroups,
+            numOfHypsE: hypsE->Js.Array2.length,
+            frmConstParts:frmConstPartsArr,
+            constParts:constPartsArr,
+            varGroups:varGroupsArr,
             subs,
             workVars: {
                 numOfCtxVars,

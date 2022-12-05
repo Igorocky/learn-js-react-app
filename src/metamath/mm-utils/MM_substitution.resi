@@ -53,9 +53,10 @@ let iterateSubstitutions: (
 type frameProofDataRec = {
     frame: frame,
     hypsE: array<hypothesis>,
-    frmConstParts:constParts,
-    constParts:constParts,
-    varGroups:array<varGroup>,
+    numOfHypsE:int,
+    frmConstParts:array<constParts>,
+    constParts:array<constParts>,
+    varGroups:array<array<varGroup>>,
     subs:subs,
     workVars:workVars,
 }

@@ -133,6 +133,7 @@ let testApplyAssertions = (
     ~stopAfter:string="",
     ~additionalStatements:array<stmt>,
     ~statements:array<(string,string)>,
+    ~frameFilter:frame=>bool=_=>true,
     ~fileWithExpectedResult:string,
     ()
 ) => {
@@ -211,7 +212,7 @@ let testApplyAssertions = (
             }
         }),
         ~parenCnt,
-        // ~frameFilter=frame=>frame.label=="mp",
+        ~frameFilter,
         ~onMatchFound = res => {
             switch actualResults->Belt_MutableMapString.get(res.asrtLabel) {
                 | None => actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(tmpCtx, res)])
@@ -263,6 +264,7 @@ describe("applyAssertions", _ => {
             ~statements = [
                 ("p1","|- ( t + 0 ) = t")
             ],
+            ~frameFilter=frame=>frame.label=="mp",
             ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement.txt",
             ()
         )
