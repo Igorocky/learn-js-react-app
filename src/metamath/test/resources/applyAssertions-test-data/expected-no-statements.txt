@@ -4,7 +4,7 @@ Work variables:
     workVar2 term term2
     workVar3 term term3
 Arguments:
-    
+
 Proof:
     ::a1
 Result:
@@ -15,7 +15,7 @@ Result:
 Work variables:
     workVar1 term term1
 Arguments:
-    
+
 Proof:
     ::a2
 Result:
@@ -39,7 +39,7 @@ Result:
 Work variables:
     workVar1 term term1
 Arguments:
-    
+
 Proof:
     ::th1
 Result:

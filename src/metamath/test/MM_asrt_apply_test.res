@@ -176,10 +176,14 @@ let testApplyAssertions = (
         let workVarsStr = workVarHypLabels->Js.Array2.mapi((label,i) => {
             `${label} ${workVarTypes[i]} ${workVarNames[i]}`
         })->Js_array2.joinWith("\n    ")
-        let argsStr = args->Js_array2.joinWith("\n    ")
+        let argsStr = if (args->Js.Array2.length > 0) {
+            "    " ++ args->Js_array2.joinWith("\n    ")
+        } else {
+            ""
+        }
         let proofStr = `:${argLabels->Js_array2.joinWith(",")}:${res.asrtLabel}`
         `------------------------\n` ++ 
-            `Work variables:\n    ${workVarsStr}\nArguments:\n    ${argsStr}\nProof:\n    ${proofStr}\n` ++
+            `Work variables:\n    ${workVarsStr}\nArguments:\n${argsStr}\nProof:\n    ${proofStr}\n` ++
             `Result:\n    ${asrtExprStr}\n\n`
     }
 
@@ -256,7 +260,7 @@ describe("applyAssertions", _ => {
             ()
         )
     })
-    it("applies assertions when there is one statement", _ => {
+    it("applies assertions when there is one statement, for modus ponens", _ => {
         testApplyAssertions(
             ~mmFilePath = demo0,
             ~stopAfter = "th1",
@@ -265,6 +269,18 @@ describe("applyAssertions", _ => {
                 ("p1","|- ( t + 0 ) = t")
             ],
             ~frameFilter=frame=>frame.label=="mp",
+            ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement-mp.txt",
+            ()
+        )
+    })
+    it("applies assertions when there is one statement, for all assertions from demo0", _ => {
+        testApplyAssertions(
+            ~mmFilePath = demo0,
+            ~stopAfter = "th1",
+            ~additionalStatements = [],
+            ~statements = [
+                ("p1","|- ( t + 0 ) = t")
+            ],
             ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement.txt",
             ()
         )
