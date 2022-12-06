@@ -40,7 +40,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                             }
                             Continue
                         }
-                    )
+                    )->ignore
                 }
             })
             recToProve.branches = Some(branches)

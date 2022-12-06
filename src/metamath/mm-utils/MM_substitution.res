@@ -33,7 +33,6 @@ type subs = {
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
-    lockedByHypE: array<int>,
 }
 
 type frameProofDataRec = {
@@ -48,38 +47,6 @@ type frameProofDataRec = {
 }
 
 type frameProofData = array<frameProofDataRec>
-
-let subsLockDefined = (subs, ~lockLevel:int):unit => {
-    for v in 0 to subs.size-1 {
-        if (subs.isDefined[v] && subs.lockedByHypE[v] == -1) {
-            subs.lockedByHypE[v] = lockLevel
-        }
-    }
-}
-
-let subsUndefineForLevel = (subs, ~lockLevelToUndefineFrom:int) => {
-    for v in 0 to subs.size-1 {
-        if (lockLevelToUndefineFrom <= subs.lockedByHypE[v]) {
-            subs.isDefined[v] = false
-            subs.lockedByHypE[v] = -1
-        }
-    }
-}
-
-let subsUndefineAll = subs => {
-    for v in 0 to subs.size-1 {
-        subs.isDefined[v] = false
-        subs.lockedByHypE[v] = -1
-    }
-}
-
-let subsUndefineUnlocked = subs => {
-    for v in 0 to subs.size-1 {
-        if (subs.lockedByHypE[v] == -1) {
-            subs.isDefined[v] = false
-        }
-    }
-}
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
     if (leftConstPartIdx < 0) {
@@ -339,7 +306,7 @@ let rec iterateVarGroups = (
     ~consumer: subs=>contunieInstruction
 ): contunieInstruction => {
     let grp = varGroups[curGrpIdx]
-    let varNum = grp.frmExpr[grp.varsBeginIdx+curVarIdx]
+    let frmVar = grp.frmExpr[grp.varsBeginIdx+curVarIdx]
     let maxSubExprLength = grp.exprEndIdx - subExprBeginIdx + 1 - (grp.numOfVars - curVarIdx - 1)
     
     let invokeNext = (subExprLength:int):contunieInstruction => {
@@ -371,12 +338,12 @@ let rec iterateVarGroups = (
     }
 
     let continueInstr = ref(Continue)
-    if (!subs.isDefined[varNum]) {
-        subs.isDefined[varNum] = true
-        subs.exprs[varNum] = expr
-        subs.begins[varNum] = subExprBeginIdx
+    if (!subs.isDefined[frmVar]) {
+        subs.isDefined[frmVar] = true
+        subs.exprs[frmVar] = expr
+        subs.begins[frmVar] = subExprBeginIdx
         if (curVarIdx == grp.numOfVars-1) {
-            subs.ends[varNum] = grp.exprEndIdx
+            subs.ends[frmVar] = grp.exprEndIdx
             continueInstr.contents = invokeNext(maxSubExprLength)
         } else {
             let subExprLength = ref(1)
@@ -384,7 +351,7 @@ let rec iterateVarGroups = (
             parenCnt->parenCntReset
             let pStatus = ref(Balanced)
             while (subExprLength.contents <= maxSubExprLength && continueInstr.contents == Continue && pStatus.contents != Failed) {
-                subs.ends[varNum] = end.contents
+                subs.ends[frmVar] = end.contents
                 pStatus.contents = parenCnt->parenCntPut(expr[end.contents])
                 if (pStatus.contents == Balanced) {
                     continueInstr.contents = invokeNext(subExprLength.contents)
@@ -394,11 +361,11 @@ let rec iterateVarGroups = (
                 end.contents = end.contents + 1
             }
         }
-        subs.isDefined[varNum] = false
+        subs.isDefined[frmVar] = false
     } else {
-        let existingExpr = subs.exprs[varNum]
-        let existingExprBeginIdx = subs.begins[varNum]
-        let existingExprLen = subs.ends[varNum] - existingExprBeginIdx + 1
+        let existingExpr = subs.exprs[frmVar]
+        let existingExprBeginIdx = subs.begins[frmVar]
+        let existingExprLen = subs.ends[frmVar] - existingExprBeginIdx + 1
         if (existingExprLen <= maxSubExprLength && (curVarIdx < grp.numOfVars-1 || existingExprLen == maxSubExprLength)) {
             let checkedLen = ref(0)
             while (checkedLen.contents < existingExprLen 
@@ -422,10 +389,12 @@ let iterateSubstitutions = (
     ~subs:subs,
     ~parenCnt:parenCnt,
     ~consumer: subs => contunieInstruction
-) => {
+):contunieInstruction => {
     if (subs.size == 0) {
         if (frmExpr == expr) {
-            consumer(subs)->ignore
+            consumer(subs)
+        } else {
+            Continue
         }
     } else {
         iterateConstParts(
@@ -437,7 +406,6 @@ let iterateSubstitutions = (
             ~parenCnt,
             ~consumer = constParts => {
                 initVarGroups(~varGroups, ~constParts, ~expr)
-                subsUndefineUnlocked(subs)
                 iterateVarGroups(
                     ~expr,
                     ~subs,
@@ -449,7 +417,7 @@ let iterateSubstitutions = (
                     ~consumer
                 )
             }
-        )->ignore
+        )
     }
 }
 
@@ -460,7 +428,6 @@ let createSubs = (~numOfVars:int) => {
         ends: Belt_Array.make(numOfVars, 0),
         exprs: Belt_Array.make(numOfVars, []),
         isDefined: Belt_Array.make(numOfVars, false),
-        lockedByHypE: Belt_Array.make(numOfVars, -1),
     }
 }
 
@@ -661,6 +628,6 @@ let test_iterateSubstitutions: (~ctx:mmContext, ~frmExpr:expr, ~expr:expr) => ar
             result->Js_array2.push(res)->ignore
             Continue
         }
-    )
+    )->ignore
     result
 }

@@ -32,7 +32,6 @@ type subs = {
     ends: array<int>,
     exprs: array<expr>,
     isDefined: array<bool>,
-    lockedByHypE: array<int>,
 }
 
 let createConstParts: expr => constParts
@@ -48,8 +47,9 @@ let iterateSubstitutions: (
     ~subs:subs,
     ~parenCnt:parenCnt,
     ~consumer: subs => contunieInstruction
-) => unit
+) => contunieInstruction
 
+//todo: rename to frmSubsData
 type frameProofDataRec = {
     frame: frame,
     hypsE: array<hypothesis>,
@@ -62,10 +62,6 @@ type frameProofDataRec = {
 }
 type frameProofData = array<frameProofDataRec>
 let prepareFrameProofData: mmContext => frameProofData
-let subsLockDefined: (subs, ~lockLevel:int) => unit
-let subsUndefineForLevel: (subs, ~lockLevelToUndefineFrom:int) => unit
-let subsUndefineAll: subs => unit
-let subsUndefineUnlocked: subs => unit
 let applySubs: (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int) => expr
 let verifyDisjoints: (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDisjInCtx:(int,int)=>bool) => bool
 

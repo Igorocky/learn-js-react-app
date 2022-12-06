@@ -19,7 +19,7 @@ describe("iterateCombinations", _ => {
                 res->Js_array2.push(comb->Js_array2.joinWith(" "))->ignore
                 Continue
             }
-        )
+        )->ignore
 
         //then
         assertEq(
@@ -61,7 +61,7 @@ describe("iterateCombinations", _ => {
                     Continue
                 }
             }
-        )
+        )->ignore
 
         //then
         assertEq(
@@ -93,7 +93,7 @@ describe("iterateCombinations", _ => {
                 res->Js_array2.push(comb->Js_array2.joinWith(" "))->ignore
                 Continue
             }
-        )
+        )->ignore
 
         //then
         assertEq(
@@ -120,7 +120,7 @@ describe("iterateCombinations", _ => {
                 res->Js_array2.push(comb->Js_array2.joinWith(" "))->ignore
                 Continue
             }
-        )
+        )->ignore
 
         //then
         assertEq( res, [ ] )
@@ -134,6 +134,7 @@ let testApplyAssertions = (
     ~additionalStatements:array<stmt>,
     ~statements:array<(string,string)>,
     ~frameFilter:frame=>bool=_=>true,
+    ~result:option<string>=?,
     ~fileWithExpectedResult:string,
     ()
 ) => {
@@ -226,6 +227,7 @@ let testApplyAssertions = (
         }),
         ~parenCnt,
         ~frameFilter,
+        ~result=?result->Belt_Option.map(str => str->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)),
         ~onMatchFound = res => {
             switch actualResults->Belt_MutableMapString.get(res.asrtLabel) {
                 | None => actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(workCtx, res)])
@@ -291,6 +293,20 @@ describe("applyAssertions", _ => {
                 ("p1","|- ( t + 0 ) = t")
             ],
             ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement.txt",
+            ()
+        )
+    })
+    it("applies assertions when there is one statement and a result, for all assertions from demo0", _ => {
+        testApplyAssertions(
+            ~mmFilePath = demo0,
+            ~stopAfter = "th1",
+            ~additionalStatements = [],
+            ~statements = [
+                ("p1","|- P")
+            ],
+            ~frameFilter = frame => frame.label == "mp",
+            ~result="|- P",
+            ~fileWithExpectedResult = "./src/metamath/test/resources/applyAssertions-test-data/expected-one-statement-with-result.txt",
             ()
         )
     })

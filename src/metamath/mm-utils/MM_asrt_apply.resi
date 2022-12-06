@@ -23,6 +23,7 @@ let applyAssertions: (
 //    ~frmsSyntax:frameProofData,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<labeledExpr>,
+    ~result:expr=?,
     ~parenCnt:parenCnt,
     ~frameFilter:frame=>bool=?,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
@@ -37,4 +38,4 @@ let iterateCombinations: (
     ~numOfHyps:int,
     ~stmtCanMatchHyp:(int,int)=>bool,
     ~combinationConsumer:array<int>=>contunieInstruction,
-) => unit
+) => contunieInstruction
