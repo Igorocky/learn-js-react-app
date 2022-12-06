@@ -29,13 +29,15 @@ type mutableMapStr<'v> = Belt.HashMap.String.t<'v>
 type mutableMapInt<'v> = Belt.HashMap.Int.t<'v>
 type mutableSetInt = Belt.HashSet.Int.t
 
+type disjMutable = mutableMapInt<mutableSetInt>
+
 type rec mmContextContents = {
     parent: option<mmContextContents>,
     consts: array<string>,
     varsBaseIdx: int,
     vars: array<string>,
     symToInt: mutableMapStr<int>,
-    disj: mutableMapInt<mutableSetInt>,
+    disj: disjMutable,
     hyps: array<hypothesis>,
     symToHyp: mutableMapStr<hypothesis>,
     mutable lastComment: string,
@@ -178,8 +180,10 @@ let mutableSetIntClone = (orig:mutableSetInt) => {
     set
 }
 
-let addDisjPairToMap = (disjMap:mutableMapInt<mutableSetInt>, n, m) => {
-    let (min,max) = if (n <= m) {(n,m)} else {(m,n)}
+let addDisjPairToMap = (disjMap:disjMutable, n, m) => {
+    let min = if (n <= m) {n} else {m}
+    let max = if (n <= m) {m} else {n}
+
     switch disjMap->mutableMapIntGet(min) {
         | None => disjMap->mutableMapIntPut(min, mutableSetIntMakeFromArray([max]))
         | Some(set) => set->mutableSetIntAdd(max)
@@ -257,18 +261,25 @@ let isAsrtPriv: (mmContextContents,string) => bool = (ctx, label) => {
 
 let isAsrt: (mmContext,string) => bool = (ctx, label) => isAsrtPriv(ctx.contents, label)
 
+let disjContains = (disj:disjMutable, n, m):bool => {
+    let min = if (n <= m) {n} else {m}
+    let max = if (n <= m) {m} else {n}
+    switch disj->mutableMapIntGet(min) {
+        | None => false
+        | Some(ms) => ms->mutableSetIntHas(max)
+    }
+}
+
+let disjForEach = (disjMutable, consumer) => {
+    disjMutable->mutableMapIntForEach((n,ms) => Belt_Array.concat([n], ms->mutableSetIntToArray)->consumer)
+}
+
 let isDisj = (ctx,n,m) => {
-    let (min,max) = if (n <= m) {(n,m)} else {(m,n)}
     ctx.contents->forEachCtxInReverseOrder(ctx => {
-        switch ctx.disj->mutableMapIntGet(min) {
-            | Some(ms) => {
-                if (ms->mutableSetIntHas(max)) {
-                    Some(true)
-                } else {
-                    None
-                }
-            }
-            | None => None
+        if (ctx.disj->disjContains(n,m)) {
+            Some(true)
+        } else {
+            None
         }
     })->Belt_Option.getWithDefault(false)
 }
@@ -562,6 +573,10 @@ let cloneContext: mmContext => mmContext = ctx => {
 
 // cdblk #update ===========================================================================================
 
+let disjMutableMake = () => {
+    mutableMapIntMake()
+}
+
 let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
     let pCtxContentsOpt = switch parent {
         | Some(pCtx) => Some(pCtx.contents)
@@ -577,7 +592,7 @@ let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
             },
             vars: [],
             symToInt: mutableMapStrMake(),
-            disj: mutableMapIntMake(),
+            disj: disjMutableMake(),
             hyps: [],
             symToHyp: mutableMapStrMake(),
             lastComment: "",

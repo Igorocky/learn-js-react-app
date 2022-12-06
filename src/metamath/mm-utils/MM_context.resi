@@ -12,6 +12,8 @@ type hypothesis = {
     expr: expr
 }
 
+type disjMutable
+
 type frame = {
     disj: Belt.Map.Int.t<Belt_SetInt.t>,
     hyps: array<hypothesis>,
@@ -58,3 +60,7 @@ let generateWorkVarNames: (mmContext, array<int>) => array<string>
 let generateLabels: (mmContext, ~prefix:string, ~amount:int) => array<string>
 
 let exprEq: (expr,expr) => bool
+let disjMutableMake: unit => disjMutable
+let addDisjPairToMap: (disjMutable, int, int) => unit
+let disjContains: (disjMutable, int, int) => bool
+let disjForEach: (disjMutable, array<int> => unit) => unit

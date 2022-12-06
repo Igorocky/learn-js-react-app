@@ -137,16 +137,27 @@ let testApplyAssertions = (
     ~fileWithExpectedResult:string,
     ()
 ) => {
-    let printApplyAssertionResult = (ctx, res:applyAssertionResult):string => {
-        ctx->openChildContext
+    let printApplyAssertionResult = (workCtx, res:applyAssertionResult):string => {
+        workCtx->openChildContext
+        let maxWorkCtxVar = workCtx->getNumOfVars - 1
+        let workVarHypLabels = workCtx->generateLabels(~prefix="workVar", ~amount=res.workVarTypes->Js_array2.length)
+        let workVarTypes = res.workVarTypes->Js_array2.map(workCtx->ctxIntToStrExn)
+        let workVarNames = workCtx->generateWorkVarNames(res.workVarTypes)
+        let disjArrStr = []
+        res.disj->disjForEach(disj => {
+            disjArrStr->Js.Array2.push(
+                "[ " ++ 
+                disj->Js.Array2.map(v => {
+                    if (v <= maxWorkCtxVar) {workCtx->ctxIntToStrExn(v)} else {workVarNames[v-maxWorkCtxVar-1]}
+                })->Js_array2.joinWith(" ") ++ 
+                " ]"
+            )->ignore
+        })
+        let disjStr = if (disjArrStr->Js.Array2.length == 0) {""} else {"    " ++ disjArrStr->Js.Array2.joinWith("\n    ")}
 
-        let workVarHypLabels = ctx->generateLabels(~prefix="workVar", ~amount=res.workVarTypes->Js_array2.length)
-        let workVarTypes = res.workVarTypes->Js_array2.map(ctx->ctxIntToStrExn)
-        let workVarNames = ctx->generateWorkVarNames(res.workVarTypes)
-
-        ctx->applySingleStmt(Var({symbols:workVarNames}))
+        workCtx->applySingleStmt(Var({symbols:workVarNames}))
         workVarHypLabels->Js.Array2.forEachi((label,i) => {
-            ctx->applySingleStmt(Floating({label, expr:[workVarTypes[i], workVarNames[i]]}))
+            workCtx->applySingleStmt(Floating({label, expr:[workVarTypes[i], workVarNames[i]]}))
         })
         let args = []
         let argLabels = []
@@ -157,10 +168,10 @@ let testApplyAssertions = (
                     argLabels->Js_array2.push(label)->ignore
                 }
                 | None => {
-                    let newStmtLabel = ctx->generateLabels(~prefix="provable", ~amount=1)
+                    let newStmtLabel = workCtx->generateLabels(~prefix="provable", ~amount=1)
                     let label = newStmtLabel[0]
-                    let exprArrStr = res.argExprs[i]->Belt_Option.getExn->Js_array2.map(ctx->ctxIntToStrExn)
-                    ctx->applySingleStmt(Provable({
+                    let exprArrStr = res.argExprs[i]->Belt_Option.getExn->Js_array2.map(workCtx->ctxIntToStrExn)
+                    workCtx->applySingleStmt(Provable({
                         label, 
                         expr:exprArrStr,
                         proof:Table([])
@@ -170,12 +181,16 @@ let testApplyAssertions = (
                 }
             }
         })
-        let asrtExprStr = ctx->ctxExprToStrExn(res.asrtExpr)
-        ctx->resetToParentContext
+        let asrtExprStr = workCtx->ctxExprToStrExn(res.asrtExpr)
+        workCtx->resetToParentContext
 
-        let workVarsStr = workVarHypLabels->Js.Array2.mapi((label,i) => {
-            `${label} ${workVarTypes[i]} ${workVarNames[i]}`
-        })->Js_array2.joinWith("\n    ")
+        let workVarsStr = if (workVarHypLabels->Js_array2.length == 0) {
+            ""
+        } else {
+            "    " ++ workVarHypLabels->Js.Array2.mapi((label,i) => {
+                `${label} ${workVarTypes[i]} ${workVarNames[i]}`
+            })->Js_array2.joinWith("\n    ")
+        }
         let argsStr = if (args->Js.Array2.length > 0) {
             "    " ++ args->Js_array2.joinWith("\n    ")
         } else {
@@ -183,44 +198,38 @@ let testApplyAssertions = (
         }
         let proofStr = `:${argLabels->Js_array2.joinWith(",")}:${res.asrtLabel}`
         `------------------------\n` ++ 
-            `Work variables:\n    ${workVarsStr}\nArguments:\n${argsStr}\nProof:\n    ${proofStr}\n` ++
+            `Work variables:\n${workVarsStr}\nDisjoints:\n${disjStr}\nArguments:\n${argsStr}\nProof:\n    ${proofStr}\n` ++
             `Result:\n    ${asrtExprStr}\n\n`
     }
 
     //given
     let mmFileText = Expln_utils_files.readStringFromFile(mmFilePath)
     let (ast, _) = parseMmFile(mmFileText, ())
-    let ctx = loadContext(ast, ~stopBefore, ~stopAfter, ())
-    additionalStatements->Js_array2.forEach(ctx->applySingleStmt)
-    let frms = prepareFrameProofData(ctx)
-    let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
+    let preCtx = loadContext(ast, ~stopBefore, ~stopAfter, ())
+    additionalStatements->Js_array2.forEach(preCtx->applySingleStmt)
+    let workCtx = createContext(~parent=preCtx, ())
+    let frms = prepareFrameProofData(workCtx)
+    let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
-    let tmpCtx = createContext(~parent=ctx, ())
-    statements->Js_array2.forEach(((label,exprStr)) => {
-        tmpCtx->applySingleStmt(Provable({
-            label, 
-            expr:exprStr->getSpaceSeparatedValuesAsArray, 
-            proof:Table([])
-        }))
-    })
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
 
     //when
     applyAssertions(
+        ~ctx=workCtx,
         ~frms,
-        ~nonSyntaxTypes = ctx->makeExprExn(["|-"]),
+        ~nonSyntaxTypes = preCtx->makeExprExn(["|-"]),
         ~statements = statements->Js_array2.map(((label,exprStr)) => {
             {
                 label, 
-                expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(tmpCtx,_)
+                expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)
             }
         }),
         ~parenCnt,
         ~frameFilter,
         ~onMatchFound = res => {
             switch actualResults->Belt_MutableMapString.get(res.asrtLabel) {
-                | None => actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(tmpCtx, res)])
-                | Some(arr) => arr->Js.Array2.push(printApplyAssertionResult(tmpCtx, res))->ignore
+                | None => actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(workCtx, res)])
+                | Some(arr) => arr->Js.Array2.push(printApplyAssertionResult(workCtx, res))->ignore
             }
             // Js.Console.log("onMatchFound ------------------------------------------------------------------")
             // Js.Console.log(printApplyAssertionResult(res))

@@ -564,7 +564,7 @@ let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
     res
 }
 
-let verifyDisjoints = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs) => {
+let verifyDisjoints = (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDisjInCtx:(int,int)=>bool) => {
     let maxVarNum = subs.size-1
     let res = ref(true)
     for n in 0 to maxVarNum {
@@ -585,7 +585,7 @@ let verifyDisjoints = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs) 
                                             if (res.contents) {
                                                 let ms = subs.exprs[m][mi]
                                                 if (ms >= 0) {
-                                                    res.contents = ns != ms && ctx->isDisj(ns,ms)
+                                                    res.contents = ns != ms && isDisjInCtx(ns,ms)
                                                 }
                                             }
                                         }

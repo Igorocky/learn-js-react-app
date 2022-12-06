@@ -22,7 +22,7 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
                         ~parenCnt,
                         ~consumer = subs => {
                             if (subs.isDefined->Js_array2.every(b=>b)) {
-                                if (verifyDisjoints(~ctx, ~frmDisj=frm.frame.disj, ~subs)) {
+                                if (verifyDisjoints(~frmDisj=frm.frame.disj, ~subs, ~isDisjInCtx=ctx->isDisj)) {
                                     let args: array<int> = frm.frame.hyps->Js_array2.map(hyp => {
                                         let exprToProve = applySubs(
                                             ~frmExpr = hyp.expr, 

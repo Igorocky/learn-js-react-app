@@ -11,6 +11,7 @@ type labeledExpr = {
 type applyAssertionResult = {
     workVars: array<int>,
     workVarTypes: array<int>,
+    disj:disjMutable,
     argLabels: array<option<string>>,
     argExprs: array<option<expr>>,
     asrtLabel: string,
@@ -212,7 +213,25 @@ let rec iterateSubstitutionsForHyps = (
 
 // }
 
+let extractNewDisj = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~maxCtxVar:int):option<disjMutable> => {
+    let result = disjMutableMake()
+    let disjIsValid = verifyDisjoints(~frmDisj, ~subs, ~isDisjInCtx = (n,m) => {
+        if (n <= maxCtxVar && m <= maxCtxVar) {
+            ctx->isDisj(n,m)
+        } else {
+            result->addDisjPairToMap(n,m)
+            true
+        }
+    })
+    if (disjIsValid) {
+        Some(result)
+    } else {
+        None
+    }
+}
+
 let applyAssertions = (
+    ~ctx,
     ~frms:frameProofData,
 //    ~frmsSyntax:frameProofData,
     ~nonSyntaxTypes:array<int>,
@@ -251,20 +270,31 @@ let applyAssertions = (
                         ~comb,
                         ~hypIdx=0,
                         ~onMatchFound = frm => {
-                            let numOfArgs = frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.length - 1
-                            let res = {
-                                workVars: frm.workVars.vars->Js.Array2.copy,
-                                workVarTypes: frm.workVars.types->Js.Array2.copy,
-                                argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
-                                argExprs: frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfArgs),
-                                asrtLabel: frm.frame.label,
-                                asrtExpr: switch frm.workVars.hypIdxToExprWithWorkVars[numOfArgs] {
-                                    | None => raise(MmException({msg:`frm.workVars.hypIdxToExprWithWorkVars doesn't have asrtExpr.`}))
-                                    | Some(expr) => expr
-                                },
+                            switch extractNewDisj(
+                                ~ctx, 
+                                ~frmDisj=frm.frame.disj, 
+                                ~subs=frm.subs, 
+                                ~maxCtxVar=frm.workVars.numOfCtxVars-1
+                            ) {
+                                | None => Continue
+                                | Some(disj) => {
+                                    let numOfArgs = frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.length - 1
+                                    let res = {
+                                        workVars: frm.workVars.vars->Js.Array2.copy,
+                                        workVarTypes: frm.workVars.types->Js.Array2.copy,
+                                        disj,
+                                        argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
+                                        argExprs: frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfArgs),
+                                        asrtLabel: frm.frame.label,
+                                        asrtExpr: switch frm.workVars.hypIdxToExprWithWorkVars[numOfArgs] {
+                                            | None => raise(MmException({msg:`frm.workVars.hypIdxToExprWithWorkVars doesn't have asrtExpr.`}))
+                                            | Some(expr) => expr
+                                        },
+                                    }
+                                    // checkTypesInFloatingHyps(res)
+                                    onMatchFound(res)
+                                }
                             }
-                            // checkTypesInFloatingHyps(res)
-                            onMatchFound(res)
                         }
                     )
                 },
