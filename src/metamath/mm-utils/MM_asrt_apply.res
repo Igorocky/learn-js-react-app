@@ -152,6 +152,7 @@ let rec iterateSubstitutionsForHyps = (
         frm.subs->subsUndefineForLevel(~lockLevelToUndefineFrom=hypIdx)
         frm.workVars.vars->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
         frm.workVars.types->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
+        frm.workVars.hypIdxToExprWithWorkVars[hypIdx] = None
         res
     }
 
