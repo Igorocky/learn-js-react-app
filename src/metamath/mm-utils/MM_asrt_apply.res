@@ -215,11 +215,16 @@ let rec iterateSubstitutionsForHyps = (
 
 // }
 
-let extractNewDisj = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~maxCtxVar:int):option<disjMutable> => {
+let extractNewDisj = (
+    ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, 
+    ~subs:subs, 
+    ~maxCtxVar:int, 
+    ~isDisjInCtx:(int,int)=>bool
+):option<disjMutable> => {
     let result = disjMutableMake()
     let disjIsValid = verifyDisjoints(~frmDisj, ~subs, ~isDisjInCtx = (n,m) => {
         if (n <= maxCtxVar && m <= maxCtxVar) {
-            ctx->isDisj(n,m)
+            isDisjInCtx(n,m)
         } else {
             result->addDisjPairToMap(n,m)
             true
@@ -258,10 +263,10 @@ let iterateSubstitutionsForResult = (
 }
 
 let applyAssertions = (
-    ~ctx,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
+    ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
@@ -303,7 +308,7 @@ let applyAssertions = (
                                 ~hypIdx=0,
                                 ~onMatchFound = frm => {
                                     switch extractNewDisj(
-                                        ~ctx, 
+                                        ~isDisjInCtx, 
                                         ~frmDisj=frm.frame.disj, 
                                         ~subs=frm.subs, 
                                         ~maxCtxVar=frm.workVars.numOfCtxVars-1

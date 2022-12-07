@@ -216,7 +216,7 @@ let testApplyAssertions = (
 
     //when
     applyAssertions(
-        ~ctx=workCtx,
+        ~isDisjInCtx = workCtx->isDisj,
         ~frms,
         ~nonSyntaxTypes = preCtx->makeExprExn(["|-"]),
         ~statements = statements->Js_array2.map(((label,exprStr)) => {

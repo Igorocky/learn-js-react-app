@@ -18,10 +18,10 @@ type applyAssertionResult = {
 }
 
 let applyAssertions: (
-    ~ctx:mmContext,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
+    ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
     ~result:expr=?,
     ~parenCnt:parenCnt,
