@@ -13,13 +13,14 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
     let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
-    let proofTbl = []
+    let tbl = []
+    let hyps = ctx->getAllHyps
 
     //when
-    let targetIdx = findProof(~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl)
+    let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)
 
     //then
-    assertEq(true, proofTbl[targetIdx].proof->Belt_Option.isSome)
+    assertEq(true, tbl[targetIdx].proof->Belt_Option.isSome)
 }
 
 describe("findProof", _ => {

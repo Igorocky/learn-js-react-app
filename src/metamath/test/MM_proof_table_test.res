@@ -15,11 +15,12 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
     let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
-    let proofTbl = []
-    let targetIdx = findProof(~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl)
+    let tbl = []
+    let hyps = ctx->getAllHyps
+    let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)
 
     //when
-    let actualProof = createProof(ctx, proofTbl, targetIdx)
+    let actualProof = createProof(ctx, tbl, targetIdx)
 
     //then
     try {

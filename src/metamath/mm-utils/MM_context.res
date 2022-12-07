@@ -435,6 +435,15 @@ let getMandHypsPriv:(mmContextContents, expr) => array<hypothesis> = (ctx, expr)
 
 let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => getMandHypsPriv(ctx.contents, expr)
 
+let getAllHyps = ctx => {
+    let hyps = []
+    ctx->forEachHypothesisInDeclarationOrder(hyp => {
+        hyps->Js.Array2.push(hyp)->ignore
+        None
+    })->ignore
+    hyps
+}
+
 let forEachFramePriv: (mmContextContents, frame => option<'a>) => option<'a> = (ctx, consumer) => {
     ctx->forEachCtxInDeclarationOrder(ctx => {
         let result = ref(None)

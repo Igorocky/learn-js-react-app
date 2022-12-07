@@ -35,12 +35,13 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
     let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
-    let proofTbl = []
-    let targetIdx = findProof(~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl)
+    let hyps = ctx->getAllHyps
+    let tbl = []
+    let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)
     //proofTablePrint(ctx, proofTbl, "dddddddddddddd")
 
     //when
-    let actualSyntaxTree = buildSyntaxTree(ctx, proofTbl, targetIdx)
+    let actualSyntaxTree = buildSyntaxTree(ctx, tbl, targetIdx)
 
     //then
     //Js.Console.log2("actualSyntaxTree", actualSyntaxTree->syntaxTreeToSyntaxTreeTest->Expln_utils_common.stringify)

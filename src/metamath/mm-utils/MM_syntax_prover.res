@@ -3,9 +3,16 @@ open MM_substitution
 open MM_proof_table
 open MM_parser
 
-let suggestPossibleProofs = (~recToProve, ~frms, ~parenCnt, ~tbl, ~ctx) => {
+let suggestPossibleProofs = (
+    ~recToProve, 
+    ~frms, 
+    ~parenCnt, 
+    ~tbl, 
+    ~hyps:array<hypothesis>, 
+    ~isDisjInCtx:(int,int) => bool
+) => {
     let exprToProve = recToProve.expr
-    let foundHyp = ctx->forEachHypothesisInDeclarationOrder(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
+    let foundHyp = hyps->Expln_utils_common.arrForEach(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
     switch foundHyp {
         | Some(hyp) => recToProve.branches = Some([Hypothesis({label:hyp.label})])
         | None => {
@@ -22,7 +29,7 @@ let suggestPossibleProofs = (~recToProve, ~frms, ~parenCnt, ~tbl, ~ctx) => {
                         ~parenCnt,
                         ~consumer = subs => {
                             if (subs.isDefined->Js_array2.every(b=>b)) {
-                                if (verifyDisjoints(~frmDisj=frm.frame.disj, ~subs, ~isDisjInCtx=ctx->isDisj)) {
+                                if (verifyDisjoints(~frmDisj=frm.frame.disj, ~subs, ~isDisjInCtx)) {
                                     let args: array<int> = frm.frame.hyps->Js_array2.map(hyp => {
                                         let exprToProve = applySubs(
                                             ~frmExpr = hyp.expr, 
@@ -48,13 +55,20 @@ let suggestPossibleProofs = (~recToProve, ~frms, ~parenCnt, ~tbl, ~ctx) => {
     }
 }
 
-let findProof = (~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl as tbl) => {
+let findProof = (
+    ~frms, 
+    ~parenCnt, 
+    ~expr, 
+    ~tbl, 
+    ~hyps:array<hypothesis>, 
+    ~isDisjInCtx:(int,int) => bool
+) => {
     let targetIdx = tbl->addExprToProve(expr)
     tbl->markProved
     tbl->updateDist(targetIdx)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
     while (tbl[targetIdx].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {
-        suggestPossibleProofs(~tbl, ~ctx, ~frms, ~parenCnt,
+        suggestPossibleProofs(~tbl, ~frms, ~parenCnt, ~hyps, ~isDisjInCtx,
             ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
         )
         tbl->markProved
