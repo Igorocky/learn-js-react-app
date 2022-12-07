@@ -3,14 +3,14 @@ open MM_substitution
 open MM_proof_table
 open MM_parser
 
-let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => {
+let suggestPossibleProofs = (~recToProve, ~frms, ~parenCnt, ~tbl, ~ctx) => {
     let exprToProve = recToProve.expr
     let foundHyp = ctx->forEachHypothesisInDeclarationOrder(hyp => if hyp.expr->exprEq(exprToProve) { Some(hyp) } else { None })
     switch foundHyp {
         | Some(hyp) => recToProve.branches = Some([Hypothesis({label:hyp.label})])
         | None => {
             let branches = []
-            frameData->Js_array2.forEach(frm => {
+            frms->Js_array2.forEach(frm => {
                 if (frm.numOfHypsE == 0) {
                     iterateSubstitutions(
                         ~frmExpr = frm.frame.asrt,
@@ -48,13 +48,13 @@ let suggestPossibleProofs = (~recToProve, ~frameData, ~parenCnt, ~tbl, ~ctx) => 
     }
 }
 
-let findProof = (~ctx, ~frameProofData as frameData, ~parenCnt, ~expr, ~proofTbl as tbl) => {
+let findProof = (~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl as tbl) => {
     let targetIdx = tbl->addExprToProve(expr)
     tbl->markProved
     tbl->updateDist(targetIdx)
     let exprToProveIdx = ref(tbl->getNextExprToProveIdx)
     while (tbl[targetIdx].proof->Belt_Option.isNone && exprToProveIdx.contents->Belt_Option.isSome) {
-        suggestPossibleProofs(~tbl, ~ctx, ~frameData, ~parenCnt,
+        suggestPossibleProofs(~tbl, ~ctx, ~frms, ~parenCnt,
             ~recToProve=tbl[exprToProveIdx.contents->Belt_Option.getExn]
         )
         tbl->markProved

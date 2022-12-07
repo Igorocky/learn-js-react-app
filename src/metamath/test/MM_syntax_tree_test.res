@@ -33,10 +33,10 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
-    let frameProofData = prepareFrameProofData(ctx)
+    let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
     let proofTbl = []
-    let targetIdx = findProof(~ctx, ~frameProofData, ~parenCnt, ~expr, ~proofTbl)
+    let targetIdx = findProof(~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl)
     //proofTablePrint(ctx, proofTbl, "dddddddddddddd")
 
     //when

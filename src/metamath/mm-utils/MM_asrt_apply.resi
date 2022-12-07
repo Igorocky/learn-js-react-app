@@ -19,8 +19,8 @@ type applyAssertionResult = {
 
 let applyAssertions: (
     ~ctx:mmContext,
-    ~frms:frameProofData,
-//    ~frmsSyntax:frameProofData,
+    ~frms:array<frmSubsData>,
+//    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<labeledExpr>,
     ~result:expr=?,

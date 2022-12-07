@@ -11,12 +11,12 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
-    let frameProofData = prepareFrameProofData(ctx)
+    let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
     let proofTbl = []
 
     //when
-    let targetIdx = findProof(~ctx, ~frameProofData, ~parenCnt, ~expr, ~proofTbl)
+    let targetIdx = findProof(~ctx, ~frms, ~parenCnt, ~expr, ~proofTbl)
 
     //then
     assertEq(true, proofTbl[targetIdx].proof->Belt_Option.isSome)

@@ -209,7 +209,7 @@ let testApplyAssertions = (
     let preCtx = loadContext(ast, ~stopBefore, ~stopAfter, ())
     additionalStatements->Js_array2.forEach(preCtx->applySingleStmt)
     let workCtx = createContext(~parent=preCtx, ())
-    let frms = prepareFrameProofData(workCtx)
+    let frms = prepareFrmSubsData(workCtx)
     let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
@@ -296,7 +296,7 @@ describe("applyAssertions", _ => {
             ()
         )
     })
-    it("applies assertions when there is one statement and a result, for all assertions from demo0", _ => {
+    it("applies assertions when there is one statement and a result, for mp assertion from demo0", _ => {
         testApplyAssertions(
             ~mmFilePath = demo0,
             ~stopAfter = "th1",

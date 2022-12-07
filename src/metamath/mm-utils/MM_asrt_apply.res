@@ -75,7 +75,7 @@ let iterateCombinations = (
 }
 
 let stmtCanMatchHyp = (
-    ~frm:frameProofDataRec,
+    ~frm:frmSubsData,
     ~hypIdx:int,
     ~stmt:expr,
     ~hyp:expr,
@@ -99,9 +99,9 @@ let stmtCanMatchHyp = (
 }
 
 let iterateSubstitutionsWithWorkVars = (
-    ~frm:frameProofDataRec,
+    ~frm:frmSubsData,
     ~hypIdx: int,
-    ~consumer: frameProofDataRec => contunieInstruction
+    ~consumer: frmSubsData => contunieInstruction
 ):contunieInstruction => {
     let initialNumOfWorkVars = frm.workVars.vars->Js_array2.length
     let predefinedSubs = frm.subs.isDefined->Js_array2.copy
@@ -154,12 +154,12 @@ let iterateSubstitutionsWithWorkVars = (
 }
 
 let rec iterateSubstitutionsForHyps = (
-    ~frm:frameProofDataRec,
+    ~frm:frmSubsData,
     ~parenCnt:parenCnt,
     ~statements:array<labeledExpr>,
     ~comb:array<int>,
     ~hypIdx:int,
-    ~onMatchFound: frameProofDataRec => contunieInstruction
+    ~onMatchFound: frmSubsData => contunieInstruction
 ):contunieInstruction => {
     if (hypIdx == comb->Js.Array2.length) {
         iterateSubstitutionsWithWorkVars(
@@ -233,10 +233,10 @@ let extractNewDisj = (~ctx, ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~
 }
 
 let iterateSubstitutionsForResult = (
-    ~frm:frameProofDataRec,
+    ~frm:frmSubsData,
     ~result:option<expr>,
     ~parenCnt:parenCnt,
-    ~consumer:frameProofDataRec=>contunieInstruction,
+    ~consumer:frmSubsData=>contunieInstruction,
 ):contunieInstruction => {
     switch result {
         | None => consumer(frm)
@@ -259,8 +259,8 @@ let iterateSubstitutionsForResult = (
 
 let applyAssertions = (
     ~ctx,
-    ~frms:frameProofData,
-//    ~frmsSyntax:frameProofData,
+    ~frms:array<frmSubsData>,
+//    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
     ~statements:array<labeledExpr>,
     ~result:option<expr>=?,

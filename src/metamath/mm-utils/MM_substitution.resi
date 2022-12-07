@@ -49,8 +49,7 @@ let iterateSubstitutions: (
     ~consumer: subs => contunieInstruction
 ) => contunieInstruction
 
-//todo: rename to frmSubsData
-type frameProofDataRec = {
+type frmSubsData = {
     frame: frame,
     hypsE: array<hypothesis>,
     numOfHypsE:int,
@@ -60,8 +59,7 @@ type frameProofDataRec = {
     subs:subs,
     workVars:workVars,
 }
-type frameProofData = array<frameProofDataRec>
-let prepareFrameProofData: mmContext => frameProofData
+let prepareFrmSubsData: mmContext => array<frmSubsData>
 let applySubs: (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int) => expr
 let verifyDisjoints: (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDisjInCtx:(int,int)=>bool) => bool
 

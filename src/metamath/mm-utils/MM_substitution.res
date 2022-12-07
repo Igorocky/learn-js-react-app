@@ -35,7 +35,7 @@ type subs = {
     isDefined: array<bool>,
 }
 
-type frameProofDataRec = {
+type frmSubsData = {
     frame: frame,
     hypsE: array<hypothesis>,
     numOfHypsE:int,
@@ -45,8 +45,6 @@ type frameProofDataRec = {
     subs:subs,
     workVars:workVars,
 }
-
-type frameProofData = array<frameProofDataRec>
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
     if (leftConstPartIdx < 0) {
@@ -451,7 +449,7 @@ let createSubs = (~numOfVars:int) => {
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
 
-let prepareFrameProofData = ctx => {
+let prepareFrmSubsData = ctx => {
     let frames = []
     let numOfCtxVars = ctx->getNumOfVars
     ctx->forEachFrame(frame => {
