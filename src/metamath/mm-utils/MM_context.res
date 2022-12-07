@@ -45,6 +45,7 @@ type rec mmContextContents = {
 }
 
 type mmContext = ref<mmContextContents>
+type mmContextReduced = mmContext
 
 // cdblk #utils ===========================================================================================
 
@@ -608,6 +609,10 @@ let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
             frames: mutableMapStrMake(),
         }
     )
+}
+
+let createContextReduced = ctx => {
+    
 }
 
 let openChildContext: mmContext => unit = ctx => {

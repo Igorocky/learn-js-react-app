@@ -1,6 +1,7 @@
 open MM_context
 open MM_parser
 open MM_proof_verifier
+open MM_substitution
 
 type exprSource =
     | Hypothesis({label:string})
@@ -13,7 +14,9 @@ type proofRecord = {
     mutable branches: option<array<exprSource>>
 }
 
-type proofTable = array<proofRecord>
+type proofTable = {
+    frms: array<frmSubsData>,
+}
 
 let getNextExprToProveIdx: proofTable => option<int>
 let addExprToProve: (proofTable, expr) => int

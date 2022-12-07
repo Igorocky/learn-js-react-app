@@ -20,7 +20,7 @@ type varGroup = {
 }
 
 type workVars = {
-    numOfCtxVars: int,
+    mutable numOfDeclaredVars: int,
     vars: array<int>,
     types: array<int>,
     hypIdxToExprWithWorkVars: array<option<expr>>,
@@ -34,10 +34,32 @@ type subs = {
     isDefined: array<bool>,
 }
 
+type frameReduced = {
+    disj: Belt.Map.Int.t<Belt_SetInt.t>,
+    hyps: array<hypothesis>,
+    asrt: expr,
+    label: string,
+    varTypes: array<int>,
+    numOfVars: int,
+    numOfArgs: int,
+}
+
+type frmSubsData = {
+    frame: frameReduced,
+    hypsE: array<hypothesis>,
+    numOfHypsE:int,
+    frmConstParts:array<constParts>,
+    constParts:array<constParts>,
+    varGroups:array<array<varGroup>>,
+    subs:subs,
+    workVars:workVars,
+}
+
 let createConstParts: expr => constParts
 let createMatchingConstParts: constParts => constParts
 let createVarGroups: (~frmExpr:expr, ~frmConstParts:constParts) => array<varGroup>
 let createSubs: (~numOfVars:int) => subs
+let prepareFrmSubsData: mmContext => array<frmSubsData>
 let iterateSubstitutions: (
     ~frmExpr:expr, 
     ~expr:expr, 
@@ -48,18 +70,6 @@ let iterateSubstitutions: (
     ~parenCnt:parenCnt,
     ~consumer: subs => contunieInstruction
 ) => contunieInstruction
-
-type frmSubsData = {
-    frame: frame,
-    hypsE: array<hypothesis>,
-    numOfHypsE:int,
-    frmConstParts:array<constParts>,
-    constParts:array<constParts>,
-    varGroups:array<array<varGroup>>,
-    subs:subs,
-    workVars:workVars,
-}
-let prepareFrmSubsData: mmContext => array<frmSubsData>
 let applySubs: (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int) => expr
 let verifyDisjoints: (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDisjInCtx:(int,int)=>bool) => bool
 

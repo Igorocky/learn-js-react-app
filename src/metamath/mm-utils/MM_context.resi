@@ -3,6 +3,7 @@ open MM_parser
 type expr = array<int>
 
 type mmContext
+type mmContextReduced
 
 type hypothesisType = F | E
 
@@ -27,6 +28,7 @@ type frame = {
 }
 
 let createContext: (~parent:mmContext=?, ()) => mmContext
+let createContextReduced: mmContext => mmContextReduced
 let applySingleStmt: (mmContext, stmt) => unit
 let openChildContext: mmContext => unit
 let closeChildContext: mmContext => unit
