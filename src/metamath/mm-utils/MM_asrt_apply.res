@@ -81,32 +81,37 @@ let stmtCanMatchHyp = (
     ~hyp:expr,
     ~parenCnt:parenCnt,
 ):bool => {
-    let res = ref(false)
-    iterateSubstitutions(
-        ~frmExpr = hyp,
-        ~expr = stmt,
-        ~frmConstParts = frm.frmConstParts[hypIdx], 
-        ~constParts = frm.constParts[hypIdx], 
-        ~varGroups = frm.varGroups[hypIdx],
-        ~subs = frm.subs,
-        ~parenCnt,
-        ~consumer = subs => {
-            res.contents = true
-            Stop
-        }
-    )->ignore
-    res.contents
+    if (hyp[0] != stmt[0]) {
+        false
+    } else {
+        let res = ref(false)
+        iterateSubstitutions(
+            ~frmExpr = hyp,
+            ~expr = stmt,
+            ~frmConstParts = frm.frmConstParts[hypIdx], 
+            ~constParts = frm.constParts[hypIdx], 
+            ~varGroups = frm.varGroups[hypIdx],
+            ~subs = frm.subs,
+            ~parenCnt,
+            ~consumer = subs => {
+                res.contents = true
+                Stop
+            }
+        )->ignore
+        res.contents
+    }
 }
 
 let iterateSubstitutionsWithWorkVars = (
+    ~workVars:workVars,
     ~frm:frmSubsData,
     ~hypIdx: int,
-    ~consumer: frmSubsData => contunieInstruction
+    ~continue: () => contunieInstruction
 ):contunieInstruction => {
-    let initialNumOfWorkVars = frm.workVars.vars->Js_array2.length
+    let initialNumOfWorkVars = workVars.vars->Js_array2.length
     let predefinedSubs = frm.subs.isDefined->Js_array2.copy
 
-    let nextVar = ref(frm.workVars.numOfCtxVars + frm.workVars.vars->Js_array2.length)
+    let nextVar = ref(workVars.numOfDeclaredVars + workVars.vars->Js_array2.length)
     let frmVars = []
     let newVars = []
     let newVarTypes = []
@@ -138,34 +143,36 @@ let iterateSubstitutionsWithWorkVars = (
         frm.subs.ends[frmVar] = 0
         frm.subs.isDefined[frmVar] = true
 
-        frm.workVars.vars->Js_array2.push(workVar)->ignore
-        frm.workVars.types->Js_array2.push(workVarType)->ignore
+        workVars.vars->Js_array2.push(workVar)->ignore
+        workVars.types->Js_array2.push(workVarType)->ignore
     }
-    frm.workVars.hypIdxToExprWithWorkVars[hypIdx] = Some(newExprWithWorkVars)
+    workVars.hypIdxToExprWithWorkVars[hypIdx] = Some(newExprWithWorkVars)
 
-    let res = consumer(frm)
+    let res = continue()
 
     predefinedSubs->Js_array2.forEachi((predefined,i) => frm.subs.isDefined[i]=predefined)
-    frm.workVars.vars->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
-    frm.workVars.types->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
-    frm.workVars.hypIdxToExprWithWorkVars[hypIdx] = None
+    workVars.vars->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
+    workVars.types->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
+    workVars.hypIdxToExprWithWorkVars[hypIdx] = None
 
     res
 }
 
 let rec iterateSubstitutionsForHyps = (
+    ~workVars:workVars,
     ~frm:frmSubsData,
     ~parenCnt:parenCnt,
     ~statements:array<labeledExpr>,
     ~comb:array<int>,
     ~hypIdx:int,
-    ~onMatchFound: frmSubsData => contunieInstruction
+    ~onMatchFound: () => contunieInstruction
 ):contunieInstruction => {
     if (hypIdx == comb->Js.Array2.length) {
         iterateSubstitutionsWithWorkVars(
+            ~workVars,
             ~frm,
             ~hypIdx,
-            ~consumer = onMatchFound
+            ~continue = onMatchFound
         )
     } else if (comb[hypIdx] >= 0) {
         iterateSubstitutions(
@@ -178,6 +185,7 @@ let rec iterateSubstitutionsForHyps = (
             ~parenCnt,
             ~consumer = subs => {
                 iterateSubstitutionsForHyps(
+                    ~workVars,
                     ~frm,
                     ~parenCnt,
                     ~statements,
@@ -189,10 +197,12 @@ let rec iterateSubstitutionsForHyps = (
         )
     } else {
         iterateSubstitutionsWithWorkVars(
+            ~workVars,
             ~frm,
             ~hypIdx,
-            ~consumer = frm => {
+            ~continue = () => {
                 iterateSubstitutionsForHyps(
+                    ~workVars,
                     ~frm,
                     ~parenCnt,
                     ~statements,
@@ -241,10 +251,10 @@ let iterateSubstitutionsForResult = (
     ~frm:frmSubsData,
     ~result:option<expr>,
     ~parenCnt:parenCnt,
-    ~consumer:frmSubsData=>contunieInstruction,
+    ~consumer:subs=>contunieInstruction,
 ):contunieInstruction => {
     switch result {
-        | None => consumer(frm)
+        | None => consumer(frm.subs)
         | Some(expr) => {
             iterateSubstitutions(
                 ~frmExpr = frm.frame.asrt,
@@ -254,15 +264,14 @@ let iterateSubstitutionsForResult = (
                 ~varGroups = frm.varGroups[frm.numOfHypsE],
                 ~subs = frm.subs,
                 ~parenCnt,
-                ~consumer = subs => {
-                    consumer(frm)
-                }
+                ~consumer
             )
         }
     }
 }
 
 let applyAssertions = (
+    ~numOfDeclaredVars:int,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
@@ -270,19 +279,25 @@ let applyAssertions = (
     ~statements:array<labeledExpr>,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
-    ~frameFilter:frame=>bool=_=>true,
+    ~frameFilter:frameReduced=>bool=_=>true,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
     ()
 ):unit => {
     let numOfStmts = statements->Js_array2.length
     frms->Js_array2.forEach(frm => {
         if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0]) && frameFilter(frm.frame)) {
-            let numOfHyps = frm.hypsE->Js_array2.length
             iterateSubstitutionsForResult(
                 ~frm,
                 ~result,
                 ~parenCnt,
-                ~consumer = frm => {
+                ~consumer = subs => {
+                    let numOfHyps = frm.hypsE->Js_array2.length
+                    let workVars = {
+                        numOfDeclaredVars,
+                        vars: [],
+                        types: [],
+                        hypIdxToExprWithWorkVars: Belt_Array.make(numOfHyps+1, None)
+                    }
                     iterateCombinations(
                         ~numOfStmts,
                         ~numOfHyps,
@@ -301,29 +316,29 @@ let applyAssertions = (
                         },
                         ~combinationConsumer = comb => {
                             iterateSubstitutionsForHyps(
+                                ~workVars,
                                 ~frm,
                                 ~parenCnt,
                                 ~statements,
                                 ~comb,
                                 ~hypIdx=0,
-                                ~onMatchFound = frm => {
+                                ~onMatchFound = () => {
                                     switch extractNewDisj(
                                         ~isDisjInCtx, 
                                         ~frmDisj=frm.frame.disj, 
                                         ~subs=frm.subs, 
-                                        ~maxCtxVar=frm.workVars.numOfCtxVars-1
+                                        ~maxCtxVar=numOfDeclaredVars-1
                                     ) {
                                         | None => Continue
                                         | Some(disj) => {
-                                            let numOfArgs = frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.length - 1
                                             let res = {
-                                                workVars: frm.workVars.vars->Js.Array2.copy,
-                                                workVarTypes: frm.workVars.types->Js.Array2.copy,
+                                                workVars: workVars.vars->Js.Array2.copy,
+                                                workVarTypes: workVars.types->Js.Array2.copy,
                                                 disj,
                                                 argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
-                                                argExprs: frm.workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfArgs),
+                                                argExprs: workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfHyps),
                                                 asrtLabel: frm.frame.label,
-                                                asrtExpr: switch frm.workVars.hypIdxToExprWithWorkVars[numOfArgs] {
+                                                asrtExpr: switch workVars.hypIdxToExprWithWorkVars[numOfHyps] {
                                                     | None => raise(MmException({msg:`frm.workVars.hypIdxToExprWithWorkVars doesn't have asrtExpr.`}))
                                                     | Some(expr) => expr
                                                 },

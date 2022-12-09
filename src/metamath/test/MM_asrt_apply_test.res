@@ -133,7 +133,7 @@ let testApplyAssertions = (
     ~stopAfter:string="",
     ~additionalStatements:array<stmt>,
     ~statements:array<(string,string)>,
-    ~frameFilter:frame=>bool=_=>true,
+    ~frameFilter:frameReduced=>bool=_=>true,
     ~result:option<string>=?,
     ~fileWithExpectedResult:string,
     ()
@@ -216,6 +216,7 @@ let testApplyAssertions = (
 
     //when
     applyAssertions(
+        ~numOfDeclaredVars = workCtx->getNumOfVars,
         ~isDisjInCtx = workCtx->isDisj,
         ~frms,
         ~nonSyntaxTypes = preCtx->makeExprExn(["|-"]),

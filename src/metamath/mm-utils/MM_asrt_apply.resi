@@ -18,6 +18,7 @@ type applyAssertionResult = {
 }
 
 let applyAssertions: (
+    ~numOfDeclaredVars:int,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
@@ -25,7 +26,7 @@ let applyAssertions: (
     ~statements:array<labeledExpr>,
     ~result:expr=?,
     ~parenCnt:parenCnt,
-    ~frameFilter:frame=>bool=?,
+    ~frameFilter:frameReduced=>bool=?,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
     ()
 ) => unit

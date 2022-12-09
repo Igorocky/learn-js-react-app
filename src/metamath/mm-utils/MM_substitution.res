@@ -21,7 +21,7 @@ type varGroup = {
 }
 
 type workVars = {
-    numOfCtxVars: int,
+    numOfDeclaredVars:int,
     vars: array<int>,
     types: array<int>,
     hypIdxToExprWithWorkVars: array<option<expr>>,
@@ -35,15 +35,24 @@ type subs = {
     isDefined: array<bool>,
 }
 
+type frameReduced = {
+    disj: Belt.Map.Int.t<Belt_SetInt.t>,
+    hyps: array<hypothesis>,
+    asrt: expr,
+    label: string,
+    varTypes: array<int>,
+    numOfVars: int,
+    numOfArgs: int,
+}
+
 type frmSubsData = {
-    frame: frame,
+    frame: frameReduced,
     hypsE: array<hypothesis>,
     numOfHypsE:int,
     frmConstParts:array<constParts>,
     constParts:array<constParts>,
     varGroups:array<array<varGroup>>,
     subs:subs,
-    workVars:workVars,
 }
 
 let lengthOfGap = (leftConstPartIdx:int, constParts:array<array<int>>, exprLength:int):int => {
@@ -450,7 +459,7 @@ let createSubs = (~numOfVars:int) => {
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
 
 let prepareFrmSubsData = ctx => {
-    let frames = []
+    let frms = []
     let numOfCtxVars = ctx->getNumOfVars
     ctx->forEachFrame(frame => {
         let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
@@ -476,24 +485,26 @@ let prepareFrmSubsData = ctx => {
         varGroupsArr->Js.Array2.push(varGroups)->ignore
 
         let subs = createSubs(~numOfVars=frame.numOfVars)
-        frames->Js_array2.push({
-            frame,
+        frms->Js_array2.push({
+            frame: {
+                disj: frame.disj,
+                hyps: frame.hyps,
+                asrt: frame.asrt,
+                label: frame.label,
+                varTypes: frame.varTypes,
+                numOfVars: frame.numOfVars,
+                numOfArgs: frame.numOfArgs,
+            },
             hypsE,
             numOfHypsE: hypsE->Js.Array2.length,
             frmConstParts:frmConstPartsArr,
             constParts:constPartsArr,
             varGroups:varGroupsArr,
             subs,
-            workVars: {
-                numOfCtxVars,
-                vars: [],
-                types: [],
-                hypIdxToExprWithWorkVars: Belt_Array.make(hypsE->Js_array2.length+1, None)
-            }
         })->ignore
         None
     })->ignore
-    frames
+    frms
 }
 
 let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
