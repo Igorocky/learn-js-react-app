@@ -20,9 +20,9 @@ type varGroup = {
 }
 
 type workVars = {
-    numOfDeclaredVars:int,
-    vars: array<int>,
-    types: array<int>,
+    maxVar:int,
+    newVars: array<int>,
+    newVarTypes: array<int>,
     hypIdxToExprWithWorkVars: array<option<expr>>,
 }
 

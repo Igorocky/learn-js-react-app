@@ -18,7 +18,7 @@ type applyAssertionResult = {
 }
 
 let applyAssertions: (
-    ~numOfDeclaredVars:int,
+    ~maxVar:int,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,

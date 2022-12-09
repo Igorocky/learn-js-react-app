@@ -108,10 +108,10 @@ let iterateSubstitutionsWithWorkVars = (
     ~hypIdx: int,
     ~continue: () => contunieInstruction
 ):contunieInstruction => {
-    let initialNumOfWorkVars = workVars.vars->Js_array2.length
+    let initialNumOfWorkVars = workVars.newVars->Js_array2.length
     let predefinedSubs = frm.subs.isDefined->Js_array2.copy
 
-    let nextVar = ref(workVars.numOfDeclaredVars + workVars.vars->Js_array2.length)
+    let nextVar = ref(workVars.maxVar + 1 + workVars.newVars->Js_array2.length)
     let frmVars = []
     let newVars = []
     let newVarTypes = []
@@ -135,24 +135,24 @@ let iterateSubstitutionsWithWorkVars = (
     let maxI = frmVars->Js_array2.length - 1
     for i in 0 to maxI {
         let frmVar = frmVars[i]
-        let workVar = newVars[i]
-        let workVarType = newVarTypes[i]
+        let newVar = newVars[i]
+        let newVarType = newVarTypes[i]
 
-        frm.subs.exprs[frmVar] = [workVar]
+        frm.subs.exprs[frmVar] = [newVar]
         frm.subs.begins[frmVar] = 0
         frm.subs.ends[frmVar] = 0
         frm.subs.isDefined[frmVar] = true
 
-        workVars.vars->Js_array2.push(workVar)->ignore
-        workVars.types->Js_array2.push(workVarType)->ignore
+        workVars.newVars->Js_array2.push(newVar)->ignore
+        workVars.newVarTypes->Js_array2.push(newVarType)->ignore
     }
     workVars.hypIdxToExprWithWorkVars[hypIdx] = Some(newExprWithWorkVars)
 
     let res = continue()
 
     predefinedSubs->Js_array2.forEachi((predefined,i) => frm.subs.isDefined[i]=predefined)
-    workVars.vars->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
-    workVars.types->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
+    workVars.newVars->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
+    workVars.newVarTypes->Js_array2.removeFromInPlace(~pos=initialNumOfWorkVars)->ignore
     workVars.hypIdxToExprWithWorkVars[hypIdx] = None
 
     res
@@ -271,7 +271,7 @@ let iterateSubstitutionsForResult = (
 }
 
 let applyAssertions = (
-    ~numOfDeclaredVars:int,
+    ~maxVar:int,
     ~frms:array<frmSubsData>,
 //    ~frmsSyntax:array<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
@@ -293,9 +293,9 @@ let applyAssertions = (
                 ~consumer = subs => {
                     let numOfHyps = frm.hypsE->Js_array2.length
                     let workVars = {
-                        numOfDeclaredVars,
-                        vars: [],
-                        types: [],
+                        maxVar,
+                        newVars: [],
+                        newVarTypes: [],
                         hypIdxToExprWithWorkVars: Belt_Array.make(numOfHyps+1, None)
                     }
                     iterateCombinations(
@@ -327,13 +327,13 @@ let applyAssertions = (
                                         ~isDisjInCtx, 
                                         ~frmDisj=frm.frame.disj, 
                                         ~subs=frm.subs, 
-                                        ~maxCtxVar=numOfDeclaredVars-1
+                                        ~maxCtxVar=maxVar
                                     ) {
                                         | None => Continue
                                         | Some(disj) => {
                                             let res = {
-                                                workVars: workVars.vars->Js.Array2.copy,
-                                                workVarTypes: workVars.types->Js.Array2.copy,
+                                                workVars: workVars.newVars->Js.Array2.copy,
+                                                workVarTypes: workVars.newVarTypes->Js.Array2.copy,
                                                 disj,
                                                 argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
                                                 argExprs: workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfHyps),
