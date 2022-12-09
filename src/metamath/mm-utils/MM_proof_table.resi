@@ -8,6 +8,7 @@ type exprSource =
     | Assertion({args:array<int>, label:string})
 
 type proofRecord = {
+    label: string,
     expr:expr,
     mutable proof:option<exprSource>,
     mutable dist:int,
@@ -15,7 +16,9 @@ type proofRecord = {
 }
 
 type proofTable = {
-    frms: array<frmSubsData>,
+    existingIds: Belt_SetString.t,
+    frms: Belt_MapString.t<frmSubsData>,
+    preVarsNum: int,
 }
 
 let getNextExprToProveIdx: proofTable => option<int>
