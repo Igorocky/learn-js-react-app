@@ -65,3 +65,9 @@ let disjMutableMake: unit => disjMutable
 let addDisjPairToMap: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool
 let disjForEach: (disjMutable, array<int> => unit) => unit
+
+module ExprCmp: {
+  type identity
+  type t = expr
+  let cmp: Belt_Id.cmp<t, identity>
+}

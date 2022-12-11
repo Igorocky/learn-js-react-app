@@ -191,15 +191,40 @@ let addDisjPairToMap = (disjMap:disjMutable, n, m) => {
 }
 
 let exprEq: (expr,expr) => bool = (a,b) => {
-    let len = a->Js_array2.length
-    let eq = ref(len == b->Js_array2.length)
-    let i = ref(0)
-    while (eq.contents && i.contents < len) {
-        eq.contents = a[i.contents] == b[i.contents]
-        i.contents = i.contents + 1
+    let len1 = a->Js_array2.length
+    let len2 = b->Js_array2.length
+    if (len1 != len2) {
+        false
+    } else {
+        let eq = ref(true)
+        let i = ref(0)
+        while (eq.contents && i.contents < len1) {
+            eq.contents = a[i.contents] == b[i.contents]
+            i.contents = i.contents + 1
+        }
+        eq.contents
     }
-    eq.contents
 }
+
+module ExprCmp = Belt.Id.MakeComparable({
+    type t = expr
+    let cmp = (e1,e2) => {
+        let len1 = e1->Js_array2.length
+        let len2 = e2->Js_array2.length
+        switch Expln_utils_common.intCmp(len1, len2) {
+            | 0 => {
+                let res = ref(0)
+                let i = ref(0)
+                while (i.contents < len1 && res.contents == 0) {
+                    res.contents = Expln_utils_common.intCmp(e1[i.contents], e2[i.contents])
+                    i.contents = i.contents + 1
+                }
+                res.contents
+            }
+            | r => r
+        }
+    }
+})
 // cdblk #search ===========================================================================================
 
 let rec forEachCtxInDeclarationOrder = (ctx:mmContextContents,consumer:mmContextContents=>option<'a>):option<'a> => {
@@ -916,7 +941,7 @@ let generateLabels = (ctx:mmContext, ~prefix:string, ~amount:int): array<string>
     let maxI = amount - 1
     let cnt = ref(0)
     let res = []
-    for i in 0 to maxI {
+    for _ in 0 to maxI {
         cnt.contents = cnt.contents + 1
         let newName = ref(prefix ++ cnt.contents->Belt_Int.toString)
         while (ctx->isHyp(newName.contents) || ctx->isAsrt(newName.contents)) {

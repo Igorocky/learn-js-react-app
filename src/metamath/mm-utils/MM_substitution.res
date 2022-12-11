@@ -460,7 +460,6 @@ let createSubs = (~numOfVars:int) => {
 
 let prepareFrmSubsData = ctx => {
     let frms = []
-    let numOfCtxVars = ctx->getNumOfVars
     ctx->forEachFrame(frame => {
         let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
 

@@ -152,26 +152,6 @@ let updateDist: (proofTable,int) => unit = (tbl,targetIdx) => {
     }
 }
 
-module ExprCmp = Belt.Id.MakeComparable({
-    type t = expr
-    let cmp = (e1,e2) => {
-        let len1 = e1->Js_array2.length
-        let len2 = e2->Js_array2.length
-        switch Expln_utils_common.intCmp(len1, len2) {
-            | 0 => {
-                let res = ref(0)
-                let i = ref(0)
-                while (i.contents < len1 && res.contents == 0) {
-                    res.contents = Expln_utils_common.intCmp(e1[i.contents], e2[i.contents])
-                    i.contents = i.contents + 1
-                }
-                res.contents
-            }
-            | r => r
-        }
-    }
-})
-
 let traverseRecordsInRpnOrder = (tbl,targetIdx,~onUse,~onReuse) => {
     let savedExprs = Belt_MutableSet.make(~id=module(ExprCmp))
     let reusedExprsSet = Belt_MutableSet.make(~id=module(ExprCmp))

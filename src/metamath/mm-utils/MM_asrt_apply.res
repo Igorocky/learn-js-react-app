@@ -93,7 +93,7 @@ let stmtCanMatchHyp = (
             ~varGroups = frm.varGroups[hypIdx],
             ~subs = frm.subs,
             ~parenCnt,
-            ~consumer = subs => {
+            ~consumer = _ => {
                 res.contents = true
                 Stop
             }
@@ -183,7 +183,7 @@ let rec iterateSubstitutionsForHyps = (
             ~varGroups = frm.varGroups[hypIdx],
             ~subs = frm.subs,
             ~parenCnt,
-            ~consumer = subs => {
+            ~consumer = _ => {
                 iterateSubstitutionsForHyps(
                     ~workVars,
                     ~frm,
@@ -290,7 +290,7 @@ let applyAssertions = (
                 ~frm,
                 ~result,
                 ~parenCnt,
-                ~consumer = subs => {
+                ~consumer = _ => {
                     let numOfHyps = frm.hypsE->Js_array2.length
                     let workVars = {
                         maxVar,
