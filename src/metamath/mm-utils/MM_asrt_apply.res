@@ -22,22 +22,41 @@ let rec iterateCombinationsRec = (
     ~candidatesPerHyp:array<array<int>>,
     ~comb:array<int>,
     ~hypIdx:int,
+    ~skipCombinationsWithEmptyArgs:bool,
+    ~skipCombinationsWithoutEmptyArgs:bool,
     ~combinationConsumer:array<int>=>contunieInstruction,
 ):contunieInstruction => {
     if (hypIdx == comb->Js.Array2.length) {
-        combinationConsumer(comb)
+        let thereIsEmptyArg = comb->Js.Array2.some(a => a == -1)
+        if (thereIsEmptyArg) {
+            if (skipCombinationsWithEmptyArgs) {
+                Continue
+            } else {
+                combinationConsumer(comb)
+            }
+        } else {
+            if (skipCombinationsWithoutEmptyArgs) {
+                Continue
+            } else {
+                combinationConsumer(comb)
+            }
+        }
     } else {
         let res = ref(Continue)
         let c = ref(0)
         let maxC = candidatesPerHyp[hypIdx]->Js.Array2.length-1
         while (res.contents == Continue && c.contents <= maxC) {
             comb[hypIdx] = candidatesPerHyp[hypIdx][c.contents]
-            res.contents = iterateCombinationsRec(
-                ~candidatesPerHyp,
-                ~comb,
-                ~hypIdx = hypIdx+1,
-                ~combinationConsumer
-            )
+            if (!(comb[hypIdx] == -1 && skipCombinationsWithEmptyArgs)) {
+                res.contents = iterateCombinationsRec(
+                    ~candidatesPerHyp,
+                    ~comb,
+                    ~hypIdx = hypIdx+1,
+                    ~skipCombinationsWithEmptyArgs,
+                    ~skipCombinationsWithoutEmptyArgs,
+                    ~combinationConsumer
+                )
+            }
             c.contents = c.contents + 1
         }
         res.contents
@@ -63,12 +82,26 @@ let iterateCombinations = (
     let thereIsHypWithoutAnyCandidate = candidatesPerHyp->Js_array2.some(candidates => candidates->Js_array2.length == 0)
     if (!thereIsHypWithoutAnyCandidate) {
         let comb = Belt_Array.make(numOfHyps, 0)
-        iterateCombinationsRec(
+        let continue = iterateCombinationsRec(
             ~candidatesPerHyp,
             ~comb,
             ~hypIdx = 0,
+            ~skipCombinationsWithEmptyArgs=true,
+            ~skipCombinationsWithoutEmptyArgs=false,
             ~combinationConsumer
         )
+        if (continue == Continue) {
+            iterateCombinationsRec(
+                ~candidatesPerHyp,
+                ~comb,
+                ~hypIdx = 0,
+                ~skipCombinationsWithEmptyArgs=false,
+                ~skipCombinationsWithoutEmptyArgs=true,
+                ~combinationConsumer
+            )
+        } else {
+            continue
+        }
     } else {
         Continue
     }
