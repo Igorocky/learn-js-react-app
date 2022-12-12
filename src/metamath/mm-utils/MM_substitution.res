@@ -548,17 +548,19 @@ let verifyDisjoints = (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDis
                 | Some(set) => {
                     set->Belt_SetInt.forEach(m => {
                         if (res.contents) {
+                            let nExpr = subs.exprs[n]
                             let nExprBegin = subs.begins[n]
                             let nExprEnd = subs.ends[n]
+                            let mExpr = subs.exprs[m]
                             let mExprBegin = subs.begins[m]
                             let mExprEnd = subs.ends[m]
                             for ni in nExprBegin to nExprEnd {
                                 if (res.contents) {
-                                    let ns = subs.exprs[n][ni]
+                                    let ns = nExpr[ni]
                                     if (ns >= 0) {
                                         for mi in mExprBegin to mExprEnd {
                                             if (res.contents) {
-                                                let ms = subs.exprs[m][mi]
+                                                let ms = mExpr[mi]
                                                 if (ms >= 0) {
                                                     res.contents = ns != ms && isDisjInCtx(ns,ms)
                                                 }
