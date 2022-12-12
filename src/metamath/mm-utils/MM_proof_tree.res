@@ -8,7 +8,7 @@ open MM_parenCounter
 type rootStmt = {
     label: string,
     expr: expr,
-    justification: option<string>,
+    justification: option<array<string>>,
 }
 
 type rec proofTreeNode = {
@@ -124,7 +124,7 @@ let markProved = ( node:proofTreeNode ) => {
 
 let proveStmt = (
     ~tree:proofTree,
-    ~stmts:array<labeledExpr>,
+    ~stmts:array<rootStmt>,
     ~stmtIdx:int,
     ~searchDepth:int,
 ) => {
@@ -134,39 +134,46 @@ let proveStmt = (
 
     let addParentsWithoutNewVars = (node) => {
         tree.frms->Belt_MapString.forEach((_,frm) => {
-            let frmExpr = frm.frame.asrt
-            let expr = node.expr
-            if (frmExpr[0] == expr[0]) {
-                iterateSubstitutions(
-                    ~frmExpr,
-                    ~expr,
-                    ~frmConstParts = frm.frmConstParts[frm.numOfHypsE], 
-                    ~constParts = frm.constParts[frm.numOfHypsE], 
-                    ~varGroups = frm.varGroups[frm.numOfHypsE],
-                    ~subs = frm.subs,
-                    ~parenCnt=tree.parenCnt,
-                    ~consumer = subs => {
-                        if (subs.isDefined->Js_array2.every(b=>b)
-                            && verifyDisjoints(~frmDisj=frm.frame.disj, ~subs, ~isDisjInCtx=tree.disj->disjContains)) {
-                            let args = frm.frame.hyps->Js_array2.map(hyp => {
-                                let newExprToProve = applySubs(
-                                    ~frmExpr = hyp.expr, 
-                                    ~subs,
-                                    ~createWorkVar = 
-                                        _ => raise(MmException({msg:`Work variables are not supported in addParentsWithoutNewVars().`}))
-                                )
-                                let arg = addExprToProve(~tree, ~expr=newExprToProve, ~dist=node.dist+1, ~child=Some(node))
-                                nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
-                                arg
-                            })
-                            node.parents->Belt_Option.getExn->Js_array2.push(Assertion({
-                                args,
-                                label: frm.frame.label
-                            }))->ignore
+            if (node.proof->Belt.Option.isNone) {
+                let frmExpr = frm.frame.asrt
+                let expr = node.expr
+                if (frmExpr[0] == expr[0]) {
+                    iterateSubstitutions(
+                        ~frmExpr,
+                        ~expr,
+                        ~frmConstParts = frm.frmConstParts[frm.numOfHypsE], 
+                        ~constParts = frm.constParts[frm.numOfHypsE], 
+                        ~varGroups = frm.varGroups[frm.numOfHypsE],
+                        ~subs = frm.subs,
+                        ~parenCnt=tree.parenCnt,
+                        ~consumer = subs => {
+                            if (subs.isDefined->Js_array2.every(b=>b)
+                                && verifyDisjoints(~frmDisj=frm.frame.disj, ~subs, ~isDisjInCtx=tree.disj->disjContains)) {
+                                let args = frm.frame.hyps->Js_array2.map(hyp => {
+                                    let newExprToProve = applySubs(
+                                        ~frmExpr = hyp.expr, 
+                                        ~subs,
+                                        ~createWorkVar = 
+                                            _ => raise(MmException({msg:`Work variables are not supported in addParentsWithoutNewVars().`}))
+                                    )
+                                    let arg = addExprToProve(~tree, ~expr=newExprToProve, ~dist=node.dist+1, ~child=Some(node))
+                                    nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
+                                    arg
+                                })
+                                node.parents->Belt_Option.getExn->Js_array2.push(Assertion({
+                                    args,
+                                    label: frm.frame.label
+                                }))->ignore
+                                markProved(node)
+                            }
+                            if (node.proof->Belt.Option.isNone) {
+                                Continue
+                            } else {
+                                Stop
+                            }
                         }
-                        Continue
-                    }
-                )->ignore
+                    )->ignore
+                }
             }
         })
     }
@@ -194,7 +201,7 @@ let proveStmt = (
                         | None => {
                             curNode.parents = Some([])
                             addParentsWithoutNewVars(curNode)
-                            if (searchDepth <= curNode.dist) {
+                            if (curNode.proof->Belt.Option.isNone && searchDepth <= curNode.dist) {
                                 addParentsWithNewVars(curNode)
                             }
                         }
@@ -211,9 +218,9 @@ let prove = (
     ~hyps: Belt_MutableMap.t<expr,hypothesis,ExprCmp.identity>,
     ~maxVar: int,
     ~disj: disjMutable,
-    ~stmts:array<labeledExpr>,
+    ~stmts:array<rootStmt>,
     ~searchDepth:int,
-) => {
+):proofTree => {
     let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
     for i in 0 to stmts->Js_array2.length - 1 {
         proveStmt(
@@ -223,4 +230,5 @@ let prove = (
             ~searchDepth,
         )
     }
+    tree
 }
