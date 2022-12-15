@@ -15,7 +15,6 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let expr = exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(ctx, _)
     let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
-    let tbl = []
     let hyps = ctx->getAllHyps
     let disj = ctx->getAllDisj
 

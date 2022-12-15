@@ -1,10 +1,11 @@
 open Expln_test
 open MM_parser
 open MM_context
-open MM_syntax_prover
 open MM_parenCounter
 open MM_syntax_tree
 open MM_substitution
+open MM_proof_tree
+open MM_proof_table2
 
 type rec syntaxTreeNodeTest = {
     label:string,
@@ -32,16 +33,31 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
-    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
-    let frms = prepareFrmSubsData(ctx)->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
+    let expr = exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(ctx, _)
+    let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
-    let hyps = ctx->getAllHyps->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
-    let tbl = []
-    let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)
-    //proofTablePrint(ctx, proofTbl, "dddddddddddddd")
+    let hyps = ctx->getAllHyps
+    let disj = ctx->getAllDisj
+    let proofTree = proofTreeProve(
+        ~parenCnt,
+        ~frms,
+        ~hyps,
+        ~maxVar = ctx->getNumOfVars - 1,
+        ~disj,
+        ~stmts = [
+            {
+                label: "test-stmt",
+                expr,
+                justification: None
+            }
+        ],
+        ~searchDepth = 0,
+    )
+    let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn
+    let proofTable = proofTreeCreateProofTable(proofNode)
 
     //when
-    let actualSyntaxTree = buildSyntaxTree(ctx, tbl, targetIdx)
+    let actualSyntaxTree = buildSyntaxTree(ctx, proofTable, proofTable->Js_array2.length-1)
 
     //then
     //Js.Console.log2("actualSyntaxTree", actualSyntaxTree->syntaxTreeToSyntaxTreeTest->Expln_utils_common.stringify)

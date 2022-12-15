@@ -1,6 +1,6 @@
 open MM_context
 open MM_parser
-open MM_proof_table
+open MM_proof_table2
 
 type rec syntaxTreeNode = {
     id: string,
@@ -38,8 +38,7 @@ let extractVarToRecIdxMapping = (args:array<int>, frame):array<int> => {
 
 let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
     switch r.proof {
-        | None => raise(MmException({msg: `Unexpected condition: a proof table record to be used for syntax tree generation doesn't have a proof.`}))
-        | Some(Hypothesis({label})) => {
+        | Hypothesis({label}) => {
             {
                 id: idSeq(),
                 parent,
@@ -57,7 +56,7 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                 }
             }
         }
-        | Some(Assertion({args, label})) => {
+        | Assertion({args, label}) => {
             switch ctx->getFrame(label) {
                 | None => raise(MmException({msg: `Cannot find a frame by label '${label}'`}))
                 | Some(frame) => {
