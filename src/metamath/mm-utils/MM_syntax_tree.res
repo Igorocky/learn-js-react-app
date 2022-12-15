@@ -1,6 +1,6 @@
 open MM_context
 open MM_parser
-open MM_proof_table2
+open MM_proof_table
 
 type rec syntaxTreeNode = {
     id: string,

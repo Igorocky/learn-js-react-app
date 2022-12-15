@@ -1,6 +1,7 @@
 open MM_context
 open MM_parenCounter
 open MM_substitution
+open MM_proof_table
 
 type rootStmt = {
     label: string, 
@@ -42,4 +43,4 @@ let proofTreeProve: (
   ~searchDepth: int,
 ) => proofTree
 
-let proofTreeCreateProofTable: proofTreeNode => MM_proof_table2.proofTable2
+let proofTreeCreateProofTable: proofTreeNode => proofTable

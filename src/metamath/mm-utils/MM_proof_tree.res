@@ -4,7 +4,7 @@ open MM_proof_verifier
 open MM_substitution
 open MM_asrt_apply
 open MM_parenCounter
-open MM_proof_table2
+open MM_proof_table
 
 type rootStmt = {
     label: string,
@@ -240,7 +240,7 @@ let proofTreeProve = (
     tree
 }
 
-let proofTreeCreateProofTable = (node:proofTreeNode):proofTable2 => {
+let proofTreeCreateProofTable = (node:proofTreeNode):proofTable => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
     let tbl = []

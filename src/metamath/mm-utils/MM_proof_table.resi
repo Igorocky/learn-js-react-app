@@ -11,9 +11,9 @@ type proofRecord = {
     proof:exprSource,
 }
 
-type proofTable2 = array<proofRecord>
+type proofTable = array<proofRecord>
 
-let createProof: (mmContext, proofTable2, int) => proof
-let createProofTableFromProof: proofNode => proofTable2
+let createProof: (mmContext, proofTable, int) => proof
+let createProofTableFromProof: proofNode => proofTable
 
-let proofTablePrint: (mmContext, proofTable2, string) => unit
+let proofTablePrint: (mmContext, proofTable, string) => unit

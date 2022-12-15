@@ -1,5 +1,5 @@
 open MM_context
-open MM_proof_table2
+open MM_proof_table
 
 type rec syntaxTreeNode = {
     id: string,
@@ -11,6 +11,6 @@ and childNode =
     | Subtree(syntaxTreeNode)
     | Symbol({id:string, sym:string})
 
-let buildSyntaxTree: (mmContext, proofTable2, int) => syntaxTreeNode
+let buildSyntaxTree: (mmContext, proofTable, int) => syntaxTreeNode
 let syntaxTreeToSymbols: syntaxTreeNode => array<string>
 let syntaxTreeIsEmpty: syntaxTreeNode => bool

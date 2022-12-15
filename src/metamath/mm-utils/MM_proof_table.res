@@ -11,7 +11,7 @@ type proofRecord = {
     proof:exprSource,
 }
 
-type proofTable2 = array<proofRecord>
+type proofTable = array<proofRecord>
 
 let printProofRec = (ctx,r) => {
     let exprStr = ctx->ctxExprToStrExn(r.expr)
@@ -84,7 +84,7 @@ let collectReusedExprs = (tbl,targetIdx):Belt_Set.t<expr, ExprCmp.identity> => {
     Belt_Set.fromArray(reusedExprs, ~id=module(ExprCmp))
 }
 
-let createProof = (ctx:mmContext, tbl:proofTable2, targetIdx:int):proof => {
+let createProof = (ctx:mmContext, tbl:proofTable, targetIdx:int):proof => {
     let tblLen = tbl->Js_array2.length
     if (tblLen <= targetIdx) {
         raise(MmException({msg:`tblLen <= targetIdx`}))
@@ -141,7 +141,7 @@ let createProof = (ctx:mmContext, tbl:proofTable2, targetIdx:int):proof => {
 
 }
 
-let createProofTableFromProof: proofNode => proofTable2  = proofNode => {
+let createProofTableFromProof: proofNode => proofTable  = proofNode => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
     let tbl = []
