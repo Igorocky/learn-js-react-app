@@ -141,7 +141,7 @@ let createProof = (ctx:mmContext, tbl:proofTable2, targetIdx:int):proof => {
 
 }
 
-let createOrderedProofTableFromProof: proofNode => proofTable2  = proofNode => {
+let createProofTableFromProof: proofNode => proofTable2  = proofNode => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
     let tbl = []

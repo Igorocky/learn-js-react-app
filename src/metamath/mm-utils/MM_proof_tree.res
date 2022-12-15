@@ -4,6 +4,7 @@ open MM_proof_verifier
 open MM_substitution
 open MM_asrt_apply
 open MM_parenCounter
+open MM_proof_table2
 
 type rootStmt = {
     label: string,
@@ -231,4 +232,64 @@ let prove = (
         )
     }
     tree
+}
+
+let createProofTable = (node:proofTreeNode):proofTable2 => {
+    let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
+    let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
+    let tbl = []
+    Expln_utils_data.traverseTree(
+        (),
+        node,
+        (_,n) => {
+            switch n.proof {
+                | None => raise(MmException({msg:`Cannot create proofTable from an unproved proofTreeNode [1].`}))
+                | Some(VarType) => raise(MmException({msg:`VarType is not supported in createProofTable [1].`}))
+                | Some(Hypothesis(_)) => None
+                | Some(Assertion({args})) => {
+                    if (processedExprs->Belt_MutableSet.has(n.expr)) {
+                        None
+                    } else {
+                        Some(args)
+                    }
+                }
+            }
+        },
+        ~process = (_, n) => {
+            switch n.proof {
+                | None => raise(MmException({msg:`Cannot create proofTable from an unproved proofTreeNode [2].`}))
+                | Some(VarType) => raise(MmException({msg:`VarType is not supported in createProofTable [2].`}))
+                | Some(Hypothesis({label})) => {
+                    if (exprToIdx->Belt_MutableMap.get(n.expr)->Belt_Option.isNone) {
+                        let idx = tbl->Js_array2.push({proof:Hypothesis({label:label}), expr:n.expr})-1
+                        exprToIdx->Belt_MutableMap.set(n.expr,idx)
+                    }
+                }
+                | Some(Assertion(_)) => ()
+            }
+            None
+        },
+        ~postProcess = (_, n) => {
+            switch n.proof {
+                | Some(Hypothesis(_)) => ()
+                | Some(Assertion({args,label})) => {
+                    if (exprToIdx->Belt_MutableMap.get(n.expr)->Belt_Option.isNone) {
+                        let idx = tbl->Js_array2.push({
+                            proof:Assertion({
+                                label:label,
+                                args: args->Js_array2.map(n => {
+                                    exprToIdx->Belt_MutableMap.get(n.expr)->Belt_Option.getWithDefault(-1)
+                                })
+                            }),
+                            expr:n.expr
+                        })-1
+                        exprToIdx->Belt_MutableMap.set(n.expr,idx)
+                    }
+                }
+            }
+            None
+        },
+        ()
+    )->ignore
+    tbl
 }
