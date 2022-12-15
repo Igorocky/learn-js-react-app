@@ -39,14 +39,18 @@ type proofTree = {
 let createEmptyProofTree = (
     ~parenCnt:parenCnt,
     ~frms: Belt_MapString.t<frmSubsData>,
-    ~hyps: Belt_MutableMap.t<expr,hypothesis,ExprCmp.identity>,
+    ~hyps: Belt_MapString.t<hypothesis>,
     ~maxVar: int,
     ~disj: disjMutable,
 ) => {
+    let hypsMap = Belt_MutableMap.make(~id=module(ExprCmp))
+    hyps->Belt_MapString.forEach((k,v) => {
+        hypsMap->Belt_MutableMap.set(v.expr, v)
+    })
     {
         parenCnt,
         frms,
-        hyps,
+        hyps: hypsMap,
         newVars: Belt_MutableSet.make(~id=module(ExprCmp)),
         newVarTypes: Belt_MutableMapInt.make(),
         maxVar,
@@ -213,14 +217,14 @@ let proveStmt = (
     }
 }
 
-let prove = (
-    ~parenCnt:parenCnt,
+let proofTreeProve = (
+    ~parenCnt: parenCnt,
     ~frms: Belt_MapString.t<frmSubsData>,
-    ~hyps: Belt_MutableMap.t<expr,hypothesis,ExprCmp.identity>,
+    ~hyps: Belt_MapString.t<hypothesis>,
     ~maxVar: int,
     ~disj: disjMutable,
-    ~stmts:array<rootStmt>,
-    ~searchDepth:int,
+    ~stmts: array<rootStmt>,
+    ~searchDepth: int,
 ):proofTree => {
     let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
     for i in 0 to stmts->Js_array2.length - 1 {
@@ -234,7 +238,7 @@ let prove = (
     tree
 }
 
-let createProofTable = (node:proofTreeNode):proofTable2 => {
+let proofTreeCreateProofTable = (node:proofTreeNode):proofTable2 => {
     let processedExprs = Belt_MutableSet.make(~id = module(ExprCmp))
     let exprToIdx = Belt_MutableMap.make(~id = module(ExprCmp))
     let tbl = []

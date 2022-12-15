@@ -458,7 +458,7 @@ let createSubs = (~numOfVars:int) => {
 
 //let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
 
-let prepareFrmSubsData = ctx => {
+let prepareFrmSubsData = (ctx):Belt_MapString.t<frmSubsData> => {
     let frms = []
     ctx->forEachFrame(frame => {
         let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
@@ -503,7 +503,7 @@ let prepareFrmSubsData = ctx => {
         })->ignore
         None
     })->ignore
-    frms
+    Belt_MapString.fromArray(frms->Js_array2.map(frm => (frm.frame.label, frm)))
 }
 
 let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {

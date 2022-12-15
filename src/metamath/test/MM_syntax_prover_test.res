@@ -11,10 +11,10 @@ let testCanFindProof = (~mmFile, ~exprStr) => {
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
     let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
-    let frms = prepareFrmSubsData(ctx)
+    let frms = prepareFrmSubsData(ctx)->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
     let tbl = []
-    let hyps = ctx->getAllHyps
+    let hyps = ctx->getAllHyps->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
 
     //when
     let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)

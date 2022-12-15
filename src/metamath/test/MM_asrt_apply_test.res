@@ -216,7 +216,7 @@ let testApplyAssertions = (
     let preCtx = loadContext(ast, ~stopBefore, ~stopAfter, ())
     additionalStatements->Js_array2.forEach(preCtx->applySingleStmt)
     let workCtx = createContext(~parent=preCtx, ())
-    let frms = prepareFrmSubsData(workCtx)
+    let frms = prepareFrmSubsData(workCtx)->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
     let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()

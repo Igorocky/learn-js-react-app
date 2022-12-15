@@ -460,13 +460,13 @@ let getMandHypsPriv:(mmContextContents, expr) => array<hypothesis> = (ctx, expr)
 
 let getMandHyps:(mmContext, expr) => array<hypothesis> = (ctx, expr) => getMandHypsPriv(ctx.contents, expr)
 
-let getAllHyps = ctx => {
+let getAllHyps = (ctx):Belt_MapString.t<hypothesis> => {
     let hyps = []
     ctx->forEachHypothesisInDeclarationOrder(hyp => {
         hyps->Js.Array2.push(hyp)->ignore
         None
     })->ignore
-    hyps
+    Belt_MapString.fromArray(hyps->Js_array2.map(hyp => (hyp.label, hyp)))
 }
 
 let forEachFramePriv: (mmContextContents, frame => option<'a>) => option<'a> = (ctx, consumer) => {
@@ -609,6 +609,19 @@ let cloneContext: mmContext => mmContext = ctx => {
 
 let disjMutableMake = () => {
     mutableMapIntMake()
+}
+
+let getAllDisj = (ctx:mmContext):disjMutable => {
+    let disj = disjMutableMake()
+    ctx.contents->forEachCtxInReverseOrder(ctx => {
+        ctx.disj->mutableMapIntForEach((n,ms) => {
+            ms->mutableSetIntForEach(m => {
+                disj->addDisjPairToMap(n,m)
+            })
+        })
+        None
+    })->ignore
+    disj
 }
 
 let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {

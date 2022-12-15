@@ -1,9 +1,9 @@
 open Expln_test
 open MM_parser
 open MM_context
-open MM_syntax_prover
-open MM_proof_table
+open MM_proof_table2
 open MM_proof_verifier
+open MM_proof_tree
 open MM_parenCounter
 open MM_substitution
 
@@ -12,15 +12,32 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
-    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
-    let frms = prepareFrmSubsData(ctx)->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
+    let expr = exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(ctx, _)
+    let frms = prepareFrmSubsData(ctx)
     let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
     let tbl = []
-    let hyps = ctx->getAllHyps->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
-    let targetIdx = findProof(~frms, ~parenCnt, ~expr, ~tbl, ~hyps, ~isDisjInCtx=ctx->isDisj)
+    let hyps = ctx->getAllHyps
+    let disj = ctx->getAllDisj
 
     //when
-    let actualProof = createProof(ctx, tbl, targetIdx)
+    let proofTree = proofTreeProve(
+        ~parenCnt,
+        ~frms,
+        ~hyps,
+        ~maxVar = ctx->getNumOfVars - 1,
+        ~disj,
+        ~stmts = [
+            {
+                label: "test-stmt",
+                expr,
+                justification: None
+            }
+        ],
+        ~searchDepth = 0,
+    )
+    let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn
+    let proofTable = proofTreeCreateProofTable(proofNode)
+    let actualProof = createProof(ctx, proofTable, proofTable->Js_array2.length-1)
 
     //then
     try {
@@ -41,7 +58,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     assertEqMsg(actualProofStr, expectedProof, `testCreateProof for: ${exprStr}`)
 }
 
-describe("createProof", _ => {
+describe("proofTreeProve", _ => {
     it("finds proofs for simple wffs", _ => {
         let demo0 = "./src/metamath/test/resources/demo0.mm"
         let setReduced = "./src/metamath/test/resources/set-reduced.mm"
