@@ -63,7 +63,7 @@ let addExprToProve = (~tree:proofTree, ~expr:expr, ~dist:int, ~child:option<proo
     let result = switch tree.nodes->Belt_MutableMap.get(expr) {
         | Some(node) => node
         | None => {
-            {
+            let node = {
                 expr,
                 parents: None,
                 children: [],
@@ -71,6 +71,8 @@ let addExprToProve = (~tree:proofTree, ~expr:expr, ~dist:int, ~child:option<proo
                 dist,
                 syntax: None,
             }
+            tree.nodes->Belt_MutableMap.set(expr, node)->ignore
+            node
         }
     }
     switch child {
