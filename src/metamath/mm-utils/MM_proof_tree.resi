@@ -26,9 +26,9 @@ type proofTree = {
   parenCnt: parenCnt,
   frms: Belt_MapString.t<frmSubsData>,
   hyps: Belt_MutableMap.t<expr, hypothesis, ExprCmp.identity>,
+  mutable maxVar: int,
   newVars: Belt_MutableSet.t<expr, ExprCmp.identity>,
   newVarTypes: Belt_MutableMapInt.t<int>,
-  mutable maxVar: int,
   disj: disjMutable,
   nodes: Belt_MutableMap.t<expr, proofTreeNode, ExprCmp.identity>,
 }
@@ -41,6 +41,7 @@ let proofTreeProve: (
   ~disj: disjMutable,
   ~stmts: array<rootStmt>,
   ~searchDepth: int,
+  ~nonSyntaxTypes:array<int>,
 ) => proofTree
 
 let proofTreeCreateProofTable: proofTreeNode => proofTable

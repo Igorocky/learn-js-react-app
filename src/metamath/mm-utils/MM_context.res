@@ -295,8 +295,16 @@ let disjContains = (disj:disjMutable, n, m):bool => {
     }
 }
 
-let disjForEach = (disjMutable, consumer) => {
+let disjForEachArr = (disjMutable, consumer) => {
     disjMutable->mutableMapIntForEach((n,ms) => Belt_Array.concat([n], ms->mutableSetIntToArray)->consumer)
+}
+
+let disjForEach = (disjMutable, consumer) => {
+    disjMutable->mutableMapIntForEach((n,ms) => {
+        ms->mutableSetIntForEach(m => {
+            consumer(n,m)
+        })
+    })
 }
 
 let isDisj = (ctx,n,m) => {

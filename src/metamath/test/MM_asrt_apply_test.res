@@ -148,11 +148,11 @@ let testApplyAssertions = (
     let printApplyAssertionResult = (workCtx, res:applyAssertionResult):string => {
         workCtx->openChildContext
         let maxWorkCtxVar = workCtx->getNumOfVars - 1
-        let workVarHypLabels = workCtx->generateLabels(~prefix="workVar", ~amount=res.workVarTypes->Js_array2.length)
-        let workVarTypes = res.workVarTypes->Js_array2.map(workCtx->ctxIntToStrExn)
-        let workVarNames = workCtx->generateWorkVarNames(res.workVarTypes)
+        let workVarHypLabels = workCtx->generateLabels(~prefix="workVar", ~amount=res.newVarTypes->Js_array2.length)
+        let workVarTypes = res.newVarTypes->Js_array2.map(workCtx->ctxIntToStrExn)
+        let workVarNames = workCtx->generateWorkVarNames(res.newVarTypes)
         let disjArrStr = []
-        res.disj->disjForEach(disj => {
+        res.newDisj->disjForEachArr(disj => {
             disjArrStr->Js.Array2.push(
                 "[ " ++ 
                 disj->Js.Array2.map(v => {
@@ -216,7 +216,7 @@ let testApplyAssertions = (
     let preCtx = loadContext(ast, ~stopBefore, ~stopAfter, ())
     additionalStatements->Js_array2.forEach(preCtx->applySingleStmt)
     let workCtx = createContext(~parent=preCtx, ())
-    let frms = prepareFrmSubsData(workCtx)->Belt_MapString.toArray->Js_array2.map(((_,v)) => v)
+    let frms = prepareFrmSubsData(workCtx)
     let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
@@ -226,7 +226,7 @@ let testApplyAssertions = (
         ~maxVar = workCtx->getNumOfVars-1,
         ~isDisjInCtx = workCtx->isDisj,
         ~frms,
-        ~nonSyntaxTypes = preCtx->makeExprExn(["|-"]),
+        ~nonSyntaxTypes = workCtx->makeExprExn(["|-"]),
         ~statements = statements->Js_array2.map(((label,exprStr)) => {
             {
                 label, 

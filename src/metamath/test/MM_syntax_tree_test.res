@@ -52,6 +52,7 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
             }
         ],
         ~searchDepth = 0,
+        ~nonSyntaxTypes = ctx->makeExprExn(["|-"]),
     )
     let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn
     let proofTable = proofTreeCreateProofTable(proofNode)

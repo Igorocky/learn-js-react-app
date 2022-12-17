@@ -9,9 +9,9 @@ type labeledExpr = {
 }
 
 type applyAssertionResult = {
-    workVars: array<int>,
-    workVarTypes: array<int>,
-    disj:disjMutable,
+    newVars: array<int>,
+    newVarTypes: array<int>,
+    newDisj:disjMutable,
     argLabels: array<option<string>>,
     argExprs: array<option<expr>>,
     asrtLabel: string,
@@ -248,16 +248,6 @@ let rec iterateSubstitutionsForHyps = (
     }
 }
 
-// let checkTypesInFloatingHyps = (
-//     ~ctx:mmContext, 
-//     ~frmsSyntax:frameProofData, 
-//     ~frm:frameProofDataRec,
-//     ~parenCnt:parenCnt, 
-//     ~proofTbl:proofTable
-// ) => {
-
-// }
-
 let extractNewDisj = (
     ~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, 
     ~subs:subs, 
@@ -305,8 +295,7 @@ let iterateSubstitutionsForResult = (
 
 let applyAssertions = (
     ~maxVar:int,
-    ~frms:array<frmSubsData>,
-//    ~frmsSyntax:array<frmSubsData>,
+    ~frms:Belt_MapString.t<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
@@ -317,7 +306,7 @@ let applyAssertions = (
     ()
 ):unit => {
     let numOfStmts = statements->Js_array2.length
-    frms->Js_array2.forEach(frm => {
+    frms->Belt_MapString.forEach((_,frm) => {
         if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0]) && frameFilter(frm.frame)) {
             iterateSubstitutionsForResult(
                 ~frm,
@@ -363,11 +352,11 @@ let applyAssertions = (
                                         ~maxCtxVar=maxVar
                                     ) {
                                         | None => Continue
-                                        | Some(disj) => {
+                                        | Some(newDisj) => {
                                             let res = {
-                                                workVars: workVars.newVars->Js.Array2.copy,
-                                                workVarTypes: workVars.newVarTypes->Js.Array2.copy,
-                                                disj,
+                                                newVars: workVars.newVars->Js.Array2.copy,
+                                                newVarTypes: workVars.newVarTypes->Js.Array2.copy,
+                                                newDisj,
                                                 argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
                                                 argExprs: workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfHyps),
                                                 asrtLabel: frm.frame.label,
@@ -376,7 +365,6 @@ let applyAssertions = (
                                                     | Some(expr) => expr
                                                 },
                                             }
-                                            // checkTypesInFloatingHyps(res)
                                             onMatchFound(res)
                                         }
                                     }

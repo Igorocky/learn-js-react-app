@@ -8,9 +8,9 @@ type labeledExpr = {
 }
 
 type applyAssertionResult = {
-    workVars: array<int>,
-    workVarTypes: array<int>,
-    disj:disjMutable,
+    newVars: array<int>,
+    newVarTypes: array<int>,
+    newDisj:disjMutable,
     argLabels: array<option<string>>,
     argExprs: array<option<expr>>,
     asrtLabel: string,
@@ -19,8 +19,7 @@ type applyAssertionResult = {
 
 let applyAssertions: (
     ~maxVar:int,
-    ~frms:array<frmSubsData>,
-//    ~frmsSyntax:array<frmSubsData>,
+    ~frms:Belt_MapString.t<frmSubsData>,
     ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,

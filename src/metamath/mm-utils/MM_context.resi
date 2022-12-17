@@ -65,7 +65,8 @@ let exprEq: (expr,expr) => bool
 let disjMutableMake: unit => disjMutable
 let addDisjPairToMap: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool
-let disjForEach: (disjMutable, array<int> => unit) => unit
+let disjForEachArr: (disjMutable, array<int> => unit) => unit
+let disjForEach: (disjMutable, (int,int) => unit) => unit
 
 module ExprCmp: {
   type identity
