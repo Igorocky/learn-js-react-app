@@ -18,7 +18,7 @@ type rec proofTreeNode = {
   expr: expr,
   label: option<string>,
   mutable parents: option<array<exprSource>>,
-  children: array<proofTreeNode>,
+  mutable children: array<proofTreeNode>,
   mutable proof: option<exprSource>,
   mutable dist: int,
   mutable syntax: option<proofTreeNode>,
