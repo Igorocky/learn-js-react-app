@@ -145,7 +145,7 @@ let testApplyAssertions = (
     ~fileWithExpectedResult:string,
     ()
 ) => {
-    let printApplyAssertionResult = (workCtx, res:applyAssertionResult):string => {
+    let printApplyAssertionResult = (workCtx, statements:array<labeledExpr>, res:applyAssertionResult):string => {
         workCtx->openChildContext
         let maxWorkCtxVar = workCtx->getNumOfVars - 1
         let workVarHypLabels = workCtx->generateLabels(~prefix="workVar", ~amount=res.newVarTypes->Js_array2.length)
@@ -169,27 +169,41 @@ let testApplyAssertions = (
         })
         let args = []
         let argLabels = []
-        res.argLabels->Js.Array2.forEachi((label,i) => {
-            switch label {
-                | Some(label) => {
-                    args->Js_array2.push(`[${label}]`)->ignore
-                    argLabels->Js_array2.push(label)->ignore
-                }
-                | None => {
-                    let newStmtLabel = workCtx->generateLabels(~prefix="provable", ~amount=1)
-                    let label = newStmtLabel[0]
-                    let exprArrStr = res.argExprs[i]->Belt_Option.getExn->Js_array2.map(workCtx->ctxIntToStrExn)
-                    workCtx->applySingleStmt(Provable({
-                        label, 
-                        expr:exprArrStr,
-                        proof:Table([])
-                    }))
-                    args->Js_array2.push(`${label}: ${exprArrStr->Js_array2.joinWith(" ")}`)->ignore
-                    argLabels->Js_array2.push(label)->ignore
+        let frame = workCtx->getFrame(res.asrtLabel)->Belt_Option.getExn
+        frame.hyps->Js_array2.forEach(hyp => {
+            if (hyp.typ == E) {
+                let argExpr = applySubs(
+                    ~frmExpr=hyp.expr,
+                    ~subs=res.subs,
+                    ~createWorkVar=_=>raise(MmException({msg:`Cannot create work var in testApplyAssertions[1]`}))
+                )
+                switch statements->Js.Array2.find(({label,expr}) => exprEq(expr,argExpr)) {
+                    | Some({label}) => {
+                        args->Js_array2.push(`[${label}]`)->ignore
+                        argLabels->Js_array2.push(label)->ignore
+                    }
+                    | None => {
+                        let newStmtLabel = workCtx->generateLabels(~prefix="provable", ~amount=1)
+                        let label = newStmtLabel[0]
+                        let exprArrStr = argExpr->Js_array2.map(workCtx->ctxIntToStrExn)
+                        workCtx->applySingleStmt(Provable({
+                            label, 
+                            expr:exprArrStr,
+                            proof:Table([])
+                        }))
+                        args->Js_array2.push(`${label}: ${exprArrStr->Js_array2.joinWith(" ")}`)->ignore
+                        argLabels->Js_array2.push(label)->ignore
+                    }
                 }
             }
         })
-        let asrtExprStr = workCtx->ctxExprToStrExn(res.asrtExpr)
+        let asrtExprStr = workCtx->ctxExprToStrExn(
+            applySubs(
+                ~frmExpr=frame.asrt,
+                ~subs=res.subs,
+                ~createWorkVar=_=>raise(MmException({msg:`Cannot create work var in testApplyAssertions[2]`}))
+            )
+        )
         workCtx->resetToParentContext
 
         let workVarsStr = if (workVarHypLabels->Js_array2.length == 0) {
@@ -220,6 +234,12 @@ let testApplyAssertions = (
     let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
+    let statements = statements->Js_array2.map(((label,exprStr)) => {
+        {
+            label, 
+            expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)
+        }
+    })
 
     //when
     applyAssertions(
@@ -227,19 +247,18 @@ let testApplyAssertions = (
         ~isDisjInCtx = workCtx->isDisj,
         ~frms,
         ~nonSyntaxTypes = workCtx->makeExprExn(["|-"]),
-        ~statements = statements->Js_array2.map(((label,exprStr)) => {
-            {
-                label, 
-                expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)
-            }
-        }),
+        ~statements,
         ~parenCnt,
         ~frameFilter,
         ~result=?result->Belt_Option.map(str => str->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)),
         ~onMatchFound = res => {
             switch actualResults->Belt_MutableMapString.get(res.asrtLabel) {
-                | None => actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(workCtx, res)])
-                | Some(arr) => arr->Js.Array2.push(printApplyAssertionResult(workCtx, res))->ignore
+                | None => {
+                    actualResults->Belt_MutableMapString.set(res.asrtLabel, [printApplyAssertionResult(workCtx, statements, res)])
+                }
+                | Some(arr) => {
+                    arr->Js.Array2.push(printApplyAssertionResult(workCtx, statements, res))->ignore
+                }
             }
             // Js.Console.log("onMatchFound ------------------------------------------------------------------")
             // Js.Console.log(printApplyAssertionResult(res))

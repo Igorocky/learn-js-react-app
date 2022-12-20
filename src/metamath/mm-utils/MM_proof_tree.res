@@ -6,14 +6,20 @@ open MM_asrt_apply
 open MM_parenCounter
 open MM_proof_table
 
+type justification = {
+    args: array<string>,
+    asrt: string
+}
+
 type rootStmt = {
     label: string,
     expr: expr,
-    justification: option<array<string>>,
+    justification: option<justification>,
 }
 
 type rec proofTreeNode = {
     expr:expr,
+    label: option<string>,
     mutable parents: option<array<exprSource>>,
     children: array<proofTreeNode>,
     mutable proof: option<exprSource>,
@@ -59,12 +65,19 @@ let createEmptyProofTree = (
     }
 }
 
-let addExprToProve = (~tree:proofTree, ~expr:expr, ~dist:int, ~child:option<proofTreeNode>):proofTreeNode => {
+let addExprToProve = (
+    ~tree:proofTree, 
+    ~expr:expr, 
+    ~label:option<string>, 
+    ~dist:int, 
+    ~child:option<proofTreeNode>
+):proofTreeNode => {
     let result = switch tree.nodes->Belt_MutableMap.get(expr) {
         | Some(node) => node
         | None => {
             let node = {
                 expr,
+                label,
                 parents: None,
                 children: [],
                 proof: None,
@@ -133,6 +146,7 @@ let rec proveNode = (
     ~tree:proofTree,
     ~stmts:array<rootStmt>,
     ~node:proofTreeNode,
+    ~justification: option<justification>,
     ~searchDepth:int,
     ~nonSyntaxTypes:array<int>,
 ) => {
@@ -162,7 +176,13 @@ let rec proveNode = (
                                         ~createWorkVar = 
                                             _ => raise(MmException({msg:`Work variables are not supported in addParentsWithoutNewVars().`}))
                                     )
-                                    let arg = addExprToProve(~tree, ~expr=newExprToProve, ~dist=node.dist+1, ~child=Some(node))
+                                    let arg = addExprToProve(
+                                        ~tree, 
+                                        ~expr=newExprToProve, 
+                                        ~label=None,
+                                        ~dist=node.dist+1, 
+                                        ~child=Some(node)
+                                    )
                                     nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
                                     arg
                                 })
@@ -224,33 +244,25 @@ let rec proveNode = (
                     }
                 )
             })
-            let args = applResult.argLabels->Js_array2.mapi((lbl,i) => {
-                let newExprToProve = switch lbl {
-                    | Some(label) => {
-                        switch rootStmts->Js_array2.find(({label:lbl}) => lbl == label) {
-                            | None => raise(MmException({msg:`Cannot find root statement with label '${label}'`}))
-                            | Some({expr}) => expr
-                        }
-                    }
-                    | None => {
-                        switch applResult.argExprs[i] {
-                            | None => raise(MmException({msg:`Cannot determine argument expression for index ${i->Belt_Int.toString}.`}))
-                            | Some(expr) => {
-                                expr->Js_array2.map(sym => {
-                                    switch vToNewVar->Belt_MutableMapInt.get(sym) {
-                                        | None => sym
-                                        | Some(newVar) => newVar
-                                    }
-                                })
-                            }
-                        }
-                    }
-                }
-                let arg = addExprToProve(~tree, ~expr=newExprToProve, ~dist=node.dist+1, ~child=Some(node))
-                nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
-                arg
+            let frame = switch tree.frms->Belt_MapString.get(applResult.asrtLabel) {
+                | None => raise(MmException({msg:`Cannot find an assertion with label ${applResult.asrtLabel}.`}))
+                | Some(frm) => frm.frame
+            }
+            let args = frame.hyps->Js_array2.map(hyp => {
+                addExprToProve(
+                    ~tree,
+                    ~expr = applySubs(
+                        ~frmExpr = hyp.expr, 
+                        ~subs=applResult.subs,
+                        ~createWorkVar = _ => raise(MmException({msg:`New work variables are not expected here.`}))
+                    ),
+                    ~label=None,
+                    ~dist=node.dist+1,
+                    ~child=Some(node)
+                )
             })
-            if (checkTypes(~tree, ~asrtLabel=applResult.asrtLabel, ~args)) {
+            if (checkTypes(~tree, ~frame, ~args)) {
+                args->Js_array2.forEach(nodesToCreateParentsFor->Belt_MutableQueue.add)
                 node.parents->Belt_Option.getExn->Js_array2.push(Assertion({
                     args,
                     label: applResult.asrtLabel
@@ -296,35 +308,26 @@ let rec proveNode = (
 }
 and let checkTypes = (
     ~tree:proofTree,
-    ~asrtLabel:string,
+    ~frame:frameReduced,
     ~args:array<proofTreeNode>,
 ):bool => {
     let nodesToTypecheck = []
-    switch tree.frms->Belt_MapString.get(asrtLabel) {
-        | None => raise(MmException({msg:`Cannot find an assertion with label ${asrtLabel}.`}))
-        | Some(frm) => {
-            frm.frame.hyps ->Js.Array2.forEachi((hyp,hypIdx) => {
-                if (hyp.typ == F) {
-                    nodesToTypecheck->Js.Array2.push(args[hypIdx])->ignore
-                }
-            })
+    frame.hyps->Js.Array2.forEachi((hyp,hypIdx) => {
+        if (hyp.typ == F) {
+            nodesToTypecheck->Js.Array2.push(args[hypIdx])->ignore
         }
-    }
-    let typeCheckResult = nodesToTypecheck->Expln_utils_common.arrForEach(node => {
+    })
+    nodesToTypecheck->Js.Array2.every(node => {
         proveNode(
             ~tree,
             ~stmts = [],
             ~node,
+            ~justification=None,
             ~searchDepth = 0,
             ~nonSyntaxTypes=[],
         )
-        if (node.proof->Belt_Option.isNone) {
-            Some(false)
-        } else {
-            None
-        }
+        node.proof->Belt_Option.isSome
     })
-    typeCheckResult->Belt_Option.isNone
 }
 
 let proofTreeProve = (
@@ -340,12 +343,13 @@ let proofTreeProve = (
     let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
     for stmtIdx in 0 to stmts->Js_array2.length - 1 {
         let rootNode = addExprToProve(
-            ~tree, ~expr=stmts[stmtIdx].expr, ~dist=0, ~child=None
+            ~tree, ~expr=stmts[stmtIdx].expr, ~label=Some(stmts[stmtIdx].label), ~dist=0, ~child=None
         )
         proveNode(
             ~tree,
             ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx),
             ~node=rootNode,
+            ~justification=stmts[stmtIdx].justification,
             ~searchDepth,
             ~nonSyntaxTypes,
         )

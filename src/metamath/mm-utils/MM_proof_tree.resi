@@ -3,14 +3,20 @@ open MM_parenCounter
 open MM_substitution
 open MM_proof_table
 
+type justification = {
+    args: array<string>,
+    asrt: string
+}
+
 type rootStmt = {
-    label: string, 
-    expr: expr, 
-    justification: option<array<string>>
+    label: string,
+    expr: expr,
+    justification: option<justification>,
 }
 
 type rec proofTreeNode = {
   expr: expr,
+  label: option<string>,
   mutable parents: option<array<exprSource>>,
   children: array<proofTreeNode>,
   mutable proof: option<exprSource>,

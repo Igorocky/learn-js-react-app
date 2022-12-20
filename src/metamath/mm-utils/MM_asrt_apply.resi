@@ -11,10 +11,8 @@ type applyAssertionResult = {
     newVars: array<int>,
     newVarTypes: array<int>,
     newDisj:disjMutable,
-    argLabels: array<option<string>>,
-    argExprs: array<option<expr>>,
     asrtLabel: string,
-    asrtExpr: expr,
+    subs: subs,
 }
 
 let applyAssertions: (
@@ -23,6 +21,7 @@ let applyAssertions: (
     ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
+    ~exactOrderOfStmts:bool=?,
     ~result:expr=?,
     ~parenCnt:parenCnt,
     ~frameFilter:frameReduced=>bool=?,

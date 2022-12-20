@@ -1,7 +1,6 @@
 open MM_substitution
 open MM_context
 open MM_parenCounter
-open MM_parser
 
 type labeledExpr = {
     label:string,
@@ -12,10 +11,8 @@ type applyAssertionResult = {
     newVars: array<int>,
     newVarTypes: array<int>,
     newDisj:disjMutable,
-    argLabels: array<option<string>>,
-    argExprs: array<option<expr>>,
     asrtLabel: string,
-    asrtExpr: expr,
+    subs: subs,
 }
 
 let rec iterateCombinationsRec = (
@@ -299,6 +296,7 @@ let applyAssertions = (
     ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
+    ~exactOrderOfStmts:bool=false,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
     ~frameFilter:frameReduced=>bool=_=>true,
@@ -325,9 +323,9 @@ let applyAssertions = (
                         ~numOfHyps,
                         ~stmtCanMatchHyp = (s,h) => {
                             if (s == -1) {
-                                true
+                                !exactOrderOfStmts
                             } else {
-                                stmtCanMatchHyp(
+                                (!exactOrderOfStmts || s == h) && stmtCanMatchHyp(
                                     ~frm,
                                     ~hypIdx=h,
                                     ~stmt = statements[s].expr,
@@ -357,13 +355,14 @@ let applyAssertions = (
                                                 newVars: workVars.newVars->Js.Array2.copy,
                                                 newVarTypes: workVars.newVarTypes->Js.Array2.copy,
                                                 newDisj,
-                                                argLabels: comb->Js.Array2.map(s => if (s == -1) {None} else {Some(statements[s].label)}),
-                                                argExprs: workVars.hypIdxToExprWithWorkVars->Js.Array2.filteri((_,i) => i < numOfHyps),
                                                 asrtLabel: frm.frame.label,
-                                                asrtExpr: switch workVars.hypIdxToExprWithWorkVars[numOfHyps] {
-                                                    | None => raise(MmException({msg:`frm.workVars.hypIdxToExprWithWorkVars doesn't have asrtExpr.`}))
-                                                    | Some(expr) => expr
-                                                },
+                                                subs: {
+                                                    size: frm.subs.size,
+                                                    begins: frm.subs.begins->Js.Array2.copy,
+                                                    ends: frm.subs.ends->Js.Array2.copy,
+                                                    exprs: frm.subs.exprs->Js.Array2.copy,
+                                                    isDefined: frm.subs.isDefined->Js.Array2.copy,
+                                                }
                                             }
                                             onMatchFound(res)
                                         }
