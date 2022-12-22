@@ -1,4 +1,3 @@
-open MM_wrk_client
 open MM_context
 
 let procName = "MM_wrk_ctx"
@@ -48,37 +47,4 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             settings.contents = newSettings
         }
     }
-}
-
-let beginWorkerInteractionUsingCtx = (
-    ~ctxVer:string,
-    ~ctx:mmContext,
-    ~settingsVer:int,
-    ~settings:settings,
-    ~procName:string,
-    ~initialRequest:'req, 
-    ~onResponse:(~resp:'resp, ~sendToWorker:'req=>unit, ~endWorkerInteraction:unit=>unit)=>unit,
-) => {
-    beginWorkerInteraction(
-        ~procName = "MM_wrk_ctx",
-        ~initialRequest = CheckVersionsAreUpToDate({ctxVer, settingsVer}), 
-        ~onResponse = (~resp, ~sendToWorker, ~endWorkerInteraction) => {
-            switch resp {
-                | GetCtx({ver}) => {
-                    if (ver == ctxVer) {
-                        sendToWorker(SetCtx({ver, ctx}))
-                    }
-                }
-                | GetSettings({ver}) => {
-                    if (ver == settingsVer) {
-                        sendToWorker(SetSettings({ver, settings}))
-                    }
-                }
-                | Ok => {
-                    endWorkerInteraction()
-                    beginWorkerInteraction(~procName, ~initialRequest, ~onResponse)
-                }
-            }
-        }
-    )
 }
