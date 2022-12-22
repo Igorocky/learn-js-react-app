@@ -1,13 +1,13 @@
 type serialized
 
 type workerRequest = {
-    senderId: int,
+    clientId: int,
     procName: string, 
     body: serialized
 }
 
 type workerResponse = {
-    senderId: int,
+    clientId: int,
     body: serialized
 }
 

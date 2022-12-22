@@ -6,35 +6,31 @@ let sendToWorker: workerRequest => unit = req => {
     webworker->Belt_Option.forEach(webworker => webworker["postMessage"](. req))
 }
 
-type listenerResp =
-    | ContinuePropagation
-    | StopPropagation
-
-type listener = {
+type client = {
     id: int,
-    callback: workerResponse => listenerResp
+    callback: serialized => unit
 }
 
-let nextId = ref(0)
+let nextClientId = ref(0)
 
-let getNextId = () => {
-    nextId.contents = nextId.contents + 1
-    nextId.contents - 1
+let getNextClientId = () => {
+    nextClientId.contents = nextClientId.contents + 1
+    nextClientId.contents - 1
 }
 
-let listeners = []
+let clients = []
 
-let regWorkerListener = callback => {
-    let id = getNextId()
-    listeners->Js_array2.push({ id, callback })->ignore
+let regClient = callback => {
+    let id = getNextClientId()
+    clients->Js_array2.push({ id, callback })->ignore
     id
 }
 
-let unregWorkerListener = id => {
+let unregClient = id => {
     let i = ref(0)
-    while (i.contents < listeners->Js_array2.length) {
-        if (listeners[i.contents].id == id) {
-            listeners->Js_array2.removeCountInPlace(~pos=i.contents, ~count=1)->ignore
+    while (i.contents < clients->Js_array2.length) {
+        if (clients[i.contents].id == id) {
+            clients->Js_array2.removeCountInPlace(~pos=i.contents, ~count=1)->ignore
         } else {
             i.contents = i.contents + 1
         }
@@ -43,15 +39,17 @@ let unregWorkerListener = id => {
 
 webworker->Belt_Option.forEach(webworker => {
     webworker["onmessage"]= msg => {
-        let resp = msg["data"]
+        let resp:workerResponse = msg["data"]
         let i = ref(0)
-        while (i.contents < listeners->Js_array2.length) {
-            let listener = listeners[i.contents]
-            switch listener.callback(resp) {
-                | ContinuePropagation => i.contents = i.contents + 1
-                | StopPropagation => i.contents = listeners->Js_array2.length
+        clients->Expln_utils_common.arrForEach(client => {
+            if (client.id == resp.clientId) {
+//                Js.Console.log(`[senderId=${resp.clientId->Belt_Int.toString}] client received a response`)
+                client.callback(resp.body)
+                Some(())
+            } else {
+                None
             }
-        }
+        })->ignore
     }
 })
 
@@ -62,19 +60,13 @@ let beginWorkerInteraction = (
 ) => {
     let id = ref(-1)
     let localSendToWorker = ref(_=>())
-    id.contents = regWorkerListener(resp => {
-        if (resp.senderId == id.contents) {
-//            Js.Console.log(`[senderId=${resp.senderId->Belt_Int.toString}] client receved a response`)
-            onResponse(
-                ~resp=deserialize(resp.body),
-                ~sendToWorker=localSendToWorker.contents,
-                ~endWorkerInteraction= _=>unregWorkerListener(id.contents)
-            )
-            StopPropagation
-        } else {
-            ContinuePropagation
-        }
+    id.contents = regClient(respBody => {
+        onResponse(
+            ~resp=deserialize(respBody),
+            ~sendToWorker=localSendToWorker.contents,
+            ~endWorkerInteraction= _=>unregClient(id.contents)
+        )
     })
-    localSendToWorker.contents = req => sendToWorker({senderId:id.contents, procName, body:serialize(req)})
-    sendToWorker({senderId:id.contents, procName, body:serialize(initialRequest)})
+    localSendToWorker.contents = req => sendToWorker({clientId:id.contents, procName, body:serialize(req)})
+    sendToWorker({clientId:id.contents, procName, body:serialize(initialRequest)})
 }
