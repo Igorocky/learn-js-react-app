@@ -5,14 +5,17 @@ type settings = {
     nonSyntaxTypes: array<int>
 }
 
-type request =
-    | CheckVersionsAreUpToDate({ctxVer: string, settingsVer: int})
-    | SetCtx({ver: string, ctx: MM_context.mmContext})
-    | SetSettings({ver: int, settings: settings})
+type request
+type response
 
-type response = 
-    | GetCtx({ver: string}) 
-    | GetSettings({ver: int}) 
-    | Ok
+let beginWorkerInteractionUsingCtx: (
+  ~ctxVer: string,
+  ~ctx: MM_context.mmContext,
+  ~settingsVer: int,
+  ~settings: settings,
+  ~procName: string,
+  ~initialRequest: 'req,
+  ~onResponse: ( ~resp: 'resp, ~sendToWorker: 'req => unit, ~endWorkerInteraction: unit => unit, ) => unit,
+) => unit
 
 let processOnWorkerSide: (~req: request, ~sendToClient: response => unit) => unit
