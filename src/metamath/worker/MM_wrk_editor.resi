@@ -5,7 +5,7 @@ open MM_syntax_tree
 open MM_wrk_settings
 
 type stmtCont =
-    | Text({text: array<string>, syntaxError: option<string>})
+    | Text(array<string>)
     | Tree(syntaxTreeNode)
 
 let contIsEmpty: stmtCont => bool
@@ -24,11 +24,12 @@ type userStmt = {
     typ: userStmtType,
     typEditMode: bool,
     cont: stmtCont,
+    contErr: option<string>,
     contEditMode: bool,
 
     jstf: string,
     jstfEditMode: bool,
-    jstfError: option<string>,
+    jstfErr: option<string>,
 
     expr: option<expr>,
     proof: option<proofTreeNode>,
@@ -44,19 +45,20 @@ type editorState = {
     preCtx: mmContext,
 
     constsText: string,
-    consts: array<string>,
-    constsErr: option<string>,
     constsEditMode: bool,
+    constsErr: option<string>,
 
     varsText: string,
-    vars: array<stmt>,
-    varsErr: option<string>,
     varsEditMode: bool,
+    varsErr: option<string>,
+    vars: array<stmt>,
 
     disjText: string,
-    disj: Belt_MapInt.t<Belt_SetInt.t>,
-    disjErr: option<string>,
     disjEditMode: bool,
+    disjErr: option<string>,
+    disj: Belt_MapInt.t<Belt_SetInt.t>,
+
+    wrkCtx: option<(string,mmContext)>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -92,3 +94,4 @@ let completeJstfEditMode: (editorState, string, string) => editorState
 let setSettings: (editorState, int, settings) => editorState
 let setPreCtx: (editorState, int, mmContext) => editorState
 let unify: editorState => editorState
+let refreshWrkCtx: editorState => editorState

@@ -693,6 +693,19 @@ let addConst: (mmContext,string) => unit = (ctx,cName) => {
     }
 }
 
+let addConstToRoot = (ctx,cName) => {
+    if (ctx->isConst(cName)) {
+        raise(MmException({msg:`The symbol '${cName}' is already used as a constant.`}))
+    } else if (ctx->isVar(cName)) {
+        raise(MmException({msg:`The symbol '${cName}' is already used as a variable.`}))
+    }
+    let root = ref(ctx.contents)
+    while (root.contents.parent->Belt_Option.isSome) {
+        root.contents = root.contents.parent->Belt_Option.getExn
+    }
+    root->addConst(cName)
+}
+
 let addVar: (mmContext,string) => unit = (ctx,vName) => {
     let ctx = ctx.contents
     if (isConstPriv(ctx, vName) || isVarPriv(ctx, vName)) {

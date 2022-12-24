@@ -37,10 +37,11 @@ let userStmtLocStorToUserStmt = (userStmtLocStor:userStmtLocStor):userStmt => {
         typEditMode: false,
         cont: strToCont(userStmtLocStor.cont),
         contEditMode: false,
-        
+        contErr: None,
+
         jstf: userStmtLocStor.jstf,
         jstfEditMode: false,
-        jstfError: None,
+        jstfErr: None,
 
         expr: None,
         proof: None,
@@ -56,19 +57,20 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
         preCtx,
 
         constsText: stateLocStor->Belt.Option.map(obj => obj.constsText)->Belt.Option.getWithDefault(""),
-        consts: [],
-        constsErr: None,
         constsEditMode: false,
+        constsErr: None,
 
         varsText: stateLocStor->Belt.Option.map(obj => obj.varsText)->Belt.Option.getWithDefault(""),
-        vars: [],
-        varsErr: None,
         varsEditMode: false,
+        varsErr: None,
+        vars: [],
 
         disjText: stateLocStor->Belt.Option.map(obj => obj.disjText)->Belt.Option.getWithDefault(""),
-        disj: Belt_MapInt.fromArray([]),
-        disjErr: None,
         disjEditMode: false,
+        disjErr: None,
+        disj: Belt_MapInt.fromArray([]),
+
+        wrkCtx: None,
 
         nextStmtId: stateLocStor->Belt.Option.map(obj => obj.nextStmtId)->Belt.Option.getWithDefault(0),
         stmts: 

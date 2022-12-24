@@ -5,19 +5,19 @@ open MM_syntax_tree
 open MM_wrk_settings
 
 type stmtCont =
-    | Text({text:array<string>, syntaxError: option<string>})
+    | Text(array<string>)
     | Tree(syntaxTreeNode)
 
 let contIsEmpty = cont => {
     switch cont {
-        | Text({text}) => text->Js_array2.length == 0
+        | Text(arr) => arr->Js_array2.length == 0
         | Tree(syntaxTreeNode) => syntaxTreeIsEmpty(syntaxTreeNode)
     }
 }
 
 let contToArrStr = cont => {
     switch cont {
-        | Text({text}) => text
+        | Text(arr) => arr
         | Tree(syntaxTreeNode) => syntaxTreeToSymbols(syntaxTreeNode)
     }
 }
@@ -27,10 +27,7 @@ let contToStr = cont => {
 }
 
 let strToCont = str => {
-    Text({
-        text: getSpaceSeparatedValuesAsArray(str),
-        syntaxError: None
-    })
+    Text(getSpaceSeparatedValuesAsArray(str))
 }
 
 type userStmtType = [ #a | #e | #p ]
@@ -52,11 +49,12 @@ type userStmt = {
     typ: userStmtType,
     typEditMode: bool,
     cont: stmtCont,
+    contErr: option<string>,
     contEditMode: bool,
 
     jstf: string,
     jstfEditMode: bool,
-    jstfError: option<string>,
+    jstfErr: option<string>,
 
     expr: option<expr>,
     proof: option<proofTreeNode>,
@@ -67,8 +65,8 @@ let createEmptyUserStmt = (id, typ):userStmt => {
         id, 
         label:"label", labelEditMode:false, 
         typ, typEditMode:false, 
-        cont:Text({text:[], syntaxError:None}), contEditMode:true, 
-        jstf:"", jstfEditMode:false, jstfError:None,
+        cont:Text([]), contEditMode:true, contErr:None,
+        jstf:"", jstfEditMode:false, jstfErr:None,
         expr:None, proof:None, 
     }
 }
@@ -81,19 +79,20 @@ type editorState = {
     preCtx: mmContext,
 
     constsText: string,
-    consts: array<string>,
-    constsErr: option<string>,
     constsEditMode: bool,
+    constsErr: option<string>,
 
     varsText: string,
-    vars: array<stmt>,
-    varsErr: option<string>,
     varsEditMode: bool,
+    varsErr: option<string>,
+    vars: array<stmt>,
 
     disjText: string,
-    disj: Belt_MapInt.t<Belt_SetInt.t>,
-    disjErr: option<string>,
     disjEditMode: bool,
+    disjErr: option<string>,
+    disj: Belt_MapInt.t<Belt_SetInt.t>,
+
+    wrkCtx: option<(string,mmContext)>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -414,4 +413,69 @@ let sortStmtsByType = st => {
 let unify = st => {
     let st = sortStmtsByType(st)
     st
+}
+
+let removeAllErrorsInUserStmt = stmt => {
+    {
+        ...stmt,
+        contErr: None,
+        jstfErr: None,
+    }
+}
+
+let removeAllErrorsInEditorState = st => {
+    {
+        ...st,
+        constsErr: None,
+        varsErr: None,
+        disjErr: None,
+        stmts: st.stmts->Js_array2.map(removeAllErrorsInUserStmt)
+    }
+}
+
+let editorStateHasErrors = st => {
+    st.constsErr->Belt_Option.isSome ||
+        st.varsErr->Belt_Option.isSome ||
+        st.disjErr->Belt_Option.isSome ||
+        st.stmts->Js_array2.some(stmt => {
+            stmt.contErr->Belt_Option.isSome ||
+                stmt.jstfErr->Belt_Option.isSome
+        })
+}
+
+let refreshWrkCtx = (st:editorState):editorState => {
+    let actualWrkCtxVer = [
+        st.settingsV->Belt_Int.toString,
+        st.preCtxV->Belt_Int.toString,
+        st.constsText,
+        st.varsText,
+        st.disjText,
+    ]->Js.Array2.joinWith(" ")
+    let mustUpdate = switch st.wrkCtx {
+        | None => true
+        | Some((existingWrkCtxVer,_)) if existingWrkCtxVer != actualWrkCtxVer => true
+        | _ => false
+    }
+    if (!mustUpdate) {
+        st
+    } else {
+        let st = removeAllErrorsInEditorState(st)
+        let wrkCtx = st.preCtx->cloneContext
+        let constsArr = getSpaceSeparatedValuesAsArray(st.constsText)
+        let st = if (constsArr->Js.Array2.length == 0) {
+            {...st, constsErr:None}
+        } else {
+            try {
+                constsArr->Js_array2.forEach(wrkCtx->addConstToRoot)
+                {...st, constsErr:None}
+            } catch {
+                | MmException({msg}) => {...st, constsErr:Some(msg)}
+            }
+        }
+        if (editorStateHasErrors(st)) {
+            {...st, wrkCtx:None}
+        } else {
+            {...st, wrkCtx:Some((actualWrkCtxVer, wrkCtx))}
+        }
+    }
 }

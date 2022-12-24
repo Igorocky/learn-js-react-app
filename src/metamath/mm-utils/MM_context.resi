@@ -34,6 +34,7 @@ let resetToParentContext: mmContext => unit
 let cloneContext: mmContext => mmContext
 let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore:string=?, ~stopAfter:string=?, 
                     ~expectedNumOfAssertions:int=?, ~onProgress:float=>unit=?, ()) => mmContext
+let addConstToRoot: (mmContext,string) => unit
 
 let isConst: (mmContext,string) => bool
 let isVar: (mmContext,string) => bool

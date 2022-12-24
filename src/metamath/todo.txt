@@ -1,4 +1,3 @@
-- place stmts in correct order on unification begin.
 - prepare all the required data for proof tree in the worker.
 - write tests for editorState -> proofTree -> editorState.
 
