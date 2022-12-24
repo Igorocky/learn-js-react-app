@@ -1,6 +1,7 @@
 open Expln_React_Mui
 open MM_context
 open MM_cmp_settings
+open MM_wrk_settings
 open Modal
 
 type tabData =
@@ -90,8 +91,8 @@ let make = () => {
                             modalRef
                             settings=state.settings
                             settingsV=state.settingsV
-                            ctx=state.ctx
-                            ctxV=state.ctxV
+                            preCtxV=state.ctxV
+                            preCtx=state.ctx
                         />
                     | Search => <MM_cmp_click_counter title="Search" />
                     | ProofExplorer({label}) => <MM_cmp_click_counter title=label />

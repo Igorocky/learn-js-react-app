@@ -1,8 +1,8 @@
 open MM_context
 open Expln_React_common
 open Modal
+open MM_wrk_settings
 
-type settings
 let createDefaultSettings: unit => settings
 let settingsReadFromLocStor: string => option<settings>
 let getParens: settings => array<string>

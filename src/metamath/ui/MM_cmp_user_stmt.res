@@ -2,60 +2,9 @@ open MM_syntax_tree
 open Expln_React_common
 open Expln_React_Mui
 open MM_parser
+open MM_wrk_editor
 
-type stmtCont =
-    | Text({text:array<string>, syntaxError: option<string>})
-    | Tree(syntaxTreeNode)
 
-let contIsEmpty = cont => {
-    switch cont {
-        | Text({text}) => text->Js.Array2.length == 0
-        | Tree(syntaxTreeNode) => syntaxTreeIsEmpty(syntaxTreeNode)
-    }
-}
-
-let contToArrStr = cont => {
-    switch cont {
-        | Text({text}) => text
-        | Tree(syntaxTreeNode) => syntaxTreeToSymbols(syntaxTreeNode)
-    }
-}
-
-let contToStr = cont => {
-    cont->contToArrStr->Js_array2.joinWith(" ")
-}
-
-let strToCont = str => {
-    Text({
-        text: getSpaceSeparatedValuesAsArray(str),
-        syntaxError: None
-    })
-}
-
-type userStmtType = [ #e | #p ]
-
-let userStmtTypeFromStr = str => {
-    switch str {
-        | "e" => #e
-        | "p" => #p
-        | _ => raise(MmException({msg:`Cannot convert '${str}' to userStmtType`}))
-    }
-}
-
-type userStmt = {
-    id: string,
-
-    label: string,
-    labelEditMode: bool,
-    typ: userStmtType,
-    typEditMode: bool,
-    cont: stmtCont,
-    contEditMode: bool,
-    
-    proof: string,
-    proofEditMode: bool,
-    proofError: option<string>,
-}
 
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
@@ -63,13 +12,13 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
 
 type state = {
     newText: string,
-    proofExpanded: bool,
+    jstfExpanded: bool,
 }
 
 let makeInitialState = () => {
     {
         newText: "",
-        proofExpanded: false
+        jstfExpanded: false
     }
 }
 
@@ -80,10 +29,10 @@ let setNewText = (st,text):state => {
     }
 }
 
-let setProofExpanded = (st,proofExpanded):state => {
+let setProofExpanded = (st,jstfExpanded):state => {
     {
         ...st,
-        proofExpanded
+        jstfExpanded
     }
 }
 
@@ -93,7 +42,7 @@ let make = (
     ~onLabelEditRequested:unit=>unit, ~onLabelEditDone:string=>unit,
     ~onTypEditRequested:unit=>unit, ~onTypEditDone:userStmtType=>unit,
     ~onContEditRequested:unit=>unit, ~onContEditDone:stmtCont=>unit,
-    ~onProofEditRequested:unit=>unit, ~onProofEditDone:string=>unit,
+    ~onJstfEditRequested:unit=>unit, ~onJstfEditDone:string=>unit,
 ) => {
     let (state, setState) = React.useState(_ => makeInitialState())
 
@@ -104,14 +53,14 @@ let make = (
             setState(setNewText(_,stmt.typ :> string))
         } else if (stmt.contEditMode) {
             setState(setNewText(_,contToStr(stmt.cont)))
-        } else if (stmt.proofEditMode) {
-            setState(setNewText(_,stmt.proof))
+        } else if (stmt.jstfEditMode) {
+            setState(setNewText(_,stmt.jstf))
         }
         None
-    }, [stmt.labelEditMode, stmt.typEditMode, stmt.contEditMode, stmt.proofEditMode])
+    }, [stmt.labelEditMode, stmt.typEditMode, stmt.contEditMode, stmt.jstfEditMode])
 
     let actToggleProofExpanded = () => {
-        setState(st => setProofExpanded(st, !st.proofExpanded))
+        setState(st => setProofExpanded(st, !st.jstfExpanded))
     }
 
     let actExpandProof = expanded => {
@@ -134,9 +83,9 @@ let make = (
         onContEditDone(strToCont(state.newText))
     }
     
-    let actProofEditDone = () => {
+    let actJstfEditDone = () => {
         actExpandProof(true)
-        onProofEditDone(state.newText)
+        onJstfEditDone(state.newText)
     }
 
     let ctrlEnterHnd = (kbrdEvt, clbk) => {
@@ -204,6 +153,7 @@ let make = (
                     value=""
                     onChange=evt2str(actTypEditDone)
                 >
+                    <MenuItem value="a">{React.string("A")}</MenuItem>
                     <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>
                 </Select>
@@ -225,10 +175,10 @@ let make = (
         }
     }
 
-    let rndProofBody = () => {
+    let rndJstfBody = () => {
         if (stmt.typ == #p) {
-            if (state.proofExpanded || stmt.proofEditMode) {
-                if (stmt.proofEditMode) {
+            if (state.jstfExpanded || stmt.jstfEditMode) {
+                if (stmt.jstfEditMode) {
                     <Row>
                         <TextField
                             size=#small
@@ -237,14 +187,14 @@ let make = (
                             multiline=true
                             value=state.newText
                             onChange=evt2str(actNewTextUpdated)
-                            onKeyDown=ctrlEnterHnd(_, actProofEditDone)
+                            onKeyDown=ctrlEnterHnd(_, actJstfEditDone)
                         />
-                        {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actProofEditDone)}
+                        {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone)}
                     </Row>
                 } else {
-                    <Paper variant=#outlined onClick=altLeftClickHnd(_, onProofEditRequested)>
+                    <Paper variant=#outlined onClick=altLeftClickHnd(_, onJstfEditRequested)>
                         <pre>
-                            {React.string(stmt.proof)}
+                            {React.string(stmt.jstf)}
                         </pre>
                     </Paper>
                 }
@@ -263,6 +213,6 @@ let make = (
             {rndCont()}
             {rndProofInfo()}
         </Row>
-        {rndProofBody()}
+        {rndJstfBody()}
     </Col>
 }

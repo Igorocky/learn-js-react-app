@@ -5,6 +5,8 @@ open Modal
 open MM_cmp_settings
 open MM_parser
 open MM_cmp_user_stmt
+open MM_wrk_editor
+open MM_wrk_settings
 
 type userStmtLocStor = {
     id: string,
@@ -13,47 +15,10 @@ type userStmtLocStor = {
     typ: string,
     cont: string,
     
-    proof: string,
+    jstf: string,
 }   
 
-let createEmptyUserStmt = (id, typ):userStmt => {
-    { 
-        id, 
-        label:"label", labelEditMode:false, 
-        typ, typEditMode:false, 
-        cont:Text({text:[], syntaxError:None}), contEditMode:true, 
-        proof:"", proofEditMode:false,  proofError:None 
-    }
-}
-
-type state = {
-    settingsV:int,
-    settings:settings,
-
-    ctxV: int,
-    ctx: mmContext,
-
-    constsText: string,
-    consts: array<string>,
-    constsErr: option<string>,
-    constsEditMode: bool,
-
-    varsText: string,
-    vars: array<stmt>,
-    varsErr: option<string>,
-    varsEditMode: bool,
-
-    disjText: string,
-    disj: Belt_MapInt.t<Belt_SetInt.t>,
-    disjErr: option<string>,
-    disjEditMode: bool,
-
-    nextStmtId: int,
-    stmts: array<userStmt>,
-    checkedStmtIds: array<string>,
-}
-
-type stateLocStor = {
+type editorStateLocStor = {
     constsText: string,
     varsText: string,
     disjText: string,
@@ -73,19 +38,22 @@ let userStmtLocStorToUserStmt = (userStmtLocStor:userStmtLocStor):userStmt => {
         cont: strToCont(userStmtLocStor.cont),
         contEditMode: false,
         
-        proof: userStmtLocStor.proof,
-        proofEditMode: false,
-        proofError: None,
+        jstf: userStmtLocStor.jstf,
+        jstfEditMode: false,
+        jstfError: None,
+
+        expr: None,
+        proof: None,
     }
 }
 
-let createInitialState = (settingsV, settings, ctxV, ctx, stateLocStor:option<stateLocStor>) => {
+let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocStor:option<editorStateLocStor>) => {
     {
         settingsV,
         settings,
 
-        ctxV,
-        ctx,
+        preCtxV,
+        preCtx,
 
         constsText: stateLocStor->Belt.Option.map(obj => obj.constsText)->Belt.Option.getWithDefault(""),
         consts: [],
@@ -111,7 +79,7 @@ let createInitialState = (settingsV, settings, ctxV, ctx, stateLocStor:option<st
     }
 }
 
-let stateToStateLocStor = (state:state):stateLocStor => {
+let editorStateToEditorStateLocStor = (state:editorState):editorStateLocStor => {
     {
         constsText: state.constsText,
         varsText: state.varsText,
@@ -123,17 +91,17 @@ let stateToStateLocStor = (state:state):stateLocStor => {
                 label: stmt.label,
                 typ: (stmt.typ :> string),
                 cont: contToStr(stmt.cont),
-                proof: stmt.proof,
+                jstf: stmt.jstf,
             }
         }),
     }
 }
 
-let editorSaveStateToLocStor = (state:state, key:string) => {
-    Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(state->stateToStateLocStor))
+let editorSaveStateToLocStor = (state:editorState, key:string) => {
+    Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(state->editorStateToEditorStateLocStor))
 }
 
-let editorReadStateFromLocStor = (key:string):option<stateLocStor> => {
+let readEditorStateFromLocStor = (key:string):option<editorStateLocStor> => {
     switch Dom_storage2.localStorage->Dom_storage2.getItem(key) {
         | None => None
         | Some(stateLocStorStr) => {
@@ -150,7 +118,7 @@ let editorReadStateFromLocStor = (key:string):option<stateLocStor> => {
                             label: d->str("label"),
                             typ: d->str("typ"),
                             cont: d->str("cont"),
-                            proof: d->str("proof")
+                            jstf: d->str("jstf")
                         }
                     })
                 }
@@ -163,286 +131,17 @@ let editorReadStateFromLocStor = (key:string):option<stateLocStor> => {
     }
 }
 
-let updateStmt = (st:state,id,update):state => {
-    {
-        ...st,
-        stmts: st.stmts->Js_array2.map(stmt => if stmt.id == id {update(stmt)} else {stmt})
-    }
-}
-
-let isStmtChecked = (st,id) => {
-    st.checkedStmtIds->Js.Array2.includes(id)
-}
-
-let toggleStmtChecked = (st,id) => {
-    if (isStmtChecked(st,id)) {
-        {
-            ...st,
-            checkedStmtIds: st.checkedStmtIds->Js_array2.filter(checkedId => checkedId != id)
-        }
-    } else {
-        {
-            ...st,
-            checkedStmtIds: st.checkedStmtIds->Js_array2.concat([id])
-        }
-    }
-}
-
-let checkAllStmts = (st:state):state => {
-    {
-        ...st,
-        checkedStmtIds: st.stmts->Js.Array2.map(stmt => stmt.id)
-    }
-}
-
-let uncheckAllStmts = (st:state):state => {
-    {
-        ...st,
-        checkedStmtIds: []
-    }
-}
-
-let deleteCheckedStmts = (st:state):state => {
-    let newStmts = st.stmts->Js_array2.filter(stmt => !isStmtChecked(st,stmt.id))
-    let newNextStmtId = if (newStmts->Js_array2.length == 0) { 0 } else { st.nextStmtId }
-    {
-        ...st,
-        stmts: newStmts,
-        checkedStmtIds: [],
-        nextStmtId: newNextStmtId,
-    }
-}
-
-let canMoveCheckedStmts = (st:state, up):bool => {
-    let len = st.stmts->Js_array2.length
-    len != 0 && st.checkedStmtIds->Js_array2.length != 0 && (
-        (up && !isStmtChecked(st,st.stmts[0].id)) || (!up && !isStmtChecked(st,st.stmts[len-1].id))
-    )
-}
-
-let moveCheckedStmts = (st:state,up):state => {
-    if (!canMoveCheckedStmts(st,up)) {
-        st
-    } else {
-        let len = st.stmts->Js_array2.length
-        let res = st.stmts->Js.Array2.copy
-        if up {
-            let maxI = len-2
-            for i in 0 to maxI {
-                if (!isStmtChecked(st,res[i].id) && isStmtChecked(st,res[i+1].id)) {
-                    let tmp = res[i]
-                    res[i] = res[i+1]
-                    res[i+1] = tmp
-                }
-            }
-        } else {
-            for i in len-1 downto 1 {
-                if (isStmtChecked(st,res[i-1].id) && !isStmtChecked(st,res[i].id)) {
-                    let tmp = res[i]
-                    res[i] = res[i-1]
-                    res[i-1] = tmp
-                }
-            }
-        }
-        {
-            ...st,
-            stmts: res,
-        }
-    }
-}
-
-let addNewStmt = (st:state):state => {
-    let newId = st.nextStmtId->Belt_Int.toString
-    let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
-    {
-        ...st,
-        nextStmtId: st.nextStmtId+1,
-        stmts: 
-            switch idToAddBefore {
-                | Some(idToAddBefore) => {
-                    st.stmts->Js_array2.map(stmt => {
-                        if (stmt.id == idToAddBefore) {
-                            [createEmptyUserStmt(newId,#p), stmt]
-                        } else {
-                            [stmt]
-                        }
-                    })->Belt_Array.concatMany
-                }
-                | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p)])
-            }
-    }
-}
-
-let isSingleStmtChecked = st => st.checkedStmtIds->Js_array2.length == 1
-
-let duplicateCheckedStmt = st => {
-    if (!isSingleStmtChecked(st)) {
-        st
-    } else {
-        let newId = st.nextStmtId->Belt_Int.toString
-        let idToAddAfter = st.checkedStmtIds[0]
-        {
-            ...st,
-            nextStmtId: st.nextStmtId+1,
-            stmts: 
-                st.stmts->Js_array2.map(stmt => {
-                    if (stmt.id == idToAddAfter) {
-                        [stmt, {...stmt, id:newId}]
-                    } else {
-                        [stmt]
-                    }
-                })->Belt_Array.concatMany,
-            checkedStmtIds: [newId],
-        }
-    }
-}
-
-let canGoEditModeForStmt = (st:state,stmtId) => {
-    !(st.stmts->Js_array2.some(stmt => stmt.id == stmtId && (stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode)))
-}
-
-let setConstsEditMode = st => {
-    {
-        ...st,
-        constsEditMode: true
-    }
-}
-
-let completeConstsEditMode = (st, newConstsText) => {
-    {
-        ...st,
-        constsText:newConstsText,
-        constsEditMode: false
-    }
-}
-
-let setVarsEditMode = st => {
-    {
-        ...st,
-        varsEditMode: true
-    }
-}
-
-let completeVarsEditMode = (st, newVarsText) => {
-    {
-        ...st,
-        varsText:newVarsText,
-        varsEditMode: false
-    }
-}
-
-let setDisjEditMode = st => {
-    {
-        ...st,
-        disjEditMode: true
-    }
-}
-
-let completeDisjEditMode = (st, newDisjText) => {
-    {
-        ...st,
-        disjText:newDisjText,
-        disjEditMode: false
-    }
-}
-
-let setLabelEditMode = (st:state, stmtId) => {
-    if (canGoEditModeForStmt(st, stmtId)) {
-        updateStmt(st, stmtId, stmt => {...stmt, labelEditMode:true})
-    } else {
-        st
-    }
-}
-
-let completeLabelEditMode = (st, stmtId, newLabel) => {
-    updateStmt(st, stmtId, stmt => {
-        if (newLabel->Js_string2.trim != "") {
-            {
-                ...stmt,
-                label:newLabel,
-                labelEditMode: false
-            }
-        } else {
-            stmt
-        }
-    })
-}
-
-let setContEditMode = (st, stmtId) => {
-    if (canGoEditModeForStmt(st, stmtId)) {
-        updateStmt(st, stmtId, stmt => {...stmt, contEditMode:true})
-    } else {
-        st
-    }
-}
-
-let completeContEditMode = (st, stmtId, newCont) => {
-    updateStmt(st, stmtId, stmt => {
-        if (contIsEmpty(newCont)) {
-            stmt
-        } else {
-            {
-                ...stmt,
-                cont:newCont,
-                contEditMode: false
-            }
-        }
-    })
-}
-
-let setTypEditMode = (st, stmtId) => {
-    if (canGoEditModeForStmt(st, stmtId)) {
-        updateStmt(st, stmtId, stmt => {...stmt, typEditMode:true})
-    } else {
-        st
-    }
-}
-
-let completeTypEditMode = (st, stmtId, newTyp) => {
-    updateStmt(st, stmtId, stmt => {
-        {
-            ...stmt,
-            typ:newTyp,
-            typEditMode: false
-        }
-    })
-}
-
-let setProofEditMode = (st, stmtId) => {
-    if (canGoEditModeForStmt(st, stmtId)) {
-        updateStmt(st, stmtId, stmt => {...stmt, proofEditMode:true})
-    } else {
-        st
-    }
-}
-
-let completeProofEditMode = (st, stmtId, newProof) => {
-    updateStmt(st, stmtId, stmt => {
-        {
-            ...stmt,
-            proof:newProof,
-            proofEditMode: false
-        }
-    })
-}
-
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
-}
-
-let setSettings = (st, settingsV, settings) => {
-    { ...st, settingsV, settings }
-}
-
-let setCtx = (st, ctxV, ctx) => {
-    { ...st, ctxV, ctx }
 }
 
 let stateLocStorKey = "editor-state"
 
 @react.component
-let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~ctx:mmContext, ~top:int) => {
-    let (state, setStatePriv) = React.useState(_ => createInitialState(settingsV, settings, ctxV, ctx, editorReadStateFromLocStor(stateLocStorKey)))
+let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int, ~preCtx:mmContext, ~top:int) => {
+    let (state, setStatePriv) = React.useState(_ => createInitialEditorState(
+        settingsV, settings, preCtxV, preCtx, readEditorStateFromLocStor(stateLocStorKey)
+    ))
 
     let setState = update => {
         setStatePriv(prev => {
@@ -461,14 +160,14 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
         None
     }, [settingsV])
 
-    let actCtxUpdated = (ctxV, ctx) => {
-        setState(setCtx(_, ctxV, ctx))
+    let actPreCtxUpdated = (preCtxV, preCtx) => {
+        setState(setPreCtx(_, preCtxV, preCtx))
     }
 
     React.useEffect1(() => {
-        actCtxUpdated(ctxV, ctx)
+        actPreCtxUpdated(preCtxV, preCtx)
         None
-    }, [ctxV])
+    }, [preCtxV])
 
     let mainCheckboxState = {
         let atLeastOneStmtIsChecked = state.checkedStmtIds->Js.Array2.length != 0
@@ -484,7 +183,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
 
     let editIsActive = 
         state.constsEditMode || state.varsEditMode ||
-        state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.proofEditMode )
+        state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.jstfEditMode )
 
     let actAddNewStmt = () => setState(addNewStmt)
     let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
@@ -548,8 +247,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~ctxV:int, ~
                 onContEditRequested={() => actBeginEdit(setContEditMode,stmt.id)}
                 onContEditDone={newCont => setState(completeContEditMode(_,stmt.id,newCont))}
                 
-                onProofEditRequested={() => actBeginEdit(setProofEditMode,stmt.id)}
-                onProofEditDone={newProof => setState(completeProofEditMode(_,stmt.id,newProof))}
+                onJstfEditRequested={() => actBeginEdit(setJstfEditMode,stmt.id)}
+                onJstfEditDone={newProof => setState(completeJstfEditMode(_,stmt.id,newProof))}
             />
         </Row>
     }
