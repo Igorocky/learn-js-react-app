@@ -448,11 +448,11 @@ let parseConstants = (st,wrkCtx) => {
     } else {
         let constsArr = getSpaceSeparatedValuesAsArray(st.constsText)
         if (constsArr->Js.Array2.length == 0) {
-            {...st, constsErr:None}
+            st
         } else {
             try {
                 constsArr->Js_array2.forEach(wrkCtx->addConstToRoot)
-                {...st, constsErr:None}
+                st
             } catch {
                 | MmException({msg}) => {...st, constsErr:Some(msg)}
             }
@@ -480,13 +480,38 @@ let parseVariables = (st,wrkCtx) => {
             ->Js_array2.map(so => so->Belt_Option.getWithDefault("")->Js_string2.trim)
             ->Js_array2.filter(s => s->Js_string2.length > 0)
         if (varLines->Js.Array2.length == 0) {
-            {...st, varsErr:None}
+            st
         } else {
             try {
                 varLines->Js_array2.forEach(addVarFromString(_,wrkCtx))
-                {...st, varsErr:None}
+                st
             } catch {
                 | MmException({msg}) => {...st, varsErr:Some(msg)}
+            }
+        }
+    }
+}
+
+let addDisjFromString = (str,wrkCtx) => {
+    wrkCtx->applySingleStmt(Disj({vars:getSpaceSeparatedValuesAsArray(str)}))
+}
+
+let parseDisjoints = (st,wrkCtx) => {
+    if (editorStateHasErrors(st)) {
+        st
+    } else {
+        let disjLines = st.disjText
+            ->Js_string2.splitByRe(newLineRegex)
+            ->Js_array2.map(so => so->Belt_Option.getWithDefault("")->Js_string2.trim)
+            ->Js_array2.filter(s => s->Js_string2.length > 0)
+        if (disjLines->Js.Array2.length == 0) {
+            st
+        } else {
+            try {
+                disjLines->Js_array2.forEach(addDisjFromString(_,wrkCtx))
+                st
+            } catch {
+                | MmException({msg}) => {...st, disjErr:Some(msg)}
             }
         }
     }
@@ -512,6 +537,7 @@ let refreshWrkCtx = (st:editorState):editorState => {
         let wrkCtx = st.preCtx->cloneContext
         let st = parseConstants(st,wrkCtx)
         let st = parseVariables(st,wrkCtx)
+        let st = parseDisjoints(st,wrkCtx)
         if (editorStateHasErrors(st)) {
             {...st, wrkCtx:None}
         } else {

@@ -141,5 +141,46 @@ describe("refreshWrkCtx", _ => {
         }
     })
     
+    it("detects an error in disjoints declaration", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = completeDisjEditMode(st, "t r \n r s-")
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        assertEq(st.constsErr->Belt_Option.isNone, true)
+        assertEq(st.varsErr->Belt_Option.isNone, true)
+        assertEq(st.disjErr->Belt_Option.getWithDefault(""), "The symbol 's-' is not a variable but it is used in a disjoint statement.")
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
+    })
+    
+    it("creates wrkCtx when only additional disjoints are defined and there are no errors", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = completeDisjEditMode(st, "t r \n r s")
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        switch st.wrkCtx {
+            | Some((wrkCtxVer,wrkCtx)) => {
+                assertEqMsg(wrkCtxVer, "1 1   t r \n r s", "wrkCtxVer")
+                let ti = (wrkCtx->makeExprExn(["t"]))[0]
+                let ri = (wrkCtx->makeExprExn(["r"]))[0]
+                let si = (wrkCtx->makeExprExn(["s"]))[0]
+                assertEqMsg(wrkCtx->isDisj(ti,ri), true, "t and r are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ri,ti), true, "r and t are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ri,si), true, "r and s are disjoint")
+                assertEqMsg(wrkCtx->isDisj(si,ri), true, "s and r are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ti,si), false, "t and s are not disjoint")
+                assertEqMsg(wrkCtx->isDisj(si,ti), false, "s and t are not disjoint")
+            }
+            | _ => failMsg("A non-empty context was expected")
+        }
+    })
+    
     
 })
