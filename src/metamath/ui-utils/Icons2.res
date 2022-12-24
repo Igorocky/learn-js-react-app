@@ -42,3 +42,8 @@ module Save = {
     @module("@mui/icons-material/Save") @react.component
     external make: () => React.element = "default"
 }
+
+module Settings = {
+    @module("@mui/icons-material/Settings") @react.component
+    external make: () => React.element = "default"
+}

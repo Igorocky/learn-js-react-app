@@ -1,10 +1,7 @@
 open MM_syntax_tree
 open Expln_React_common
 open Expln_React_Mui
-open MM_parser
 open MM_wrk_editor
-
-
 
 let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
     <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
@@ -12,13 +9,13 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
 
 type state = {
     newText: string,
-    jstfExpanded: bool,
+    infoExpanded: bool,
 }
 
 let makeInitialState = () => {
     {
         newText: "",
-        jstfExpanded: false
+        infoExpanded: false
     }
 }
 
@@ -29,10 +26,10 @@ let setNewText = (st,text):state => {
     }
 }
 
-let setProofExpanded = (st,jstfExpanded):state => {
+let setInfoExpanded = (st,infoExpanded):state => {
     {
         ...st,
-        jstfExpanded
+        infoExpanded
     }
 }
 
@@ -59,12 +56,12 @@ let make = (
         None
     }, [stmt.labelEditMode, stmt.typEditMode, stmt.contEditMode, stmt.jstfEditMode])
 
-    let actToggleProofExpanded = () => {
-        setState(st => setProofExpanded(st, !st.jstfExpanded))
+    let actToggleInfoExpanded = () => {
+        setState(st => setInfoExpanded(st, !st.infoExpanded))
     }
 
     let actExpandProof = expanded => {
-        setState(st => setProofExpanded(st, expanded))
+        setState(st => setInfoExpanded(st, expanded))
     }
 
     let actNewTextUpdated = newText => {
@@ -165,39 +162,43 @@ let make = (
         }
     }
 
-    let rndProofInfo = () => {
+    let rndInfoBtn = () => {
         if (stmt.typ == #p) {
-            <span onClick={_ => actToggleProofExpanded()} style=ReactDOM.Style.make(~cursor="pointer", ())>
-                {React.string("Proof")}
+            <span onClick={_ => actToggleInfoExpanded()} style=ReactDOM.Style.make(~cursor="pointer", ~fontWeight="bold", ())>
+                {React.string("\u24D8")}
             </span>
         } else {
             React.null
         }
     }
 
-    let rndJstfBody = () => {
+    let rndJstf = () => {
+        if (stmt.jstfEditMode) {
+            <Row>
+                <TextField
+                    size=#small
+                    label="Justification"
+                    style=ReactDOM.Style.make(~width="600px", ())
+                    autoFocus=true
+                    multiline=true
+                    value=state.newText
+                    onChange=evt2str(actNewTextUpdated)
+                    onKeyDown=ctrlEnterHnd(_, actJstfEditDone)
+                />
+                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone)}
+            </Row>
+        } else {
+            <Paper onClick=altLeftClickHnd(_, onJstfEditRequested) style=ReactDOM.Style.make(~padding="3px", ())>
+                {React.string("Justification: ")}
+                {React.string(stmt.jstf)}
+            </Paper>
+        }
+    }
+
+    let rndInfoBody = () => {
         if (stmt.typ == #p) {
-            if (state.jstfExpanded || stmt.jstfEditMode) {
-                if (stmt.jstfEditMode) {
-                    <Row>
-                        <TextField
-                            size=#small
-                            style=ReactDOM.Style.make(~width="600px", ())
-                            autoFocus=true
-                            multiline=true
-                            value=state.newText
-                            onChange=evt2str(actNewTextUpdated)
-                            onKeyDown=ctrlEnterHnd(_, actJstfEditDone)
-                        />
-                        {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone)}
-                    </Row>
-                } else {
-                    <Paper variant=#outlined onClick=altLeftClickHnd(_, onJstfEditRequested)>
-                        <pre>
-                            {React.string(stmt.jstf)}
-                        </pre>
-                    </Paper>
-                }
+            if (state.infoExpanded || stmt.jstfEditMode) {
+                rndJstf()
             } else {
                 React.null
             }
@@ -207,12 +208,12 @@ let make = (
     }
 
     <Col spacing=1.>
-        <Row style=ReactDOM.Style.make(~marginTop="5px", ())>
+        <Row style=ReactDOM.Style.make(~marginTop="5px", ()) alignItems=#center>
             {rndLabel()}
             {rndTyp()}
             {rndCont()}
-            {rndProofInfo()}
+            {rndInfoBtn()}
         </Row>
-        {rndJstfBody()}
+        {rndInfoBody()}
     </Col>
 }
