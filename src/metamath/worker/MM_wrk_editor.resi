@@ -91,3 +91,4 @@ let setJstfEditMode: (editorState, string) => editorState
 let completeJstfEditMode: (editorState, string, string) => editorState
 let setSettings: (editorState, int, settings) => editorState
 let setPreCtx: (editorState, int, mmContext) => editorState
+let unify: editorState => editorState

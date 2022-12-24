@@ -208,6 +208,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         }
     }
 
+    let actUnify = () => {
+        setState(unify)
+    }
+
     let rndButtons = () => {
         <Paper>
             <Row>
@@ -224,6 +228,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
+                {rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)))}
             </Row>
         </Paper>
     }

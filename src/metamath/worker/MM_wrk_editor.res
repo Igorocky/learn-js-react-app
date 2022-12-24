@@ -372,3 +372,46 @@ let setSettings = (st, settingsV, settings) => {
 let setPreCtx = (st, preCtxV, preCtx) => {
     { ...st, preCtxV, preCtx }
 }
+
+let stableSortStmts = (st, comp: (userStmt,userStmt)=>int) => {
+    let stmtsLen = st.stmts->Js.Array2.length
+    if (stmtsLen < 2) {
+        st
+    } else {
+        let newStmts = st.stmts->Js.Array2.copy
+        let changed = ref(true)
+        let e = ref(stmtsLen - 2)
+        while (e.contents >= 1 && changed.contents) {
+            changed.contents = false
+            for i in 0 to e.contents {
+                if (comp(newStmts[i], newStmts[i+1]) > 0) {
+                    let tmp = newStmts[i]
+                    newStmts[i] = newStmts[i+1]
+                    newStmts[i+1] = tmp
+                    changed.contents = true
+                }
+            }
+            e.contents = e.contents - 1
+        }
+        {
+            ...st,
+            stmts: newStmts
+        }
+    }
+}
+
+let sortStmtsByType = st => {
+    let stmtToInt = stmt => {
+        switch stmt.typ {
+            | #a => 1
+            | #e => 2
+            | #p => 3
+        }
+    }
+    st->stableSortStmts((a,b) => stmtToInt(a) - stmtToInt(b))
+}
+
+let unify = st => {
+    let st = sortStmtsByType(st)
+    st
+}

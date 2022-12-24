@@ -47,3 +47,8 @@ module Settings = {
     @module("@mui/icons-material/Settings") @react.component
     external make: () => React.element = "default"
 }
+
+module Hub = {
+    @module("@mui/icons-material/Hub") @react.component
+    external make: () => React.element = "default"
+}
