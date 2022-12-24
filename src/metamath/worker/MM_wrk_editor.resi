@@ -51,7 +51,6 @@ type editorState = {
     varsText: string,
     varsEditMode: bool,
     varsErr: option<string>,
-    vars: array<stmt>,
 
     disjText: string,
     disjEditMode: bool,

@@ -85,7 +85,6 @@ type editorState = {
     varsText: string,
     varsEditMode: bool,
     varsErr: option<string>,
-    vars: array<stmt>,
 
     disjText: string,
     disjEditMode: bool,
@@ -443,6 +442,56 @@ let editorStateHasErrors = st => {
         })
 }
 
+let parseConstants = (st,wrkCtx) => {
+    if (editorStateHasErrors(st)) {
+        st
+    } else {
+        let constsArr = getSpaceSeparatedValuesAsArray(st.constsText)
+        if (constsArr->Js.Array2.length == 0) {
+            {...st, constsErr:None}
+        } else {
+            try {
+                constsArr->Js_array2.forEach(wrkCtx->addConstToRoot)
+                {...st, constsErr:None}
+            } catch {
+                | MmException({msg}) => {...st, constsErr:Some(msg)}
+            }
+        }
+    }
+}
+
+let addVarFromString = (str,wrkCtx) => {
+    let arr = getSpaceSeparatedValuesAsArray(str)
+    if (arr->Js_array2.length != 3) {
+        raise(MmException({msg:`Cannot convert '${str}' to Var statement.`}))
+    } else {
+        wrkCtx->applySingleStmt(Var({symbols:[arr[2]]}))
+        wrkCtx->applySingleStmt(Floating({label:arr[0], expr:[arr[1], arr[2]]}))
+    }
+}
+
+let newLineRegex = %re("/[\n\r]/")
+let parseVariables = (st,wrkCtx) => {
+    if (editorStateHasErrors(st)) {
+        st
+    } else {
+        let varLines = st.varsText
+            ->Js_string2.splitByRe(newLineRegex)
+            ->Js_array2.map(so => so->Belt_Option.getWithDefault("")->Js_string2.trim)
+            ->Js_array2.filter(s => s->Js_string2.length > 0)
+        if (varLines->Js.Array2.length == 0) {
+            {...st, varsErr:None}
+        } else {
+            try {
+                varLines->Js_array2.forEach(addVarFromString(_,wrkCtx))
+                {...st, varsErr:None}
+            } catch {
+                | MmException({msg}) => {...st, varsErr:Some(msg)}
+            }
+        }
+    }
+}
+
 let refreshWrkCtx = (st:editorState):editorState => {
     let actualWrkCtxVer = [
         st.settingsV->Belt_Int.toString,
@@ -461,17 +510,8 @@ let refreshWrkCtx = (st:editorState):editorState => {
     } else {
         let st = removeAllErrorsInEditorState(st)
         let wrkCtx = st.preCtx->cloneContext
-        let constsArr = getSpaceSeparatedValuesAsArray(st.constsText)
-        let st = if (constsArr->Js.Array2.length == 0) {
-            {...st, constsErr:None}
-        } else {
-            try {
-                constsArr->Js_array2.forEach(wrkCtx->addConstToRoot)
-                {...st, constsErr:None}
-            } catch {
-                | MmException({msg}) => {...st, constsErr:Some(msg)}
-            }
-        }
+        let st = parseConstants(st,wrkCtx)
+        let st = parseVariables(st,wrkCtx)
         if (editorStateHasErrors(st)) {
             {...st, wrkCtx:None}
         } else {

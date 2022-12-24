@@ -63,7 +63,6 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
         varsText: stateLocStor->Belt.Option.map(obj => obj.varsText)->Belt.Option.getWithDefault(""),
         varsEditMode: false,
         varsErr: None,
-        vars: [],
 
         disjText: stateLocStor->Belt.Option.map(obj => obj.disjText)->Belt.Option.getWithDefault(""),
         disjEditMode: false,
