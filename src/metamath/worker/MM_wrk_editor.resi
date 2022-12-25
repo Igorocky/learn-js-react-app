@@ -24,14 +24,15 @@ type userStmt = {
     typ: userStmtType,
     typEditMode: bool,
     cont: stmtCont,
-    contErr: option<string>,
     contEditMode: bool,
 
-    jstf: string,
+    jstfText: string,
     jstfEditMode: bool,
-    jstfErr: option<string>,
+
+    stmtErr: option<string>,
 
     expr: option<expr>,
+    jstf: option<justification>,
     proof: option<proofTreeNode>,
 }
 

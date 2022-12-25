@@ -98,7 +98,7 @@ describe("refreshWrkCtx", _ => {
         //then
         switch st.wrkCtx {
             | Some((wrkCtxVer,wrkCtx)) => {
-                assertEqMsg(wrkCtxVer, "1 1 c1 c2  ", "wrkCtxVer")
+                assertEqMsg(wrkCtxVer, "1 1 c1 c2", "wrkCtxVer")
                 assertEqMsg(wrkCtx->isConst("c1"), true, "c1 is const")
                 assertEqMsg(wrkCtx->isConst("c2"), true, "c2 is const")
             }
@@ -131,7 +131,7 @@ describe("refreshWrkCtx", _ => {
         //then
         switch st.wrkCtx {
             | Some((wrkCtxVer,wrkCtx)) => {
-                assertEqMsg(wrkCtxVer, "1 1  hyp_v1 term v1 \n hyp_v2 wff v2 ", "wrkCtxVer")
+                assertEqMsg(wrkCtxVer, "1 1 hyp_v1 term v1 \n hyp_v2 wff v2", "wrkCtxVer")
                 assertEqMsg(wrkCtx->isVar("v1"), true, "v1 is var")
                 assertEqMsg(getVarType(wrkCtx, "v1"), "term", "v1 is term")
                 assertEqMsg(wrkCtx->isVar("v2"), true, "v2 is var")
@@ -167,7 +167,7 @@ describe("refreshWrkCtx", _ => {
         //then
         switch st.wrkCtx {
             | Some((wrkCtxVer,wrkCtx)) => {
-                assertEqMsg(wrkCtxVer, "1 1   t r \n r s", "wrkCtxVer")
+                assertEqMsg(wrkCtxVer, "1 1 t r \n r s", "wrkCtxVer")
                 let ti = (wrkCtx->makeExprExn(["t"]))[0]
                 let ri = (wrkCtx->makeExprExn(["r"]))[0]
                 let si = (wrkCtx->makeExprExn(["s"]))[0]
@@ -177,6 +177,84 @@ describe("refreshWrkCtx", _ => {
                 assertEqMsg(wrkCtx->isDisj(si,ri), true, "s and r are disjoint")
                 assertEqMsg(wrkCtx->isDisj(ti,si), false, "t and s are not disjoint")
                 assertEqMsg(wrkCtx->isDisj(si,ti), false, "s and t are not disjoint")
+            }
+            | _ => failMsg("A non-empty context was expected")
+        }
+    })
+    
+    it("detects an error in an axiom", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let hypId = st.stmts[0].id
+        let axId = st.stmts[1].id
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t."])})
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        assertEq(st.constsErr->Belt_Option.isNone, true)
+        assertEq(st.varsErr->Belt_Option.isNone, true)
+        assertEq(st.disjErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
+        assertEq(st.stmts[0].stmtErr->Belt_Option.getWithDefault(""), "The symbol 't.' must be either a constant or a variable.")
+        assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
+        assertEq(st.stmts[1].stmtErr->Belt_Option.isNone, true)
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
+    })
+    
+    it("detects an error in a hypothesis", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let hypId = st.stmts[0].id
+        let axId = st.stmts[1].id
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0."])})
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        assertEq(st.constsErr->Belt_Option.isNone, true)
+        assertEq(st.varsErr->Belt_Option.isNone, true)
+        assertEq(st.disjErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
+        assertEq(st.stmts[0].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
+        assertEq(st.stmts[1].stmtErr->Belt_Option.getWithDefault(""), "The symbol '0.' is not declared.")
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
+    })
+    
+    it("creates wrkCtx when there are few correct axioms and hypotheses", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let hypId = st.stmts[0].id
+        let axId = st.stmts[1].id
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        switch st.wrkCtx {
+            | Some((wrkCtxVer,wrkCtx)) => {
+                assertEqMsg(wrkCtxVer, "1 1 ::: ax |- t + t :::::: hyp |- 0 + 0 :::", "wrkCtxVer")
+
+                assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
+                assertEq(st.stmts[0].stmtErr->Belt_Option.isNone, true)
+                assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
+                assertEq(st.stmts[1].stmtErr->Belt_Option.isNone, true)
+
+                assertEqMsg(wrkCtx->isAsrt("ax"), true, "ax is an assertion")
+                assertEqMsg(wrkCtx->isHyp("hyp"), true, "hyp is a hypothesis")
             }
             | _ => failMsg("A non-empty context was expected")
         }

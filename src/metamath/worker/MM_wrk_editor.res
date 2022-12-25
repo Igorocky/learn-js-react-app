@@ -49,14 +49,15 @@ type userStmt = {
     typ: userStmtType,
     typEditMode: bool,
     cont: stmtCont,
-    contErr: option<string>,
     contEditMode: bool,
-
-    jstf: string,
+    
+    jstfText: string,
     jstfEditMode: bool,
-    jstfErr: option<string>,
+
+    stmtErr: option<string>,
 
     expr: option<expr>,
+    jstf: option<justification>,
     proof: option<proofTreeNode>,
 }
 
@@ -65,9 +66,10 @@ let createEmptyUserStmt = (id, typ):userStmt => {
         id, 
         label:"label", labelEditMode:false, 
         typ, typEditMode:false, 
-        cont:Text([]), contEditMode:true, contErr:None,
-        jstf:"", jstfEditMode:false, jstfErr:None,
-        expr:None, proof:None, 
+        cont:Text([]), contEditMode:true,
+        jstfText:"", jstfEditMode:false,
+        stmtErr: None,
+        expr:None, jstf:None, proof:None, 
     }
 }
 
@@ -357,7 +359,7 @@ let completeJstfEditMode = (st, stmtId, newJstf) => {
     updateStmt(st, stmtId, stmt => {
         {
             ...stmt,
-            jstf:newJstf,
+            jstfText:newJstf,
             jstfEditMode: false
         }
     })
@@ -379,7 +381,7 @@ let stableSortStmts = (st, comp: (userStmt,userStmt)=>int) => {
         let newStmts = st.stmts->Js.Array2.copy
         let changed = ref(true)
         let e = ref(stmtsLen - 2)
-        while (e.contents >= 1 && changed.contents) {
+        while (e.contents >= 0 && changed.contents) {
             changed.contents = false
             for i in 0 to e.contents {
                 if (comp(newStmts[i], newStmts[i+1]) > 0) {
@@ -409,16 +411,10 @@ let sortStmtsByType = st => {
     st->stableSortStmts((a,b) => stmtToInt(a) - stmtToInt(b))
 }
 
-let unify = st => {
-    let st = sortStmtsByType(st)
-    st
-}
-
 let removeAllErrorsInUserStmt = stmt => {
     {
         ...stmt,
-        contErr: None,
-        jstfErr: None,
+        stmtErr: None,
     }
 }
 
@@ -432,14 +428,15 @@ let removeAllErrorsInEditorState = st => {
     }
 }
 
+let userStmtHasErrors = stmt => {
+    stmt.stmtErr->Belt_Option.isSome
+}
+
 let editorStateHasErrors = st => {
     st.constsErr->Belt_Option.isSome ||
         st.varsErr->Belt_Option.isSome ||
         st.disjErr->Belt_Option.isSome ||
-        st.stmts->Js_array2.some(stmt => {
-            stmt.contErr->Belt_Option.isSome ||
-                stmt.jstfErr->Belt_Option.isSome
-        })
+        st.stmts->Js_array2.some(userStmtHasErrors)
 }
 
 let parseConstants = (st,wrkCtx) => {
@@ -517,14 +514,45 @@ let parseDisjoints = (st,wrkCtx) => {
     }
 }
 
+let addStmtToCtx = (stmt:userStmt, wrkCtx:mmContext):userStmt => {
+    if (stmt.typ != #a && stmt.typ != #e) {
+        raise(MmException({msg:`Cannot put a statement of type '${stmt.typ :> string}' to mm ctx.`}))
+    }
+    if (userStmtHasErrors(stmt)) {
+        stmt
+    } else {
+        try {
+            if (stmt.typ == #a) {
+                wrkCtx->applySingleStmt(Axiom({label:stmt.label, expr:stmt.cont->contToArrStr}))
+            } else if (stmt.typ == #e) {
+                wrkCtx->applySingleStmt(Essential({label:stmt.label, expr:stmt.cont->contToArrStr}))
+            }
+            stmt
+        } catch {
+            | MmException({msg}) => {...stmt, stmtErr:Some(msg)}
+        }
+    }
+}
+
 let refreshWrkCtx = (st:editorState):editorState => {
+    let st = sortStmtsByType(st)
     let actualWrkCtxVer = [
         st.settingsV->Belt_Int.toString,
         st.preCtxV->Belt_Int.toString,
         st.constsText,
         st.varsText,
         st.disjText,
-    ]->Js.Array2.joinWith(" ")
+        st.stmts->Js_array2.reduce(
+            (acc,stmt) => {
+                acc ++ if (stmt.typ == #a || stmt.typ == #e) {
+                    "::: " ++ stmt.label ++ " " ++ stmt.cont->contToArrStr->Js_array2.joinWith(" ") ++ " :::"
+                } else {
+                    ""
+                }
+            },
+            ""
+        )
+    ]->Js.Array2.filter(str => str->Js.String2.trim->Js_string2.length != 0)->Js.Array2.joinWith(" ")
     let mustUpdate = switch st.wrkCtx {
         | None => true
         | Some((existingWrkCtxVer,_)) if existingWrkCtxVer != actualWrkCtxVer => true
@@ -538,10 +566,95 @@ let refreshWrkCtx = (st:editorState):editorState => {
         let st = parseConstants(st,wrkCtx)
         let st = parseVariables(st,wrkCtx)
         let st = parseDisjoints(st,wrkCtx)
+        let st = st.stmts->Js_array2.reduce(
+            (st,stmt) => {
+                if (editorStateHasErrors(st) || stmt.typ == #p) {
+                    st
+                } else {
+                    st->updateStmt(stmt.id, _ => addStmtToCtx(stmt,wrkCtx))
+                }
+            },
+            st
+        )
         if (editorStateHasErrors(st)) {
             {...st, wrkCtx:None}
         } else {
             {...st, wrkCtx:Some((actualWrkCtxVer, wrkCtx))}
         }
     }
+}
+
+let parseJstf = jstfText => {
+    let jstfTrim = jstfText->Js_string2.trim
+    if (jstfTrim->Js_string2.length == 0) {
+        None
+    } else {
+        let argsAndAsrt = jstfTrim->Js_string2.split(":")
+        if (argsAndAsrt->Js_array2.length != 2) {
+            raise(MmException({msg:`Cannot parse justification: '${jstfText}' [1].`}))
+        }
+        Some({
+            args: argsAndAsrt[0]->getSpaceSeparatedValuesAsArray,
+            asrt: argsAndAsrt[1]
+        })
+    }
+}
+
+let setExprAndJstf = (stmt:userStmt,wrkCtx:mmContext):userStmt => {
+    try {
+
+        {
+            ...stmt,
+            expr: Some(wrkCtx->makeExprExn(stmt.cont->contToArrStr)),
+            jstf: parseJstf(stmt.jstfText)
+        }
+    } catch {
+        | MmException({msg}) => {...stmt, stmtErr:Some(msg)}
+    }
+}
+
+let isDefined = (label:string, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t) => {
+    usedLabels->Belt_MutableSetString.has(label) || wrkCtx->isHyp(label)
+}
+
+let validateJstfRefs = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t):userStmt => {
+    switch stmt.jstf {
+        | None => stmt
+        | Some({args,asrt}) => {
+            switch args->Js_array2.find(ref => !isDefined(ref,wrkCtx,usedLabels)) {
+                | Some(ref) => {
+                    {...stmt, stmtErr:Some(`The reference '${ref}' is not defined.`)}
+                }
+                | None => {
+                    if (!(wrkCtx->isAsrt(asrt))) {
+                        {...stmt, stmtErr:Some(`The label '${asrt}' doesn't refer to any assertion.`)}
+                    } else {
+                        stmt
+                    }
+                }
+            }
+        }
+    }
+}
+
+// let prepareProvablesForUnification = (st:editorState):editorState => {
+//     switch st.wrkCtx {
+//         | None => st
+//         | Some((_,wrkCtx)) => {
+//             let usedLabels = Belt_MutableSetString.make()
+//             st.stmts->Expln_utils_common.arrForEach(stmt => {
+//                 let stmt = setExprAndJstf(stmt, wrkCtx)
+//                 let stmt = switch stmt.stmtErr {
+//                     | Some(_) => stmt
+//                     | None => validateJstfRefs(stmt, wrkCtx, usedLabels)
+//                 }
+//                 //add A and E to wrkCtx
+//             })
+//         }
+//     }
+// }
+
+let unify = st => {
+    let st = refreshWrkCtx(st)
+    st
 }

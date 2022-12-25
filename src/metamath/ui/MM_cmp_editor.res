@@ -15,7 +15,7 @@ type userStmtLocStor = {
     typ: string,
     cont: string,
     
-    jstf: string,
+    jstfText: string,
 }   
 
 type editorStateLocStor = {
@@ -37,13 +37,14 @@ let userStmtLocStorToUserStmt = (userStmtLocStor:userStmtLocStor):userStmt => {
         typEditMode: false,
         cont: strToCont(userStmtLocStor.cont),
         contEditMode: false,
-        contErr: None,
 
-        jstf: userStmtLocStor.jstf,
+        jstfText: userStmtLocStor.jstfText,
         jstfEditMode: false,
-        jstfErr: None,
+
+        stmtErr: None,
 
         expr: None,
+        jstf: None,
         proof: None,
     }
 }
@@ -92,7 +93,7 @@ let editorStateToEditorStateLocStor = (state:editorState):editorStateLocStor => 
                 label: stmt.label,
                 typ: (stmt.typ :> string),
                 cont: contToStr(stmt.cont),
-                jstf: stmt.jstf,
+                jstfText: stmt.jstfText,
             }
         }),
     }
@@ -119,7 +120,7 @@ let readEditorStateFromLocStor = (key:string):option<editorStateLocStor> => {
                             label: d->str("label"),
                             typ: d->str("typ"),
                             cont: d->str("cont"),
-                            jstf: d->str("jstf")
+                            jstfText: d->str("jstfText")
                         }
                     })
                 }

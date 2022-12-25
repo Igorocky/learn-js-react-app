@@ -51,7 +51,7 @@ let make = (
         } else if (stmt.contEditMode) {
             setState(setNewText(_,contToStr(stmt.cont)))
         } else if (stmt.jstfEditMode) {
-            setState(setNewText(_,stmt.jstf))
+            setState(setNewText(_,stmt.jstfText))
         }
         None
     }, [stmt.labelEditMode, stmt.typEditMode, stmt.contEditMode, stmt.jstfEditMode])
@@ -190,7 +190,7 @@ let make = (
         } else {
             <Paper onClick=altLeftClickHnd(_, onJstfEditRequested) style=ReactDOM.Style.make(~padding="3px", ())>
                 {React.string("Justification: ")}
-                {React.string(stmt.jstf)}
+                {React.string(stmt.jstfText)}
             </Paper>
         }
     }
