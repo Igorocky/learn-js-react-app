@@ -679,7 +679,8 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
     }
 }
 
-let unify = st => {
+let validateSyntax = st => {
     let st = refreshWrkCtx(st)
+    let st = prepareProvablesForUnification(st)
     st
 }

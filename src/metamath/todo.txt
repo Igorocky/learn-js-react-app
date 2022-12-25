@@ -1,3 +1,7 @@
+- fix a bug:
+    1. load ctx and apply
+    2. delete ctx and apply - error in the console.
+- make error messages more informative: add the statement caused the error (for example in "variables" or in justifications).
 - prepare all the required data for proof tree in the worker.
 - write tests for editorState -> proofTree -> editorState.
 

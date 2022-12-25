@@ -99,7 +99,7 @@ let editorStateToEditorStateLocStor = (state:editorState):editorStateLocStor => 
     }
 }
 
-let editorSaveStateToLocStor = (state:editorState, key:string) => {
+let editorSaveStateToLocStor = (state:editorState, key:string):unit => {
     Dom_storage2.localStorage->Dom_storage2.setItem(key, Expln_utils_common.stringify(state->editorStateToEditorStateLocStor))
 }
 
@@ -145,11 +145,12 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         settingsV, settings, preCtxV, preCtx, readEditorStateFromLocStor(stateLocStorKey)
     ))
 
-    let setState = update => {
+    let setState = (update:editorState=>editorState) => {
         setStatePriv(prev => {
-            let new = update(prev)
-            new->editorSaveStateToLocStor(stateLocStorKey)
-            new
+            let newSt = update(prev)
+            let newSt = validateSyntax(newSt)
+            editorSaveStateToLocStor(newSt, stateLocStorKey)
+            newSt
         })
     }
 
@@ -171,6 +172,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         None
     }, [preCtxV])
 
+    let thereAreSyntaxErrors = editorStateHasErrors(state)
     let mainCheckboxState = {
         let atLeastOneStmtIsChecked = state.checkedStmtIds->Js.Array2.length != 0
         let atLeastOneStmtIsNotChecked = state.stmts->Js.Array2.length != state.checkedStmtIds->Js.Array2.length
@@ -199,19 +201,29 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
     let actDuplicateStmt = () => setState(duplicateCheckedStmt)
-    let actBeginEdit0 = setter => {
+    let actBeginEdit0 = (setter:editorState=>editorState) => {
         if (!editIsActive) {
             setState(setter)
         }
     }
-    let actBeginEdit = (setter, stmtId) => {
+    let actBeginEdit = (setter:(editorState,string)=>editorState, stmtId:string) => {
         if (!editIsActive) {
             setState(setter(_,stmtId))
         }
     }
+    let actCompleteEdit = (setter:editorState=>editorState) => {
+        setState(setter)
+    }
 
     let actUnify = () => {
-        setState(unify)
+        setState(validateSyntax)
+    }
+
+    let rndError = msgOpt => {
+        switch msgOpt {
+            | None => React.null
+            | Some(msg) => <pre style=ReactDOM.Style.make(~color="red", ())>{React.string(msg)}</pre>
+        }
     }
 
     let rndButtons = () => {
@@ -230,7 +242,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
-                {rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)))}
+                {
+                    rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, 
+                        ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)) && !thereAreSyntaxErrors )
+                }
             </Row>
         </Paper>
     }
@@ -242,57 +257,69 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 checked={state->isStmtChecked(stmt.id)}
                 onChange={_ => actToggleStmtChecked(stmt.id)}
             />
-            <MM_cmp_user_stmt
-                stmt
+            <Col>
+                <MM_cmp_user_stmt
+                    stmt
 
-                onLabelEditRequested={() => actBeginEdit(setLabelEditMode,stmt.id)}
-                onLabelEditDone={newLabel => setState(completeLabelEditMode(_,stmt.id,newLabel))}
+                    onLabelEditRequested={() => actBeginEdit(setLabelEditMode,stmt.id)}
+                    onLabelEditDone={newLabel => actCompleteEdit(completeLabelEditMode(_,stmt.id,newLabel))}
 
-                onTypEditRequested={() => actBeginEdit(setTypEditMode,stmt.id)}
-                onTypEditDone={newTyp => setState(completeTypEditMode(_,stmt.id,newTyp))}
+                    onTypEditRequested={() => actBeginEdit(setTypEditMode,stmt.id)}
+                    onTypEditDone={newTyp => actCompleteEdit(completeTypEditMode(_,stmt.id,newTyp))}
 
-                onContEditRequested={() => actBeginEdit(setContEditMode,stmt.id)}
-                onContEditDone={newCont => setState(completeContEditMode(_,stmt.id,newCont))}
-                
-                onJstfEditRequested={() => actBeginEdit(setJstfEditMode,stmt.id)}
-                onJstfEditDone={newProof => setState(completeJstfEditMode(_,stmt.id,newProof))}
-            />
+                    onContEditRequested={() => actBeginEdit(setContEditMode,stmt.id)}
+                    onContEditDone={newCont => actCompleteEdit(completeContEditMode(_,stmt.id,newCont))}
+                    
+                    onJstfEditRequested={() => actBeginEdit(setJstfEditMode,stmt.id)}
+                    onJstfEditDone={newProof => actCompleteEdit(completeJstfEditMode(_,stmt.id,newProof))}
+                />
+                {rndError(stmt.stmtErr)}
+            </Col>
         </Row>
     }
 
     let rndConsts = () => {
         <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
             {React.string("Constants")}
-            <MM_cmp_multiline_text
-                text=state.constsText
-                editMode=state.constsEditMode
-                onEditRequested={() => actBeginEdit0(setConstsEditMode)}
-                onEditDone={newText => setState(completeConstsEditMode(_,newText))}
-            />
+            <Col>
+                <MM_cmp_multiline_text
+                    text=state.constsText
+                    editMode=state.constsEditMode
+                    onEditRequested={() => actBeginEdit0(setConstsEditMode)}
+                    onEditDone={newText => actCompleteEdit(completeConstsEditMode(_,newText))}
+                />
+                {rndError(state.constsErr)}
+            </Col>
         </Row>
     }
 
     let rndVars = () => {
         <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
             {React.string("Variables")}
-            <MM_cmp_multiline_text
-                text=state.varsText
-                editMode=state.varsEditMode
-                onEditRequested={() => actBeginEdit0(setVarsEditMode)}
-                onEditDone={newText => setState(completeVarsEditMode(_,newText))}
-            />
+            <Col>
+                <MM_cmp_multiline_text
+                    text=state.varsText
+                    editMode=state.varsEditMode
+                    onEditRequested={() => actBeginEdit0(setVarsEditMode)}
+                    onEditDone={newText => actCompleteEdit(completeVarsEditMode(_,newText))}
+                />
+                {rndError(state.varsErr)}
+            </Col>
         </Row>
     }
 
     let rndDisj = () => {
         <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
             {React.string("Disjoints")}
-            <MM_cmp_multiline_text
-                text=state.disjText
-                editMode=state.disjEditMode
-                onEditRequested={() => actBeginEdit0(setDisjEditMode)}
-                onEditDone={newText => setState(completeDisjEditMode(_,newText))}
-            />
+            <Col>
+                <MM_cmp_multiline_text
+                    text=state.disjText
+                    editMode=state.disjEditMode
+                    onEditRequested={() => actBeginEdit0(setDisjEditMode)}
+                    onEditDone={newText => actCompleteEdit(completeDisjEditMode(_,newText))}
+                />
+                {rndError(state.disjErr)}
+            </Col>
         </Row>
     }
 
