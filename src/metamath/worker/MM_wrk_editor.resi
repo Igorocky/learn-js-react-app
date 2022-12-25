@@ -36,7 +36,7 @@ type userStmt = {
     proof: option<proofTreeNode>,
 }
 
-let createEmptyUserStmt: (string, userStmtType) => userStmt
+let createEmptyUserStmt: (string, userStmtType, string) => userStmt
 
 type editorState = {
     settingsV:int,

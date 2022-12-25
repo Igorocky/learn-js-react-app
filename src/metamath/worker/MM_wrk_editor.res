@@ -61,10 +61,10 @@ type userStmt = {
     proof: option<proofTreeNode>,
 }
 
-let createEmptyUserStmt = (id, typ):userStmt => {
+let createEmptyUserStmt = (id, typ, label):userStmt => {
     { 
         id, 
-        label:"label", labelEditMode:false, 
+        label, labelEditMode:false, 
         typ, typEditMode:false, 
         cont:Text([]), contEditMode:true,
         jstfText:"", jstfEditMode:false,
@@ -188,8 +188,19 @@ let moveCheckedStmts = (st:editorState,up):editorState => {
     }
 }
 
+let createNewLabel = (usedLabels:array<string>, prefix:string):string => {
+    let i = ref(1)
+    let newLabel = ref(prefix ++ i.contents->Belt_Int.toString)
+    while (usedLabels->Js.Array2.includes(newLabel.contents)) {
+        i.contents = i.contents + 1
+        newLabel.contents = prefix ++ i.contents->Belt_Int.toString
+    }
+    newLabel.contents
+}
+
 let addNewStmt = (st:editorState):editorState => {
     let newId = st.nextStmtId->Belt_Int.toString
+    let newLabel = createNewLabel(st.stmts->Js_array2.map(stmt=>stmt.label), "provable")
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
     {
         ...st,
@@ -199,13 +210,13 @@ let addNewStmt = (st:editorState):editorState => {
                 | Some(idToAddBefore) => {
                     st.stmts->Js_array2.map(stmt => {
                         if (stmt.id == idToAddBefore) {
-                            [createEmptyUserStmt(newId,#p), stmt]
+                            [createEmptyUserStmt(newId,#p,newLabel), stmt]
                         } else {
                             [stmt]
                         }
                     })->Belt_Array.concatMany
                 }
-                | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p)])
+                | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p, newLabel)])
             }
     }
 }
@@ -680,6 +691,7 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 }
 
 let validateSyntax = st => {
+    let st = removeAllErrorsInEditorState(st)
     let st = refreshWrkCtx(st)
     let st = prepareProvablesForUnification(st)
     st

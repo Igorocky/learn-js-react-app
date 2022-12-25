@@ -4,6 +4,7 @@
 - make error messages more informative: add the statement caused the error (for example in "variables" or in justifications).
 - prepare all the required data for proof tree in the worker.
 - write tests for editorState -> proofTree -> editorState.
+- renaming of a statement should automatically rename all references (after user confirms this action).
 
 - don't show scope selector when no file chosen.
 - validate distinct variables

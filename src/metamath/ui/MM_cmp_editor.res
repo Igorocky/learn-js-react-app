@@ -271,7 +271,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     onContEditDone={newCont => actCompleteEdit(completeContEditMode(_,stmt.id,newCont))}
                     
                     onJstfEditRequested={() => actBeginEdit(setJstfEditMode,stmt.id)}
-                    onJstfEditDone={newProof => actCompleteEdit(completeJstfEditMode(_,stmt.id,newProof))}
+                    onJstfEditDone={newJstf => actCompleteEdit(completeJstfEditMode(_,stmt.id,newJstf))}
                 />
                 {rndError(stmt.stmtErr)}
             </Col>
