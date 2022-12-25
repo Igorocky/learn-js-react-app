@@ -262,3 +262,269 @@ describe("refreshWrkCtx", _ => {
     
     
 })
+
+describe("prepareProvablesForUnification", _ => {
+    it("detects an error in a provable expression", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+-", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"])})
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.getWithDefault(""), "The symbol '+-' is not declared.")
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.isNone, true)
+    })
+
+    it("detects a syntax error in a provable's justification", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot parse justification: 'pr1 hyp' [1].")
+    })
+
+    it("detects a ref error in a provable's justification when asrt label refers to a hypothesis", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : hyp"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "The label 'hyp' doesn't refer to any assertion.")
+    })
+
+    it("detects a ref error in a provable's justification when asrt label refers to another provable", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : pr1"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "The label 'pr1' doesn't refer to any assertion.")
+    })
+
+    it("detects a ref error in a provable's justification when argument label is undefined", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp-- : ax"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "The reference 'hyp--' is not defined.")
+    })
+
+    it("detects a label duplication when a provable uses label of a predefined hypothesis", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"tt", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : ax"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot reuse label 'tt'.")
+    })
+
+    it("detects a label duplication when a provable uses label of a predefined assertion", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"mp", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : ax"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot reuse label 'mp'.")
+    })
+
+    it("detects a label duplication when a provable uses label of a previously defined another provable", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : ax"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot reuse label 'pr1'.")
+    })
+
+    it("sets expr and jstf for each provable when there are no errors", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let st = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let hypId = st.stmts[2].id
+        let axId = st.stmts[3].id
+        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
+            jstfText: "pr1 hyp : ax"
+        })
+        let st = refreshWrkCtx(st)
+
+        //when
+        let st = prepareProvablesForUnification(st)
+
+        //then
+        assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
+        assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
+        assertEq(st.stmts[2].expr->Belt_Option.isSome, true)
+        assertEq(st.stmts[2].jstf->Belt_Option.isNone, true)
+
+        assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.isNone, true)
+        assertEq(st.stmts[3].expr->Belt_Option.isSome, true)
+        assertEq(st.stmts[3].jstf, Some({args:["pr1", "hyp"], asrt:"ax"}))
+    })
+})

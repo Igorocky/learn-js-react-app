@@ -595,41 +595,48 @@ let parseJstf = jstfText => {
         }
         Some({
             args: argsAndAsrt[0]->getSpaceSeparatedValuesAsArray,
-            asrt: argsAndAsrt[1]
+            asrt: argsAndAsrt[1]->Js_string2.trim
         })
     }
 }
 
 let setExprAndJstf = (stmt:userStmt,wrkCtx:mmContext):userStmt => {
-    try {
-
-        {
-            ...stmt,
-            expr: Some(wrkCtx->makeExprExn(stmt.cont->contToArrStr)),
-            jstf: parseJstf(stmt.jstfText)
+    if (userStmtHasErrors(stmt)) {
+        stmt
+    } else {
+        try {
+            {
+                ...stmt,
+                expr: Some(wrkCtx->makeExprExn(stmt.cont->contToArrStr)),
+                jstf: parseJstf(stmt.jstfText)
+            }
+        } catch {
+            | MmException({msg}) => {...stmt, stmtErr:Some(msg)}
         }
-    } catch {
-        | MmException({msg}) => {...stmt, stmtErr:Some(msg)}
     }
 }
 
-let isDefined = (label:string, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t) => {
-    usedLabels->Belt_MutableSetString.has(label) || wrkCtx->isHyp(label)
+let isLabelDefined = (label:string, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t) => {
+    usedLabels->Belt_MutableSetString.has(label) || wrkCtx->isHyp(label) || wrkCtx->isAsrt(label)
 }
 
 let validateJstfRefs = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t):userStmt => {
-    switch stmt.jstf {
-        | None => stmt
-        | Some({args,asrt}) => {
-            switch args->Js_array2.find(ref => !isDefined(ref,wrkCtx,usedLabels)) {
-                | Some(ref) => {
-                    {...stmt, stmtErr:Some(`The reference '${ref}' is not defined.`)}
-                }
-                | None => {
-                    if (!(wrkCtx->isAsrt(asrt))) {
-                        {...stmt, stmtErr:Some(`The label '${asrt}' doesn't refer to any assertion.`)}
-                    } else {
-                        stmt
+    if (userStmtHasErrors(stmt)) {
+        stmt
+    } else {
+        switch stmt.jstf {
+            | None => stmt
+            | Some({args,asrt}) => {
+                switch args->Js_array2.find(ref => !isLabelDefined(ref,wrkCtx,usedLabels)) {
+                    | Some(ref) => {
+                        {...stmt, stmtErr:Some(`The reference '${ref}' is not defined.`)}
+                    }
+                    | None => {
+                        if (!(wrkCtx->isAsrt(asrt))) {
+                            {...stmt, stmtErr:Some(`The label '${asrt}' doesn't refer to any assertion.`)}
+                        } else {
+                            stmt
+                        }
                     }
                 }
             }
@@ -637,22 +644,40 @@ let validateJstfRefs = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_Mutable
     }
 }
 
-// let prepareProvablesForUnification = (st:editorState):editorState => {
-//     switch st.wrkCtx {
-//         | None => st
-//         | Some((_,wrkCtx)) => {
-//             let usedLabels = Belt_MutableSetString.make()
-//             st.stmts->Expln_utils_common.arrForEach(stmt => {
-//                 let stmt = setExprAndJstf(stmt, wrkCtx)
-//                 let stmt = switch stmt.stmtErr {
-//                     | Some(_) => stmt
-//                     | None => validateJstfRefs(stmt, wrkCtx, usedLabels)
-//                 }
-//                 //add A and E to wrkCtx
-//             })
-//         }
-//     }
-// }
+let validateStmtLabel = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_MutableSetString.t):userStmt => {
+    if (userStmtHasErrors(stmt)) {
+        stmt
+    } else {
+        if (isLabelDefined(stmt.label,wrkCtx,usedLabels)) {
+            {...stmt, stmtErr:Some(`Cannot reuse label '${stmt.label}'.`)}
+        } else {
+            stmt
+        }
+    }
+}
+
+let prepareProvablesForUnification = (st:editorState):editorState => {
+    switch st.wrkCtx {
+        | None => st
+        | Some((_,wrkCtx)) => {
+            let usedLabels = Belt_MutableSetString.make()
+            st.stmts->Js_array2.reduce(
+                (st,stmt) => {
+                    if (editorStateHasErrors(st) || stmt.typ != #p) {
+                        st
+                    } else {
+                        let stmt = setExprAndJstf(stmt, wrkCtx)
+                        let stmt = validateJstfRefs(stmt, wrkCtx, usedLabels)
+                        let stmt = validateStmtLabel(stmt, wrkCtx, usedLabels)
+                        usedLabels->Belt_MutableSetString.add(stmt.label)
+                        st->updateStmt(stmt.id, _ => stmt)
+                    }
+                },
+                st
+            )
+        }
+    }
+}
 
 let unify = st => {
     let st = refreshWrkCtx(st)
