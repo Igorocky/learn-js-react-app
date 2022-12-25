@@ -188,7 +188,8 @@ let moveCheckedStmts = (st:editorState,up):editorState => {
     }
 }
 
-let createNewLabel = (usedLabels:array<string>, prefix:string):string => {
+let createNewLabel = (st:editorState, prefix:string):string => {
+    let usedLabels = st.stmts->Js_array2.map(stmt=>stmt.label)
     let i = ref(1)
     let newLabel = ref(prefix ++ i.contents->Belt_Int.toString)
     while (usedLabels->Js.Array2.includes(newLabel.contents)) {
@@ -200,7 +201,7 @@ let createNewLabel = (usedLabels:array<string>, prefix:string):string => {
 
 let addNewStmt = (st:editorState):editorState => {
     let newId = st.nextStmtId->Belt_Int.toString
-    let newLabel = createNewLabel(st.stmts->Js_array2.map(stmt=>stmt.label), "stmt")
+    let newLabel = createNewLabel(st, "stmt")
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
     {
         ...st,
@@ -228,6 +229,7 @@ let duplicateCheckedStmt = st => {
         st
     } else {
         let newId = st.nextStmtId->Belt_Int.toString
+        let newLabel = createNewLabel(st, "stmt")
         let idToAddAfter = st.checkedStmtIds[0]
         {
             ...st,
@@ -235,7 +237,7 @@ let duplicateCheckedStmt = st => {
             stmts: 
                 st.stmts->Js_array2.map(stmt => {
                     if (stmt.id == idToAddAfter) {
-                        [stmt, {...stmt, id:newId}]
+                        [stmt, {...stmt, id:newId, label:newLabel}]
                     } else {
                         [stmt]
                     }
