@@ -200,7 +200,7 @@ let createNewLabel = (usedLabels:array<string>, prefix:string):string => {
 
 let addNewStmt = (st:editorState):editorState => {
     let newId = st.nextStmtId->Belt_Int.toString
-    let newLabel = createNewLabel(st.stmts->Js_array2.map(stmt=>stmt.label), "provable")
+    let newLabel = createNewLabel(st.stmts->Js_array2.map(stmt=>stmt.label), "stmt")
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
     {
         ...st,
