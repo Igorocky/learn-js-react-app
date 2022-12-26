@@ -4,6 +4,7 @@ open Expln_React_Mui
 open Modal
 open MM_wrk_editor
 open MM_wrk_settings
+open Expln_utils_promise
 
 type userStmtLocStor = {
     id: string,
@@ -212,6 +213,28 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         setState(setter)
     }
 
+    let rndSearchAsrtDialog = (~modalId, ~wrkCtxVer, ~wrkCtx, ~wrkSettings) => {
+        <MM_cmp_search_asrt
+            modalRef
+            wrkCtxVer
+            wrkCtx
+            wrkSettings
+            onCanceled={()=>closeModal(modalRef, modalId)}
+            onResultsSelected={_=>()}
+        />
+    }
+
+    let actSearchAsrt = () => {
+        switch state.wrkCtx {
+            | None => ()
+            | Some((wrkCtxVer,wrkCtx,wrkSettings)) => {
+                openModal(modalRef, _ => React.null)->promiseMap(modalId => {
+                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(~modalId, ~wrkCtxVer, ~wrkCtx, ~wrkSettings))
+                })->ignore
+            }
+        }
+    }
+
     let actUnify = () => {
         setState(validateSyntax)
     }
@@ -239,6 +262,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
+                {
+                    rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, 
+                        ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)) && !thereAreSyntaxErrors )
+                }
                 {
                     rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, 
                         ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)) && !thereAreSyntaxErrors )

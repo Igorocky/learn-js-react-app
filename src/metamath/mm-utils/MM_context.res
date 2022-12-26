@@ -379,6 +379,12 @@ let makeExprExnPriv: (mmContextContents,array<string>) => expr = (ctx, symbols) 
 
 let makeExprExn: (mmContext,array<string>) => expr = (ctx, symbols) => makeExprExnPriv(ctx.contents, symbols)
 
+let makeExprFromStringExn: (mmContext,string) => expr = (ctx, str) => makeExprExnPriv(ctx.contents, str->getSpaceSeparatedValuesAsArray)
+
+let ctxSymbToInt = (ctx:mmContext, sym:string):option<int> => {
+    symToInt(ctx.contents,sym)
+}
+
 let ctxIntToStr = (ctx:mmContextContents,i):option<string> => {
     if (i >= 0) {
         ctx->forEachCtxInReverseOrder(ctx => {

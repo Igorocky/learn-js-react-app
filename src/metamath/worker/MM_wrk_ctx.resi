@@ -20,7 +20,6 @@ type response
 let beginWorkerInteractionUsingCtx: (
     ~wrkCtxVer: string,
     ~wrkCtx: mmContext,
-    ~wrkSettingsVer: int,
     ~wrkSettings: wrkSettings,
     ~procName: string,
     ~initialRequest: 'req,

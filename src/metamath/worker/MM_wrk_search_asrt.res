@@ -24,7 +24,6 @@ let searchAssertions = (
         beginWorkerInteractionUsingCtx(
             ~wrkCtxVer,
             ~wrkCtx,
-            ~wrkSettingsVer,
             ~wrkSettings,
             ~procName,
             ~initialRequest = FindAssertions({typ, pattern}),

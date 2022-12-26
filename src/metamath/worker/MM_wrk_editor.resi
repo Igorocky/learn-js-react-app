@@ -2,6 +2,7 @@ open MM_context
 open MM_proof_tree
 open MM_syntax_tree
 open MM_wrk_settings
+open MM_wrk_ctx
 
 type stmtCont =
     | Text(array<string>)
@@ -57,7 +58,7 @@ type editorState = {
     disjErr: option<string>,
     disj: Belt_MapInt.t<Belt_SetInt.t>,
 
-    wrkCtx: option<(string,mmContext)>,
+    wrkCtx: option<(string,mmContext,wrkSettings)>,
 
     nextStmtId: int,
     stmts: array<userStmt>,

@@ -93,7 +93,7 @@ describe("refreshWrkCtx", _ => {
 
         //then
         switch st.wrkCtx {
-            | Some((wrkCtxVer,wrkCtx)) => {
+            | Some((wrkCtxVer,wrkCtx,_)) => {
                 assertEqMsg(wrkCtxVer, "1 1 c1 c2", "wrkCtxVer")
                 assertEqMsg(wrkCtx->isConst("c1"), true, "c1 is const")
                 assertEqMsg(wrkCtx->isConst("c2"), true, "c2 is const")
@@ -126,7 +126,7 @@ describe("refreshWrkCtx", _ => {
 
         //then
         switch st.wrkCtx {
-            | Some((wrkCtxVer,wrkCtx)) => {
+            | Some((wrkCtxVer,wrkCtx,_)) => {
                 assertEqMsg(wrkCtxVer, "1 1 hyp_v1 term v1 \n hyp_v2 wff v2", "wrkCtxVer")
                 assertEqMsg(wrkCtx->isVar("v1"), true, "v1 is var")
                 assertEqMsg(getVarType(wrkCtx, "v1"), "term", "v1 is term")
@@ -162,7 +162,7 @@ describe("refreshWrkCtx", _ => {
 
         //then
         switch st.wrkCtx {
-            | Some((wrkCtxVer,wrkCtx)) => {
+            | Some((wrkCtxVer,wrkCtx,_)) => {
                 assertEqMsg(wrkCtxVer, "1 1 t r \n r s", "wrkCtxVer")
                 let ti = (wrkCtx->makeExprExn(["t"]))[0]
                 let ri = (wrkCtx->makeExprExn(["r"]))[0]
@@ -241,7 +241,7 @@ describe("refreshWrkCtx", _ => {
 
         //then
         switch st.wrkCtx {
-            | Some((wrkCtxVer,wrkCtx)) => {
+            | Some((wrkCtxVer,wrkCtx,_)) => {
                 assertEqMsg(wrkCtxVer, "1 1 ::: ax |- t + t :::::: hyp |- 0 + 0 :::", "wrkCtxVer")
 
                 assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
@@ -255,8 +255,23 @@ describe("refreshWrkCtx", _ => {
             | _ => failMsg("A non-empty context was expected")
         }
     })
-    
-    
+
+    it("filters incorrect parentheses when creating parens for wrkSettings", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = setSettings(st, 2, {...st.settings, parens: "( ) [ ]. [ ] <.| |.> { }"})
+
+        //when
+        let st = refreshWrkCtx(st)
+
+        //then
+        switch st.wrkCtx {
+            | Some((_,wrkCtx,wrkSettings)) => {
+                assertEqMsg( wrkCtx->makeExprFromStringExn("( ) [ ] { }"), wrkSettings.parens, "wrkSettings.parens" )
+            }
+            | _ => failMsg("A non-empty context was expected")
+        }
+    })
 })
 
 describe("prepareProvablesForUnification", _ => {

@@ -12,9 +12,8 @@ type wrkSettings = {
 
 let wrkCtxVer = ref("")
 let wrkCtx = ref(createContext(()))
-let wrkFrms = ref(Belt_MapString.empty)
-let wrkSettingsVer = ref(-1)
 let wrkSettings = ref({parens:[], nonSyntaxTypes:[]})
+let wrkFrms = ref(Belt_MapString.empty)
 let wrkParenCnt = ref(parenCntMake(wrkSettings.contents.parens))
 
 let getWrkCtx = () => wrkCtx.contents
@@ -23,13 +22,11 @@ let getWrkSettings = () => wrkSettings.contents
 let getWrkParenCnt = () => wrkParenCnt.contents
 
 type request = 
-    | CheckVersionsAreUpToDate({wrkCtxVer:string, wrkSettingsVer:int})
-    | SetWrkCtx({ver:string, ctx:mmContext})
-    | SetWrkSettings({ver:int, settings:wrkSettings})
+    | CheckVersionsAreUpToDate({wrkCtxVer:string})
+    | SetWrkCtx({ver:string, ctx:mmContext, settings:wrkSettings})
 
 type response =
     | GetWrkCtx({ver:string})
-    | GetWrkSettings({ver:int})
     | Ok
 
 let thisProcName = procName
@@ -37,7 +34,6 @@ let thisProcName = procName
 let beginWorkerInteractionUsingCtx = (
     ~wrkCtxVer:string,
     ~wrkCtx:mmContext,
-    ~wrkSettingsVer:int,
     ~wrkSettings:wrkSettings,
     ~procName:string,
     ~initialRequest:'req, 
@@ -47,19 +43,13 @@ let beginWorkerInteractionUsingCtx = (
 ) => {
     beginWorkerInteraction(
         ~procName = thisProcName,
-        ~initialRequest = CheckVersionsAreUpToDate({wrkCtxVer, wrkSettingsVer}), 
+        ~initialRequest = CheckVersionsAreUpToDate({wrkCtxVer:wrkCtxVer}), 
         ~onResponse = (~resp, ~sendToWorker, ~endWorkerInteraction) => {
             switch resp {
                 | GetWrkCtx({ver:verRequested}) => {
                     if (verRequested == wrkCtxVer) {
-                        sendToWorker(SetWrkCtx({ver:wrkCtxVer, ctx:wrkCtx}))
-                        sendToWorker(CheckVersionsAreUpToDate({wrkCtxVer, wrkSettingsVer}))
-                    }
-                }
-                | GetWrkSettings({ver:verRequested}) => {
-                    if (verRequested == wrkSettingsVer) {
-                        sendToWorker(SetWrkSettings({ver:wrkSettingsVer, settings:wrkSettings}))
-                        sendToWorker(CheckVersionsAreUpToDate({wrkCtxVer, wrkSettingsVer}))
+                        sendToWorker(SetWrkCtx({ver:wrkCtxVer, ctx:wrkCtx, settings:wrkSettings}))
+                        sendToWorker(CheckVersionsAreUpToDate({wrkCtxVer:wrkCtxVer}))
                     }
                 }
                 | Ok => {
@@ -75,27 +65,17 @@ let beginWorkerInteractionUsingCtx = (
 
 let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit => {
     switch req {
-        | CheckVersionsAreUpToDate({wrkCtxVer:newWrkCtxVer, wrkSettingsVer:newWrkSettingsVer}) => {
-            let everythingIsUpToDate = ref(true)
+        | CheckVersionsAreUpToDate({wrkCtxVer:newWrkCtxVer}) => {
             if (wrkCtxVer.contents != newWrkCtxVer) {
-                everythingIsUpToDate.contents = false
                 sendToClient(GetWrkCtx({ver:newWrkCtxVer}))
-            }
-            if (wrkSettingsVer.contents != newWrkSettingsVer) {
-                everythingIsUpToDate.contents = false
-                sendToClient(GetWrkSettings({ver:newWrkSettingsVer}))
-            }
-            if (everythingIsUpToDate.contents) {
+            } else {
                 sendToClient(Ok)
             }
         }
-        | SetWrkCtx({ver, ctx}) => {
+        | SetWrkCtx({ver, ctx, settings:newWrkSettings}) => {
             wrkCtxVer.contents = ver
             wrkCtx.contents = ctx
             wrkFrms.contents = prepareFrmSubsData(ctx)
-        }
-        | SetWrkSettings({ver, settings:newWrkSettings}) => {
-            wrkSettingsVer.contents = ver
             wrkSettings.contents = newWrkSettings
             wrkParenCnt.contents = parenCntMake(newWrkSettings.parens)
         }

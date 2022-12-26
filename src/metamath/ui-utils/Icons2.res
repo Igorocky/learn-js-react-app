@@ -52,3 +52,8 @@ module Hub = {
     @module("@mui/icons-material/Hub") @react.component
     external make: () => React.element = "default"
 }
+
+module Search = {
+    @module("@mui/icons-material/Search") @react.component
+    external make: () => React.element = "default"
+}
