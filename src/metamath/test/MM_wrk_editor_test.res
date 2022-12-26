@@ -65,7 +65,7 @@ describe("refreshWrkCtx", _ => {
         let st = refreshWrkCtx(st)
 
         //then
-        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "The symbol 'term' is already used as a constant.")
+        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "An attempt to re-declare the math symbol 'term' as a constant.")
         assertEq(st.wrkCtx->Belt_Option.isNone, true)
     })
     
@@ -78,7 +78,7 @@ describe("refreshWrkCtx", _ => {
         let st = refreshWrkCtx(st)
 
         //then
-        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "The symbol 't' is already used as a variable.")
+        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "An attempt to re-declare the math symbol 't' as a constant.")
         assertEq(st.wrkCtx->Belt_Option.isNone, true)
     })
     

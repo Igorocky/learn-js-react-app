@@ -4,6 +4,7 @@ open MM_proof_tree
 open MM_syntax_tree
 open MM_wrk_settings
 open MM_wrk_ctx
+open MM_asrt_apply
 
 type stmtCont =
     | Text(array<string>)
@@ -462,7 +463,7 @@ let parseConstants = (st,wrkCtx) => {
             st
         } else {
             try {
-                constsArr->Js_array2.forEach(wrkCtx->addConstToRoot)
+                constsArr->Js_array2.forEach(wrkCtx->addLocalConst)
                 st
             } catch {
                 | MmException({msg}) => {...st, constsErr:Some(msg)}
@@ -724,3 +725,7 @@ let validateSyntax = st => {
     let st = prepareProvablesForUnification(st)
     st
 }
+
+// let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorState => {
+
+// }

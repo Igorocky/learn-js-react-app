@@ -148,9 +148,9 @@ let testApplyAssertions = (
     let printApplyAssertionResult = (workCtx, statements:array<labeledExpr>, res:applyAssertionResult):string => {
         workCtx->openChildContext
         let maxWorkCtxVar = workCtx->getNumOfVars - 1
-        let workVarHypLabels = workCtx->generateLabels(~prefix="workVar", ~amount=res.newVarTypes->Js_array2.length)
+        let workVarHypLabels = workCtx->generateNewLabels(~prefix="workVar", ~amount=res.newVarTypes->Js_array2.length)
         let workVarTypes = res.newVarTypes->Js_array2.map(workCtx->ctxIntToStrExn)
-        let workVarNames = workCtx->generateWorkVarNames(res.newVarTypes)
+        let workVarNames = workCtx->generateNewVarNames(res.newVarTypes)
         let disjArrStr = []
         res.newDisj->disjForEachArr(disj => {
             disjArrStr->Js.Array2.push(
@@ -183,7 +183,7 @@ let testApplyAssertions = (
                         argLabels->Js_array2.push(label)->ignore
                     }
                     | None => {
-                        let newStmtLabel = workCtx->generateLabels(~prefix="provable", ~amount=1)
+                        let newStmtLabel = workCtx->generateNewLabels(~prefix="provable", ~amount=1)
                         let label = newStmtLabel[0]
                         let exprArrStr = argExpr->Js_array2.map(workCtx->ctxIntToStrExn)
                         workCtx->applySingleStmt(Provable({

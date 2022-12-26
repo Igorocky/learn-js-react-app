@@ -33,6 +33,7 @@ type disjMutable = mutableMapInt<mutableSetInt>
 
 type rec mmContextContents = {
     parent: option<mmContextContents>,
+    constsBaseIdx: int,
     consts: array<string>,
     varsBaseIdx: int,
     vars: array<string>,
@@ -252,10 +253,11 @@ let rec forEachCtxInReverseOrder = (ctx:mmContextContents,consumer:mmContextCont
 }
 
 let rec isConstPriv: (mmContextContents,string) => bool = (ctx, sym) => {
-    switch ctx.parent {
-        | Some(parent) => parent->isConstPriv(sym)
-        | None => ctx.symToInt->mutableMapStrGet(sym)->Belt_Option.map(i => i < 0)->Belt_Option.getWithDefault(false)
-    }
+    ctx->forEachCtxInReverseOrder(ctx => {
+        ctx.symToInt->mutableMapStrGet(sym)
+    })
+        ->Belt_Option.map(i => i < 0)
+        ->Belt_Option.getWithDefault(false)
 }
 
 let isConst: (mmContext,string) => bool = (ctx, sym) => isConstPriv(ctx.contents, sym)
@@ -333,12 +335,19 @@ let getFramePriv = (ctx:mmContextContents,label):option<frame> => {
 
 let getFrame = (ctx:mmContext,label):option<frame> => getFramePriv(ctx.contents,label)
 
+let getLocalConsts: mmContext => array<string> = ctx => {
+    switch ctx.contents.parent {
+        | Some(_) => ctx.contents.consts->Js_array2.copy
+        | None => ctx.contents.consts->Js_array2.sliceFrom(1)
+    }
+}
+
 let getLocalVars: mmContext => array<string> = ctx => {
-    ctx.contents.vars->Js_array2.map(x=>x)
+    ctx.contents.vars->Js_array2.copy
 }
 
 let getLocalHyps: mmContext => array<hypothesis> = ctx => {
-    ctx.contents.hyps->Js_array2.map(x=>x)
+    ctx.contents.hyps->Js_array2.copy
 }
 
 let getNumOfVars = ctx => {
@@ -385,27 +394,36 @@ let ctxSymbToInt = (ctx:mmContext, sym:string):option<int> => {
     symToInt(ctx.contents,sym)
 }
 
-let ctxIntToStr = (ctx:mmContextContents,i):option<string> => {
-    if (i >= 0) {
-        ctx->forEachCtxInReverseOrder(ctx => {
+let ctxSymbToIntExn = (ctx:mmContext, sym:string):int => {
+    ctx.contents->symToIntExn(sym)
+}
+
+let ctxIntToStrPriv = (ctx:mmContextContents,i):option<string> => {
+    ctx->forEachCtxInReverseOrder(ctx => {
+        if (i >= 0) {
             if (i < ctx.varsBaseIdx) {
                 None
             } else {
                 Some(ctx.vars[i-ctx.varsBaseIdx])
             }
-        })
-    } else {
-        ctx->forEachCtxInDeclarationOrder(ctx => {
-            ctx.consts->Belt_Array.get(-i)
-        })
-    }
+        } else {
+            let iAbs = -i
+            if (iAbs < ctx.constsBaseIdx) {
+                None
+            } else {
+                ctx.consts->Belt_Array.get(iAbs-ctx.constsBaseIdx)
+            }
+        }
+    })
 }
 
 let ctxIntToStrExnPriv = (ctx:mmContextContents,i) => {
-    ctxIntToStr(ctx,i)->Belt.Option.getExn
+    ctxIntToStrPriv(ctx,i)->Belt.Option.getExn
 }
 
 let ctxIntToStrExn = (ctx:mmContext,i) => ctxIntToStrExnPriv(ctx.contents,i)
+
+let ctxIntToStr = (ctx:mmContext,i) => ctxIntToStrPriv(ctx.contents,i)
 
 let ctxExprToStrExnPriv: (mmContextContents, expr) => string = (ctx, expr) => {
     expr->Js_array2.map(ctxIntToStrExnPriv(ctx, _))->Js_array2.joinWith(" ")
@@ -512,19 +530,13 @@ let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int> 
         let allConsts = ["(", ")", "[", "]", "{", "}"]->Js.Array2.filter(ctx->isConstPriv)->makeExprExnPriv(ctx, _)
         let predefiend = Belt_SetInt.fromArray(allConsts)
         ctx->forEachCtxInDeclarationOrder(ctx => {
-            ctx.consts->Js_array2.forEach(cStr => {
-                if (cStr != "") {
-                    switch ctx.symToInt->mutableMapStrGet(cStr) {
-                        | None => raise(MmException({msg:`Cannot determine int code for constant symbol '${cStr}'`}))
-                        | Some(i) => {
-                            if !(predefiend->Belt_SetInt.has(i)) {
-                                allConsts->Js_array2.push(i)->ignore
-                            }
-                        }
-                    }
+            let maxC = ctx.constsBaseIdx + ctx.consts->Js.Array2.length - 1
+            for c in ctx.constsBaseIdx to maxC {
+                if (c != 0 && !(predefiend->Belt_SetInt.has(-c))) {
+                    allConsts->Js_array2.push(-c)->ignore
                 }
-            })
-            Some(())
+            }
+            None
         })->ignore
         allConsts
     }
@@ -603,6 +615,7 @@ let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int> 
 let rec cloneContextPriv: mmContextContents => mmContextContents = ctx => {
     {
         parent: ctx.parent->Belt_Option.map(cloneContextPriv),
+        constsBaseIdx: ctx.constsBaseIdx,
         consts: ctx.consts->Js_array2.copy,
         varsBaseIdx: ctx.varsBaseIdx,
         vars: ctx.vars->Js_array2.copy,
@@ -646,7 +659,14 @@ let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
     ref(
         {
             parent: pCtxContentsOpt,
-            consts: [""],
+            constsBaseIdx: switch pCtxContentsOpt {
+                | None => 0
+                | Some(parent) => parent.constsBaseIdx + parent.consts->Js_array2.length
+            },
+            consts: switch pCtxContentsOpt {
+                | None => [""]
+                | Some(_) => []
+            },
             varsBaseIdx: switch pCtxContentsOpt {
                 | None => 0
                 | Some(parent) => parent.varsBaseIdx + parent.vars->Js_array2.length
@@ -666,16 +686,6 @@ let openChildContext: mmContext => unit = ctx => {
     ctx.contents = createContext(~parent=ctx, ()).contents
 }
 
-let closeChildContext: mmContext => unit = ctx => {
-    ctx.contents = switch ctx.contents.parent {
-        | None => raise(MmException({msg:`Cannot close the root context.`}))
-        | Some(parent) => {
-            ctx.contents.frames->mutableMapStrForEach((k,v) => parent.frames->mutableMapStrPut(k,v))
-            parent
-        }
-    }
-}
-
 let resetToParentContext: mmContext => unit = ctx => {
     ctx.contents = switch ctx.contents.parent {
         | None => raise(MmException({msg:`Cannot reset the root context.`}))
@@ -687,29 +697,36 @@ let addComment: (mmContext,string) => unit = (ctx,str) => {
     ctx.contents.lastComment = str
 }
 
-let addConst: (mmContext,string) => unit = (ctx,cName) => {
-    let ctx = ctx.contents
-    if (ctx.parent->Belt_Option.isSome) {
+let addConstPriv: (mmContextContents,string,bool) => unit = (ctx,cName,strict) => {
+    if (strict && ctx.parent->Belt_Option.isSome) {
         raise(MmException({msg:`An attempt to declare a constant '${cName}' in an inner block.`}))
     } else if (isConstPriv(ctx, cName) || isVarPriv(ctx, cName)) {
         raise(MmException({msg:`An attempt to re-declare the math symbol '${cName}' as a constant.`}))
     } else {
-        ctx.symToInt->mutableMapStrPut(cName, -(ctx.consts->Js_array2.length))
+        ctx.symToInt->mutableMapStrPut(cName, -(ctx.constsBaseIdx + ctx.consts->Js_array2.length))
         ctx.consts->Js_array2.push(cName)->ignore
     }
 }
 
-let addConstToRoot = (ctx,cName) => {
-    if (ctx->isConst(cName)) {
-        raise(MmException({msg:`The symbol '${cName}' is already used as a constant.`}))
-    } else if (ctx->isVar(cName)) {
-        raise(MmException({msg:`The symbol '${cName}' is already used as a variable.`}))
+let addConst: (mmContext,string) => unit = (ctx,cName) => {
+    ctx.contents->addConstPriv(cName, true)
+}
+
+let addLocalConst: (mmContext,string) => unit = (ctx,cName) => {
+    ctx.contents->addConstPriv(cName, false)
+}
+
+let closeChildContext: mmContext => unit = ctx => {
+    ctx.contents = switch ctx.contents.parent {
+        | None => raise(MmException({msg:`Cannot close the root context.`}))
+        | Some(parent) => {
+            ctx.contents.consts->Js_array2.forEach(cName => {
+                parent->addConstPriv(cName, false)
+            })
+            ctx.contents.frames->mutableMapStrForEach((k,v) => parent.frames->mutableMapStrPut(k,v))
+            parent
+        }
     }
-    let root = ref(ctx.contents)
-    while (root.contents.parent->Belt_Option.isSome) {
-        root.contents = root.contents.parent->Belt_Option.getExn
-    }
-    root->addConst(cName)
 }
 
 let addVar: (mmContext,string) => unit = (ctx,vName) => {
@@ -960,7 +977,7 @@ let loadContext: (mmAstNode, ~initialContext:mmContext=?, ~stopBefore: string=?,
     ctx
 }
 
-let generateWorkVarNames = (ctx:mmContext, types:array<int>): array<string> => {
+let generateNewVarNames = (ctx:mmContext, types:array<int>): array<string> => {
     let maxI = types->Js.Array2.length - 1
     let cnt = ref(0)
     let res = []
@@ -977,7 +994,7 @@ let generateWorkVarNames = (ctx:mmContext, types:array<int>): array<string> => {
     res
 }
 
-let generateLabels = (ctx:mmContext, ~prefix:string, ~amount:int): array<string> => {
+let generateNewLabels = (ctx:mmContext, ~prefix:string, ~amount:int): array<string> => {
     let maxI = amount - 1
     let cnt = ref(0)
     let res = []
