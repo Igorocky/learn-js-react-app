@@ -2,9 +2,6 @@ open MM_context
 open Expln_React_common
 open Expln_React_Mui
 open Modal
-open MM_cmp_settings
-open MM_parser
-open MM_cmp_user_stmt
 open MM_wrk_editor
 open MM_wrk_settings
 

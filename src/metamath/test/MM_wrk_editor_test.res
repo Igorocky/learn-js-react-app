@@ -1,11 +1,7 @@
 open Expln_test
 open MM_parser
 open MM_context
-open MM_proof_table
-open MM_proof_verifier
 open MM_proof_tree
-open MM_parenCounter
-open MM_substitution
 open MM_wrk_editor
 open MM_wrk_settings
 

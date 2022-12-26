@@ -1,3 +1,5 @@
+- remove nonSyntaxTypes.
+- add possibility to comment statements
 - fix a bug:
     1. load ctx and apply
     2. delete ctx and apply - error in the console.
@@ -6,6 +8,7 @@
 - write tests for editorState -> proofTree -> editorState.
 - renaming of a statement should automatically rename all references (after user confirms this action).
 - correct methods related to movement of statements, they became incorrect after automatic reordering.
+- use Async/Await.
 
 - don't show scope selector when no file chosen.
 - validate distinct variables

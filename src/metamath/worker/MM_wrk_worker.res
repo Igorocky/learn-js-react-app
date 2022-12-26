@@ -28,12 +28,20 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
         MM_wrk_ctx.procName, 
         makeRequestProcessor(MM_wrk_ctx.processOnWorkerSide)
     ),
+    (
+        MM_wrk_search_asrt.procName, 
+        makeRequestProcessor(MM_wrk_search_asrt.processOnWorkerSide)
+    ),
 ])
 
 let processRequest: workerRequest => unit = req => {
-//    Js.Console.log(`[clientId=${req.clientId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
+    if (req.traceEnabled) {
+        Js.Console.log(`[clientId=${req.clientId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
+    }
     processors->Belt_MapString.get(req.procName)->Belt_Option.forEach(processor => processor(~req, ~sendToClient=resp=>{
-//        Js.Console.log(`[clientId=${resp.clientId->Belt_Int.toString}] worker is sending a response`)
+        if (req.traceEnabled) {
+            Js.Console.log(`[clientId=${resp.clientId->Belt_Int.toString}] worker is sending a response`)
+        }
         sendToClient(resp)
     }))
 }

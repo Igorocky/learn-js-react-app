@@ -1,6 +1,5 @@
 open MM_parser
 open MM_context
-open MM_proof_verifier
 open MM_substitution
 open MM_asrt_apply
 open MM_parenCounter
@@ -50,7 +49,7 @@ let createEmptyProofTree = (
     ~disj: disjMutable,
 ) => {
     let hypsMap = Belt_MutableMap.make(~id=module(ExprCmp))
-    hyps->Belt_MapString.forEach((k,v) => {
+    hyps->Belt_MapString.forEach((_,v) => {
         hypsMap->Belt_MutableMap.set(v.expr, v)
     })
     {

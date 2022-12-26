@@ -1,14 +1,16 @@
 open MM_wrk_api
 
 let webworker: option<{..}> = %raw("typeof window !== 'undefined' ? window.webWorkerInst : undefined")
-let sendToWorker: workerRequest => unit = req => {
-//    Js.Console.log(`[senderId=${req.senderId->Belt_Int.toString}] client is sending a request, procName = ${req.procName}`)
+let sendToWorkerPriv: workerRequest => unit = req => {
     webworker->Belt_Option.forEach(webworker => webworker["postMessage"](. req))
 }
 
+type clientCallback = serialized => unit
+
 type client = {
     id: int,
-    callback: serialized => unit
+    callback: clientCallback,
+    traceEnabled: bool,
 }
 
 let nextClientId = ref(0)
@@ -20,9 +22,9 @@ let getNextClientId = () => {
 
 let clients = []
 
-let regClient = callback => {
+let regClient = (~callback:clientCallback, ~enableTrace:bool) => {
     let id = getNextClientId()
-    clients->Js_array2.push({ id, callback })->ignore
+    clients->Js_array2.push({ id, callback, traceEnabled:enableTrace })->ignore
     id
 }
 
@@ -40,10 +42,11 @@ let unregClient = id => {
 webworker->Belt_Option.forEach(webworker => {
     webworker["onmessage"]= msg => {
         let resp:workerResponse = msg["data"]
-        let i = ref(0)
         clients->Expln_utils_common.arrForEach(client => {
             if (client.id == resp.clientId) {
-//                Js.Console.log(`[senderId=${resp.clientId->Belt_Int.toString}] client received a response`)
+                if (client.traceEnabled) {
+                    Js.Console.log(`[clientId=${resp.clientId->Belt_Int.toString}] client received a response`)
+                }
                 client.callback(resp.body)
                 Some(())
             } else {
@@ -57,16 +60,23 @@ let beginWorkerInteraction = (
     ~procName:string,
     ~initialRequest:'req, 
     ~onResponse:(~resp:'resp, ~sendToWorker:'req=>unit, ~endWorkerInteraction:unit=>unit)=>unit,
+    ~enableTrace: bool=false,
+    ()
 ) => {
     let id = ref(-1)
     let localSendToWorker = ref(_=>())
-    id.contents = regClient(respBody => {
+    id.contents = regClient(~enableTrace, ~callback = respBody => {
         onResponse(
             ~resp=deserialize(respBody),
             ~sendToWorker=localSendToWorker.contents,
             ~endWorkerInteraction= _=>unregClient(id.contents)
         )
     })
-    localSendToWorker.contents = req => sendToWorker({clientId:id.contents, procName, body:serialize(req)})
-    sendToWorker({clientId:id.contents, procName, body:serialize(initialRequest)})
+    localSendToWorker.contents = req => {
+        if (enableTrace) {
+            Js.Console.log(`[clientId=${id.contents->Belt_Int.toString}] client is sending a request, procName = ${procName}`)
+        }
+        sendToWorkerPriv({clientId:id.contents, procName, body:serialize(req), traceEnabled: enableTrace})
+    }
+    localSendToWorker.contents(initialRequest)
 }

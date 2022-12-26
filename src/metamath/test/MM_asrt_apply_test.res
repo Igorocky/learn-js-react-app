@@ -177,7 +177,7 @@ let testApplyAssertions = (
                     ~subs=res.subs,
                     ~createWorkVar=_=>raise(MmException({msg:`Cannot create work var in testApplyAssertions[1]`}))
                 )
-                switch statements->Js.Array2.find(({label,expr}) => exprEq(expr,argExpr)) {
+                switch statements->Js.Array2.find(({expr}) => exprEq(expr,argExpr)) {
                     | Some({label}) => {
                         args->Js_array2.push(`[${label}]`)->ignore
                         argLabels->Js_array2.push(label)->ignore

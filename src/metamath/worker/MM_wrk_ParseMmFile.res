@@ -24,7 +24,8 @@ let beginParsingMmFile = (~mmFileText, ~onProgress:float=>unit, ~onDone:parseRes
                     onDone(parseResult)
                 }
             }
-        }
+        },
+        ()
     )
 }
 

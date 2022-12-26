@@ -22,7 +22,8 @@ let beginFindParens = (~ctx, ~onProgress:float=>unit, ~onDone:string=>unit) => {
                     onDone(parens)
                 }
             }
-        }
+        },
+        ()
     )
 }
 

@@ -3,7 +3,8 @@ type serialized = Js.Json.t
 type workerRequest = {
     clientId: int,
     procName: string,
-    body: serialized
+    body: serialized,
+    traceEnabled: bool,
 }
 
 type workerResponse = {
