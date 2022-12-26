@@ -220,7 +220,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
             wrkCtx
             wrkSettings
             onCanceled={()=>closeModal(modalRef, modalId)}
-            onResultsSelected={_=>()}
+            onResultsSelected={selectedResults=>{
+                closeModal(modalRef, modalId)
+                Js.Console.log2("selectedResults->Js_array2.length", selectedResults->Js_array2.length)
+            }}
         />
     }
 

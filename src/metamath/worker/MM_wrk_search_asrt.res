@@ -1,5 +1,4 @@
 open MM_context
-open MM_wrk_client
 open MM_asrt_apply
 open Expln_utils_promise
 open MM_wrk_ctx
@@ -15,7 +14,6 @@ type response =
 let searchAssertions = (
     ~wrkCtxVer:string,
     ~wrkCtx:mmContext,
-    ~wrkSettingsVer:int,
     ~wrkSettings:wrkSettings,
     ~typ:option<int>, 
     ~pattern:option<expr>

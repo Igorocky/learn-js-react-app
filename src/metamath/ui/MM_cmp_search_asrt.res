@@ -1,7 +1,9 @@
 open Expln_React_common
 open Expln_React_Mui
+open Expln_utils_promise
 open MM_asrt_apply
 open MM_wrk_ctx
+open MM_wrk_search_asrt
 open MM_context
 open Modal
 
@@ -43,8 +45,26 @@ let make = (
         setState(setTyp(_, newTyp))
     }
 
+    let rndSearchProgressDialog = () => {
+        <Paper style=ReactDOM.Style.make(~padding="5px", ())>
+            {React.string("Search is in progress...")}
+        </Paper>
+    }
+
     let actSearch = () => {
-        ()
+        openModal(modalRef, _ => React.null)->promiseMap(modalId => {
+            updateModal(modalRef, modalId, () => rndSearchProgressDialog())
+            searchAssertions(
+                ~wrkCtxVer,
+                ~wrkCtx,
+                ~wrkSettings,
+                ~typ=None, 
+                ~pattern=None
+            )->promiseMap(found => {
+                closeModal(modalRef, modalId)
+                onResultsSelected(found)
+            })
+        })->ignore
     }
 
     let rndError = msgOpt => {
