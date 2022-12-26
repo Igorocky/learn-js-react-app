@@ -570,7 +570,6 @@ let createWrkSettings = (st,wrkCtx):wrkSettings => {
     }
     {
         parens: parensInt, 
-        nonSyntaxTypes: []
     }
 }
 

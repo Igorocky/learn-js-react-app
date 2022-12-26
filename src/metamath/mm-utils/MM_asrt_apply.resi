@@ -18,7 +18,6 @@ type applyAssertionResult = {
 let applyAssertions: (
     ~maxVar:int,
     ~frms:Belt_MapString.t<frmSubsData>,
-    ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
     ~exactOrderOfStmts:bool=?,

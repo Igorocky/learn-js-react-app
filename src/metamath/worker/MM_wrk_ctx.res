@@ -7,12 +7,11 @@ let procName = "MM_wrk_ctx"
 
 type wrkSettings = {
     parens: array<int>,
-    nonSyntaxTypes: array<int>,
 }
 
 let wrkCtxVer = ref("")
 let wrkCtx = ref(createContext(()))
-let wrkSettings = ref({parens:[], nonSyntaxTypes:[]})
+let wrkSettings = ref({parens:[]})
 let wrkFrms = ref(Belt_MapString.empty)
 let wrkParenCnt = ref(parenCntMake(wrkSettings.contents.parens))
 

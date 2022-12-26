@@ -16,7 +16,6 @@ let createDefaultSettings = () => {
     {
         parens: "( ) [ ] { }",
         parensIsValid: true,
-        nonSyntaxTypes: "|-",
         types:  [ "wff",     "term",    "setvar",  "class"],
         colors: [ "#4363d8", "#000000", "#e6194B", "#f032e6"],
     }
@@ -35,7 +34,6 @@ let settingsReadFromLocStor = (key:string):option<settings> => {
                 {
                     parens: d->str("parens"),
                     parensIsValid: d->bool("parensIsValid"),
-                    nonSyntaxTypes: d->str("nonSyntaxTypes"),
                     types: d->arr("types", asStr),
                     colors: d->arr("colors", asStr),
                 }
@@ -52,13 +50,7 @@ let getParensAsArray = st => {
     st.parens->getSpaceSeparatedValuesAsArray
 }
 
-let getNonSyntaxTypesAsArray = st => {
-    st.nonSyntaxTypes->getSpaceSeparatedValuesAsArray
-}
-
 let getParens: settings => array<string> = st => st->getParensAsArray
-
-let getNonSyntaxTypes: settings => array<string> = st => st->getNonSyntaxTypesAsArray
 
 let getCorrectedTypesAndColors = st => {
     let correctedTypes = []
@@ -84,13 +76,6 @@ let setParens = (st, str) => {
     {
         ...st,
         parens: str
-    }
-}
-
-let setNonSyntaxTypes = (st, str) => {
-    {
-        ...st,
-        nonSyntaxTypes: str
     }
 }
 
@@ -123,12 +108,10 @@ let changeColor = (st,idx,newColor) => {
 
 let correctAndValidate = st => {
     let parensArr = st->getParensAsArray
-    let syntaxTypesArr = st->getNonSyntaxTypesAsArray
     let (types, colors) = getCorrectedTypesAndColors(st)
     {
         parens: parensArr->Js_array2.joinWith(" "),
         parensIsValid: parensArr->Js_array2.length->mod(_,2) == 0,
-        nonSyntaxTypes: syntaxTypesArr->Js_array2.joinWith(" "),
         types,
         colors,
     }
@@ -140,7 +123,6 @@ let isValid = st => {
 
 let eqState = (st1, st2) => {
     getParensAsArray(st1) == getParensAsArray(st2) && 
-        getNonSyntaxTypesAsArray(st1) == getNonSyntaxTypesAsArray(st2) && 
         st1.types == st2.types && st1.colors == st2.colors
 }
 
@@ -168,10 +150,6 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
                 st->correctAndValidate
             }
         })
-    }
-
-    let onSyntaxTypesChange = newSyntaxTypes => {
-        setState(setNonSyntaxTypes(_, newSyntaxTypes))
     }
 
     let rndFindParensProgress = (pct) => {
@@ -228,13 +206,6 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
                 <Icons2.Sync/>
             </IconButton>
         </Row>
-        <TextField 
-            size=#small
-            style=ReactDOM.Style.make(~width="400px", ())
-            label="Non-syntax types" 
-            value=state.nonSyntaxTypes
-            onChange=evt2str(onSyntaxTypesChange)
-        />
         <MM_cmp_colors
             types=state.types
             colors=state.colors

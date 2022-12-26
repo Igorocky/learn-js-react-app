@@ -228,7 +228,6 @@ let rec proveNode = (
     ~node:proofTreeNode,
     ~justification: option<justification>,
     ~searchDepth:int,
-    ~nonSyntaxTypes:array<int>,
 ) => {
     let nodesToCreateParentsFor = Belt_MutableQueue.make()
 
@@ -291,7 +290,6 @@ let rec proveNode = (
                 applyAssertions(
                     ~maxVar = tree.maxVar,
                     ~frms = tree.frms,
-                    ~nonSyntaxTypes,
                     ~isDisjInCtx = tree.disj->disjContains,
                     ~statements = stmts->Js.Array2.map(({label,expr}) => {label,expr}),
                     ~result = node.expr,
@@ -308,7 +306,6 @@ let rec proveNode = (
                 applyAssertions(
                     ~maxVar = tree.maxVar,
                     ~frms = tree.frms,
-                    ~nonSyntaxTypes,
                     ~isDisjInCtx = tree.disj->disjContains,
                     ~statements = getStatementFromJustification( ~tree, ~stmts, ~justification ),
                     ~exactOrderOfStmts=true,
@@ -410,8 +407,7 @@ let rec proveNode = (
                             | None => {
                                 curNode.parents = Some([])
                                 addParentsWithoutNewVars(curNode)
-                                if (curNode.proof->Belt.Option.isNone && searchDepth <= curNode.dist 
-                                                && nonSyntaxTypes->Js_array2.includes(curNode.expr[0])) {
+                                if (curNode.proof->Belt.Option.isNone && searchDepth <= curNode.dist) {
                                     addParentsWithNewVars(curNode, None)
                                 }
                             }
@@ -440,7 +436,6 @@ and let checkTypes = (
             ~node,
             ~justification=None,
             ~searchDepth = 0,
-            ~nonSyntaxTypes=[],
         )
         node.proof->Belt_Option.isSome
     })
@@ -454,7 +449,6 @@ let proofTreeProve = (
     ~disj: disjMutable,
     ~stmts: array<rootStmt>,
     ~searchDepth: int,
-    ~nonSyntaxTypes:array<int>,
 ):proofTree => {
     let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
     for stmtIdx in 0 to stmts->Js_array2.length - 1 {
@@ -467,7 +461,6 @@ let proofTreeProve = (
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
             ~searchDepth,
-            ~nonSyntaxTypes,
         )
     }
     tree

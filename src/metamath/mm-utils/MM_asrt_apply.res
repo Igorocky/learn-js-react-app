@@ -293,7 +293,6 @@ let iterateSubstitutionsForResult = (
 let applyAssertions = (
     ~maxVar:int,
     ~frms:Belt_MapString.t<frmSubsData>,
-    ~nonSyntaxTypes:array<int>,
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<labeledExpr>,
     ~exactOrderOfStmts:bool=false,
@@ -305,7 +304,7 @@ let applyAssertions = (
 ):unit => {
     let numOfStmts = statements->Js_array2.length
     frms->Belt_MapString.forEach((_,frm) => {
-        if (nonSyntaxTypes->Js_array2.includes(frm.frame.asrt[0]) && frameFilter(frm.frame)) {
+        if (frameFilter(frm.frame)) {
             iterateSubstitutionsForResult(
                 ~frm,
                 ~result,

@@ -246,7 +246,6 @@ let testApplyAssertions = (
         ~maxVar = workCtx->getNumOfVars-1,
         ~isDisjInCtx = workCtx->isDisj,
         ~frms,
-        ~nonSyntaxTypes = workCtx->makeExprExn(["|-"]),
         ~statements,
         ~parenCnt,
         ~frameFilter,

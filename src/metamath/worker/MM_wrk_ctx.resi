@@ -6,7 +6,6 @@ let procName: string
 
 type wrkSettings = {
     parens: array<int>, 
-    nonSyntaxTypes: array<int>
 }
 
 let getWrkCtx: unit => mmContext

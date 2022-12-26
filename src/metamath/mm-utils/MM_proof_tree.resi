@@ -47,7 +47,6 @@ let proofTreeProve: (
   ~disj: disjMutable,
   ~stmts: array<rootStmt>,
   ~searchDepth: int,
-  ~nonSyntaxTypes:array<int>,
 ) => proofTree
 
 let proofTreeCreateProofTable: proofTreeNode => proofTable

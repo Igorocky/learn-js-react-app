@@ -48,7 +48,6 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             applyAssertions(
                 ~maxVar = getWrkCtx()->getNumOfVars - 1,
                 ~frms = getWrkFrms(),
-                ~nonSyntaxTypes = getWrkSettings().nonSyntaxTypes,
                 ~isDisjInCtx = getWrkCtx()->isDisj,
                 ~statements = [],
                 ~parenCnt = getWrkParenCnt(),
