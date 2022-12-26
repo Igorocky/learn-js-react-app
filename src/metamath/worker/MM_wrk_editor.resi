@@ -2,7 +2,8 @@ open MM_context
 open MM_proof_tree
 open MM_syntax_tree
 open MM_wrk_settings
-open MM_wrk_ctx
+open MM_parenCounter
+open MM_substitution
 
 type stmtCont =
     | Text(array<string>)
@@ -38,6 +39,14 @@ type userStmt = {
 
 let createEmptyUserStmt: (string, userStmtType, string) => userStmt
 
+type wrkPrecalcData = {
+    ver: string,
+    wrkCtx: mmContext,
+    parens: array<int>,
+    parenCnt: parenCnt,
+    frms: Belt_MapString.t<frmSubsData>,
+}
+
 type editorState = {
     settingsV:int,
     settings:settings,
@@ -58,7 +67,7 @@ type editorState = {
     disjErr: option<string>,
     disj: Belt_MapInt.t<Belt_SetInt.t>,
 
-    wrkCtx: option<(string,mmContext,wrkSettings)>,
+    wrkPreData: option<wrkPrecalcData>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -94,6 +103,6 @@ let completeJstfEditMode: (editorState, string, string) => editorState
 let setSettings: (editorState, int, settings) => editorState
 let setPreCtx: (editorState, int, mmContext) => editorState
 let editorStateHasErrors: editorState => bool
-let refreshWrkCtx: editorState => editorState
+let refreshWrkPreData: editorState => editorState
 let prepareProvablesForUnification: editorState => editorState
 let validateSyntax: editorState => editorState

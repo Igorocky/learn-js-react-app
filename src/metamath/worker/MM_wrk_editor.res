@@ -3,8 +3,9 @@ open MM_parser
 open MM_proof_tree
 open MM_syntax_tree
 open MM_wrk_settings
-open MM_wrk_ctx
 open MM_asrt_apply
+open MM_parenCounter
+open MM_substitution
 
 type stmtCont =
     | Text(array<string>)
@@ -75,6 +76,14 @@ let createEmptyUserStmt = (id, typ, label):userStmt => {
     }
 }
 
+type wrkPrecalcData = {
+    ver: string,
+    wrkCtx: mmContext,
+    parens: array<int>,
+    parenCnt: parenCnt,
+    frms: Belt_MapString.t<frmSubsData>,
+}
+
 type editorState = {
     settingsV:int,
     settings:settings,
@@ -95,7 +104,7 @@ type editorState = {
     disjErr: option<string>,
     disj: Belt_MapInt.t<Belt_SetInt.t>,
 
-    wrkCtx: option<(string,mmContext,wrkSettings)>,
+    wrkPreData: option<wrkPrecalcData>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -549,7 +558,7 @@ let addStmtToCtx = (stmt:userStmt, wrkCtx:mmContext):userStmt => {
     }
 }
 
-let createWrkSettings = (st,wrkCtx):wrkSettings => {
+let createParensInt = (st,wrkCtx):array<int> => {
     let parensStr = st.settings.parens->getSpaceSeparatedValuesAsArray
     let parensInt = []
     let maxI = parensStr->Js_array2.length / 2 - 1
@@ -569,12 +578,10 @@ let createWrkSettings = (st,wrkCtx):wrkSettings => {
             | _ => ()
         }
     }
-    {
-        parens: parensInt, 
-    }
+    parensInt
 }
 
-let refreshWrkCtx = (st:editorState):editorState => {
+let refreshWrkPreData = (st:editorState):editorState => {
     let st = sortStmtsByType(st)
     let actualWrkCtxVer = [
         st.settingsV->Belt_Int.toString,
@@ -593,9 +600,9 @@ let refreshWrkCtx = (st:editorState):editorState => {
             ""
         )
     ]->Js.Array2.filter(str => str->Js.String2.trim->Js_string2.length != 0)->Js.Array2.joinWith(" ")
-    let mustUpdate = switch st.wrkCtx {
+    let mustUpdate = switch st.wrkPreData {
         | None => true
-        | Some((existingWrkCtxVer,_,_)) if existingWrkCtxVer != actualWrkCtxVer => true
+        | Some({ver:existingWrkCtxVer}) if existingWrkCtxVer != actualWrkCtxVer => true
         | _ => false
     }
     if (!mustUpdate) {
@@ -617,9 +624,21 @@ let refreshWrkCtx = (st:editorState):editorState => {
             st
         )
         if (editorStateHasErrors(st)) {
-            {...st, wrkCtx:None}
+            {...st, wrkPreData:None}
         } else {
-            {...st, wrkCtx:Some((actualWrkCtxVer, wrkCtx, createWrkSettings(st, wrkCtx)))}
+            let parensInt = createParensInt(st, wrkCtx)
+            {
+                ...st, 
+                wrkPreData: Some(
+                    {
+                        ver:actualWrkCtxVer, 
+                        wrkCtx, 
+                        parens: parensInt,
+                        parenCnt: parenCntMake(parensInt),
+                        frms: prepareFrmSubsData(wrkCtx),
+                    }
+                )
+            }
         }
     }
 }
@@ -697,18 +716,18 @@ let validateStmtLabel = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_Mutabl
 }
 
 let prepareProvablesForUnification = (st:editorState):editorState => {
-    switch st.wrkCtx {
+    switch st.wrkPreData {
         | None => st
-        | Some((_,wrkCtx,_)) => {
+        | Some(preData) => {
             let usedLabels = Belt_MutableSetString.make()
             st.stmts->Js_array2.reduce(
                 (st,stmt) => {
                     if (editorStateHasErrors(st) || stmt.typ != #p) {
                         st
                     } else {
-                        let stmt = setExprAndJstf(stmt, wrkCtx)
-                        let stmt = validateJstfRefs(stmt, wrkCtx, usedLabels)
-                        let stmt = validateStmtLabel(stmt, wrkCtx, usedLabels)
+                        let stmt = setExprAndJstf(stmt, preData.wrkCtx)
+                        let stmt = validateJstfRefs(stmt, preData.wrkCtx, usedLabels)
+                        let stmt = validateStmtLabel(stmt, preData.wrkCtx, usedLabels)
                         usedLabels->Belt_MutableSetString.add(stmt.label)
                         st->updateStmt(stmt.id, _ => stmt)
                     }
@@ -721,7 +740,7 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 
 let validateSyntax = st => {
     let st = removeAllErrorsInEditorState(st)
-    let st = refreshWrkCtx(st)
+    let st = refreshWrkPreData(st)
     let st = prepareProvablesForUnification(st)
     st
 }

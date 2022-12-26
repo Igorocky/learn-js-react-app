@@ -68,7 +68,7 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
         disjErr: None,
         disj: Belt_MapInt.fromArray([]),
 
-        wrkCtx: None,
+        wrkPreData: None,
 
         nextStmtId: stateLocStor->Belt.Option.map(obj => obj.nextStmtId)->Belt.Option.getWithDefault(0),
         stmts: 
@@ -213,12 +213,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         setState(setter)
     }
 
-    let rndSearchAsrtDialog = (~modalId, ~wrkCtxVer, ~wrkCtx, ~wrkSettings) => {
+    let rndSearchAsrtDialog = (~modalId, ~wrkPreData) => {
         <MM_cmp_search_asrt
             modalRef
-            wrkCtxVer
-            wrkCtx
-            wrkSettings
+            wrkPreData
             onCanceled={()=>closeModal(modalRef, modalId)}
             onResultsSelected={selectedResults=>{
                 closeModal(modalRef, modalId)
@@ -228,11 +226,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actSearchAsrt = () => {
-        switch state.wrkCtx {
+        switch state.wrkPreData {
             | None => ()
-            | Some((wrkCtxVer,wrkCtx,wrkSettings)) => {
+            | Some(wrkPreData) => {
                 openModal(modalRef, _ => React.null)->promiseMap(modalId => {
-                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(~modalId, ~wrkCtxVer, ~wrkCtx, ~wrkSettings))
+                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(~modalId, ~wrkPreData))
                 })->ignore
             }
         }

@@ -2,6 +2,7 @@ open MM_context
 open MM_asrt_apply
 open Expln_utils_promise
 open MM_wrk_ctx
+open MM_wrk_editor
 
 let procName = "MM_wrk_search_asrt"
 
@@ -12,17 +13,13 @@ type response =
     | SearchResult({found:array<applyAssertionResult>})
 
 let searchAssertions = (
-    ~wrkCtxVer:string,
-    ~wrkCtx:mmContext,
-    ~wrkSettings:wrkSettings,
+    ~wrkPreData:wrkPrecalcData,
     ~typ:option<int>, 
     ~pattern:option<expr>
 ): promise<array<applyAssertionResult>> => {
     promise(resolve => {
         beginWorkerInteractionUsingCtx(
-            ~wrkCtxVer,
-            ~wrkCtx,
-            ~wrkSettings,
+            ~wrkPreData,
             ~procName,
             ~initialRequest = FindAssertions({typ, pattern}),
             ~onResponse = (~resp, ~sendToWorker, ~endWorkerInteraction) => {
@@ -44,11 +41,11 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
         | FindAssertions({typ, pattern}) => {
             let results = []
             applyAssertions(
-                ~maxVar = getWrkCtx()->getNumOfVars - 1,
-                ~frms = getWrkFrms(),
-                ~isDisjInCtx = getWrkCtx()->isDisj,
+                ~maxVar = getWrkPreData().wrkCtx->getNumOfVars - 1,
+                ~frms = getWrkPreData().frms,
+                ~isDisjInCtx = getWrkPreData().wrkCtx->isDisj,
                 ~statements = [],
-                ~parenCnt = getWrkParenCnt(),
+                ~parenCnt = getWrkPreData().parenCnt,
                 ~frameFilter = frame => {
                     switch typ {
                         | None => true

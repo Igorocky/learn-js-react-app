@@ -1,25 +1,17 @@
 open MM_context
 open MM_substitution
 open MM_parenCounter
+open MM_wrk_editor
 
 let procName: string
 
-type wrkSettings = {
-    parens: array<int>, 
-}
-
-let getWrkCtx: unit => mmContext
-let getWrkFrms: unit => Belt_MapString.t<frmSubsData>
-let getWrkSettings: unit => wrkSettings
-let getWrkParenCnt: unit => parenCnt
+let getWrkPreData: unit => wrkPrecalcData
 
 type request
 type response
 
 let beginWorkerInteractionUsingCtx: (
-    ~wrkCtxVer: string,
-    ~wrkCtx: mmContext,
-    ~wrkSettings: wrkSettings,
+    ~wrkPreData: wrkPrecalcData,
     ~procName: string,
     ~initialRequest: 'req,
     ~onResponse: ( ~resp: 'resp, ~sendToWorker: 'req => unit, ~endWorkerInteraction: unit => unit, ) => unit,

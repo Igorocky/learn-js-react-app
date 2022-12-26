@@ -3,6 +3,7 @@ open Expln_React_Mui
 open Expln_utils_promise
 open MM_asrt_apply
 open MM_wrk_ctx
+open MM_wrk_editor
 open MM_wrk_search_asrt
 open MM_context
 open Modal
@@ -33,9 +34,7 @@ let setTyp = (st,typ):state => {
 @react.component
 let make = (
     ~modalRef:modalRef,
-    ~wrkCtxVer:string,
-    ~wrkCtx:mmContext,
-    ~wrkSettings:wrkSettings,
+    ~wrkPreData:wrkPrecalcData,
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
@@ -55,9 +54,7 @@ let make = (
         openModal(modalRef, _ => React.null)->promiseMap(modalId => {
             updateModal(modalRef, modalId, () => rndSearchProgressDialog())
             searchAssertions(
-                ~wrkCtxVer,
-                ~wrkCtx,
-                ~wrkSettings,
+                ~wrkPreData,
                 ~typ=None, 
                 ~pattern=None
             )->promiseMap(found => {
