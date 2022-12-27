@@ -200,37 +200,47 @@ let moveCheckedStmts = (st:editorState,up):editorState => {
 }
 
 let createNewLabel = (st:editorState, prefix:string):string => {
+    let isLabelDefinedInCtx = label => {
+        switch st.wrkPreData {
+            | Some({wrkCtx}) => wrkCtx->isHyp(label) || wrkCtx->isAsrt(label)
+            | None => false
+        }
+    }
+    
     let usedLabels = st.stmts->Js_array2.map(stmt=>stmt.label)
     let i = ref(1)
     let newLabel = ref(prefix ++ i.contents->Belt_Int.toString)
-    while (usedLabels->Js.Array2.includes(newLabel.contents)) {
+    while (usedLabels->Js.Array2.includes(newLabel.contents) || isLabelDefinedInCtx(newLabel.contents)) {
         i.contents = i.contents + 1
         newLabel.contents = prefix ++ i.contents->Belt_Int.toString
     }
     newLabel.contents
 }
 
-let addNewStmt = (st:editorState):editorState => {
+let addNewStmt = (st:editorState):(editorState,string) => {
     let newId = st.nextStmtId->Belt_Int.toString
     let newLabel = createNewLabel(st, "stmt")
     let idToAddBefore = st.stmts->Js_array2.find(stmt => st.checkedStmtIds->Js_array2.includes(stmt.id))->Belt_Option.map(stmt => stmt.id)
-    {
-        ...st,
-        nextStmtId: st.nextStmtId+1,
-        stmts: 
-            switch idToAddBefore {
-                | Some(idToAddBefore) => {
-                    st.stmts->Js_array2.map(stmt => {
-                        if (stmt.id == idToAddBefore) {
-                            [createEmptyUserStmt(newId,#p,newLabel), stmt]
-                        } else {
-                            [stmt]
-                        }
-                    })->Belt_Array.concatMany
+    (
+        {
+            ...st,
+            nextStmtId: st.nextStmtId+1,
+            stmts: 
+                switch idToAddBefore {
+                    | Some(idToAddBefore) => {
+                        st.stmts->Js_array2.map(stmt => {
+                            if (stmt.id == idToAddBefore) {
+                                [createEmptyUserStmt(newId,#p,newLabel), stmt]
+                            } else {
+                                [stmt]
+                            }
+                        })->Belt_Array.concatMany
+                    }
+                    | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p, newLabel)])
                 }
-                | None => st.stmts->Js_array2.concat([createEmptyUserStmt(newId, #p, newLabel)])
-            }
-    }
+        },
+        newId
+    )
 }
 
 let isSingleStmtChecked = st => st.checkedStmtIds->Js_array2.length == 1
@@ -745,6 +755,157 @@ let validateSyntax = st => {
     st
 }
 
-// let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorState => {
+let createNewVars = (st:editorState, varTypes:array<int>):(editorState,array<int>) => {
+    switch st.wrkPreData {
+        | None => raise(MmException({msg:`Cannot create new variables without wrkPreData.`}))
+        | Some({wrkCtx}) => {
+            let numOfVars = varTypes->Js_array2.length
+            if (numOfVars == 0) {
+                (st,[])
+            } else {
+                let newVarNames = wrkCtx->generateNewVarNames(varTypes)
+                let newHypLabels = wrkCtx->generateNewLabels(~prefix="var", ~amount=numOfVars)
+                wrkCtx->applySingleStmt(Var({symbols:newVarNames}))
+                let varTypeNames = wrkCtx->ctxIntArrToStrArrExn(varTypes)
+                newHypLabels->Js.Array2.forEachi((label,i) => {
+                    wrkCtx->applySingleStmt(Floating({label, expr:[varTypeNames[i], newVarNames[i]]}))
+                })
+                let newVarInts = wrkCtx->makeExprExn(newVarNames)
+                let newVarsText = newHypLabels->Js.Array2.mapi((label,i) => {
+                    `${label} ${varTypeNames[i]} ${newVarNames[i]}`
+                })->Js_array2.joinWith("\n")
+                (
+                    {
+                        ...st,
+                        varsText: st.varsText ++ (if (st.varsText->Js.String2.length != 0) {"\n"} else {""}) ++ newVarsText
+                    },
+                    newVarInts
+                )
+            }
+            
+        }
+    }
+}
 
-// }
+let createNewDisj = (st:editorState, newDisj:disjMutable):editorState => {
+    switch st.wrkPreData {
+        | None => raise(MmException({msg:`Cannot create new disjoints without wrkPreData.`}))
+        | Some({wrkCtx}) => {
+            newDisj->disjForEachArr(varInts => {
+                wrkCtx->applySingleStmt(Disj({vars:wrkCtx->ctxIntArrToStrArrExn(varInts)}))
+            })
+            let newDisjTextLines = []
+            newDisj->disjForEachArr(varInts => {
+                newDisjTextLines->Js.Array2.push(wrkCtx->ctxIntArrToStrArrExn(varInts))->ignore
+            })
+            if (newDisjTextLines->Js.Array2.length == 0) {
+                st
+            } else {
+                let newDisjText = newDisjTextLines->Js.Array2.joinWith("\n")
+                {
+                    ...st,
+                    disjText: st.disjText ++ "\n" ++ newDisjText
+                }
+            }
+        }
+    }
+}
+
+let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorState => {
+    switch st.wrkPreData {
+        | None => raise(MmException({msg:`Cannot add assertion search result without wrkPreData.`}))
+        | Some({wrkCtx, frms}) => {
+            switch frms->Belt_MapString.get(applRes.asrtLabel) {
+                | None => raise(MmException({msg:`Cannot find assertion with label '${applRes.asrtLabel}'.`}))
+                | Some(frm) => {
+                    let (st, newCtxVarInts) = createNewVars(st,applRes.newVarTypes)
+                    let applResVarToCtxVar = Belt_MutableMapInt.make()
+                    applRes.newVars->Js.Array2.forEachi((applResVarInt,i) => {
+                        applResVarToCtxVar->Belt_MutableMapInt.set(applResVarInt, newCtxVarInts[i])
+                    })
+                    let newCtxDisj = disjMutableMake()
+                    applRes.newDisj->disjForEach((n,m) => {
+                        let newN = switch applResVarToCtxVar->Belt_MutableMapInt.get(n) {
+                            | None => n
+                            | Some(newN) => newN
+                        }
+                        let newM = switch applResVarToCtxVar->Belt_MutableMapInt.get(m) {
+                            | None => m
+                            | Some(newM) => newM
+                        }
+                        newCtxDisj->addDisjPairToMap(newN, newM)
+                    })
+                    let st = createNewDisj(st, newCtxDisj)
+                    let selectionWasEmpty = st.checkedStmtIds->Js.Array2.length == 0
+                    let st = if (!selectionWasEmpty || st.stmts->Js.Array2.length == 0) {
+                        st
+                    } else {
+                        st->toggleStmtChecked(st.stmts[0].id)
+                    }
+                    let mainStmtLabel = createNewLabel(st, "stmt")
+                    let argLabels = []
+                    let stMut = ref(st)
+                    frm.frame.hyps->Js_array2.forEach(hyp => {
+                        if (hyp.typ == E) {
+                            let argLabel = createNewLabel(stMut.contents, mainStmtLabel ++ "-" ++ hyp.label)
+                            argLabels->Js.Array2.push(argLabel)->ignore
+                            let argExprText = applySubs(
+                                ~frmExpr=hyp.expr,
+                                ~subs=applRes.subs,
+                                ~createWorkVar=_=>raise(MmException({msg:`Cannot create a work variable in addAsrtSearchResult [1].`}))
+                            )
+                                ->Js.Array2.map(appResInt => {
+                                    switch applResVarToCtxVar->Belt_MutableMapInt.get(appResInt) {
+                                        | None => appResInt
+                                        | Some(ctxVar) => ctxVar
+                                    }
+                                })
+                                ->ctxExprToStrExn(wrkCtx, _)
+                            let (st, newStmtId) = addNewStmt(stMut.contents)
+                            stMut.contents = st
+                            stMut.contents = updateStmt(stMut.contents, newStmtId, stmt => {
+                                {
+                                    ...stmt,
+                                    typ: #p,
+                                    label: argLabel,
+                                    cont: strToCont(argExprText),
+                                    contEditMode: false,
+                                }
+                            })
+                        }
+                    })
+                    let st = stMut.contents
+                    let asrtExprText = applySubs(
+                        ~frmExpr=frm.frame.asrt,
+                        ~subs=applRes.subs,
+                        ~createWorkVar=_=>raise(MmException({msg:`Cannot create a work variable in addAsrtSearchResult [2].`}))
+                    )
+                        ->Js.Array2.map(appResInt => {
+                            switch applResVarToCtxVar->Belt_MutableMapInt.get(appResInt) {
+                                | None => appResInt
+                                | Some(ctxVar) => ctxVar
+                            }
+                        })
+                        ->ctxExprToStrExn(wrkCtx, _)
+                    let (st, newStmtId) = addNewStmt(st)
+                    let jstfText = argLabels->Js.Array2.joinWith(" ") ++ ": " ++ applRes.asrtLabel
+                    let st = updateStmt(st, newStmtId, stmt => {
+                        {
+                            ...stmt,
+                            typ: #p,
+                            label: mainStmtLabel,
+                            cont: strToCont(asrtExprText),
+                            contEditMode: false,
+                            jstfText,
+                        }
+                    })
+                    if (selectionWasEmpty) {
+                        st->uncheckAllStmts
+                    } else {
+                        st
+                    }
+                }
+            }
+        }
+    }
+}

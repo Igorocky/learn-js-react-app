@@ -50,24 +50,28 @@ let getLocalVars: mmContext => array<string>
 let getLocalConsts: mmContext => array<string>
 let getLocalHyps: mmContext => array<hypothesis>
 let getNumOfVars: mmContext => int
+let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
+let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) => option<'a>
+let getNestingLevel: mmContext => int
+let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
+
 let ctxSymbToInt: (mmContext, string) => option<int>
 let ctxSymbToIntExn: (mmContext, string) => int
 let makeExprExn: (mmContext,array<string>) => expr
 let makeExprFromStringExn: (mmContext, string) => expr
-let ctxIntToStrExn: (mmContext, int) => string
 let ctxIntToStr: (mmContext, int) => option<string>
+let ctxIntToStrExn: (mmContext, int) => string
+let ctxIntArrToStrArrExn: (mmContext, expr) => array<string>
 let ctxExprToStrExn: (mmContext, expr) => string
 let frmIntToStrExn: (mmContext, frame, int) => string
 let frmExprToStrExn: (mmContext, frame, expr) => string
-let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
-let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) => option<'a>
 let createFrame: (mmContext, string, array<string>) => frame
-let getNestingLevel: mmContext => int
-let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
+
 let generateNewVarNames: (mmContext, array<int>) => array<string>
 let generateNewLabels: (mmContext, ~prefix:string, ~amount:int) => array<string>
 
 let exprEq: (expr,expr) => bool
+
 let disjMutableMake: unit => disjMutable
 let addDisjPairToMap: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool

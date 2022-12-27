@@ -187,7 +187,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         state.constsEditMode || state.varsEditMode ||
         state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.jstfEditMode )
 
-    let actAddNewStmt = () => setState(addNewStmt)
+    let actAddNewStmt = () => setState(st => {
+        let (st, _) = addNewStmt(st)
+        st
+    })
     let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
     let actToggleStmtChecked = id => setState(toggleStmtChecked(_,id))
     let actToggleMainCheckbox = () => {
@@ -213,6 +216,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         setState(setter)
     }
 
+    let actAsrtSearchResultsSelected = selectedResults => {
+        setState(st => selectedResults->Js_array2.reduce( addAsrtSearchResult, st ))
+    }
+
     let rndSearchAsrtDialog = (~modalId, ~wrkPreData) => {
         <MM_cmp_search_asrt
             modalRef
@@ -221,6 +228,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
             onResultsSelected={selectedResults=>{
                 closeModal(modalRef, modalId)
                 Js.Console.log2("selectedResults->Js_array2.length", selectedResults->Js_array2.length)
+                actAsrtSearchResultsSelected(selectedResults)
             }}
         />
     }

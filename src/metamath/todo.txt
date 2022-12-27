@@ -1,5 +1,9 @@
-- remove nonSyntaxTypes.
+- rename ctxExprToStrExn like functions to match the pattern of ctxIntArrToStrArrExn.
 - add possibility to comment statements
+- fix a bug:
+    1. load demo0.mm with an error
+    2. fix the error in demo0.mm
+    3. load updated demo0.mm - nothing happens here
 - fix a bug:
     1. load ctx and apply
     2. delete ctx and apply - error in the console.

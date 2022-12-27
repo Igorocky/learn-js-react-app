@@ -423,6 +423,8 @@ let ctxIntToStrExnPriv = (ctx:mmContextContents,i) => {
 
 let ctxIntToStrExn = (ctx:mmContext,i) => ctxIntToStrExnPriv(ctx.contents,i)
 
+let ctxIntArrToStrArrExn = (ctx,expr) => expr->Js_array2.map(ctxIntToStrExn(ctx, _))
+
 let ctxIntToStr = (ctx:mmContext,i) => ctxIntToStrPriv(ctx.contents,i)
 
 let ctxExprToStrExnPriv: (mmContextContents, expr) => string = (ctx, expr) => {

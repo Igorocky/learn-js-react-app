@@ -4,6 +4,7 @@ open MM_syntax_tree
 open MM_wrk_settings
 open MM_parenCounter
 open MM_substitution
+open MM_asrt_apply
 
 type stmtCont =
     | Text(array<string>)
@@ -82,7 +83,7 @@ let uncheckAllStmts: editorState => editorState
 let deleteCheckedStmts: editorState => editorState
 let canMoveCheckedStmts: (editorState, bool) => bool
 let moveCheckedStmts: (editorState, bool) => editorState
-let addNewStmt: editorState => editorState
+let addNewStmt: editorState => (editorState,string)
 let isSingleStmtChecked: editorState => bool
 let duplicateCheckedStmt: editorState => editorState
 let canGoEditModeForStmt: (editorState, string) => bool
@@ -106,3 +107,4 @@ let editorStateHasErrors: editorState => bool
 let refreshWrkPreData: editorState => editorState
 let prepareProvablesForUnification: editorState => editorState
 let validateSyntax: editorState => editorState
+let addAsrtSearchResult: (editorState, applyAssertionResult) => editorState
