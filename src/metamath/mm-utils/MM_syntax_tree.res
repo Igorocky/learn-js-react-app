@@ -49,7 +49,7 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                     for i in 1 to maxI {
                         children[i-1] = Symbol({
                             id: idSeq(),
-                            sym: ctx->ctxIntToStrExn(r.expr[i])
+                            sym: ctx->ctxIntToSymExn(r.expr[i])
                         })
                     }
                     children
@@ -73,7 +73,7 @@ let rec buildSyntaxTreeInner = (idSeq, ctx, tbl, parent, r):syntaxTreeNode => {
                                 if (s < 0) {
                                     Symbol({
                                         id: idSeq(),
-                                        sym: ctx->ctxIntToStrExn(s)
+                                        sym: ctx->ctxIntToSymExn(s)
                                     })
                                 } else {
                                     Subtree(buildSyntaxTreeInner(idSeq, ctx, tbl, Some(this), tbl[varToRecIdxMapping[s]]))

@@ -43,10 +43,10 @@ let createEditorState = (mmFile) => {
 }
 
 let getVarType = (ctx:mmContext, vName:string) => {
-    let varInt = (ctx->makeExprExn([vName]))[0]
+    let varInt = (ctx->ctxSymsToIntsExn([vName]))[0]
     ctx->forEachHypothesisInDeclarationOrder(hyp => {
         if (hyp.typ == F && hyp.expr[1] == varInt) {
-            Some(ctx->ctxIntToStrExn(hyp.expr[0]))
+            Some(ctx->ctxIntToSymExn(hyp.expr[0]))
         } else {
             None
         }
@@ -163,9 +163,9 @@ describe("refreshWrkPreData", _ => {
         switch st.wrkPreData {
             | Some(wrkPreData) => {
                 assertEqMsg(wrkPreData.ver, "1 1 t r \n r s", "wrkCtxVer")
-                let ti = (wrkPreData.wrkCtx->makeExprExn(["t"]))[0]
-                let ri = (wrkPreData.wrkCtx->makeExprExn(["r"]))[0]
-                let si = (wrkPreData.wrkCtx->makeExprExn(["s"]))[0]
+                let ti = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["t"]))[0]
+                let ri = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["r"]))[0]
+                let si = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["s"]))[0]
                 assertEqMsg(wrkPreData.wrkCtx->isDisj(ti,ri), true, "t and r are disjoint")
                 assertEqMsg(wrkPreData.wrkCtx->isDisj(ri,ti), true, "r and t are disjoint")
                 assertEqMsg(wrkPreData.wrkCtx->isDisj(ri,si), true, "r and s are disjoint")
@@ -266,7 +266,7 @@ describe("refreshWrkPreData", _ => {
         //then
         switch st.wrkPreData {
             | Some(wrkPreData) => {
-                assertEqMsg( wrkPreData.wrkCtx->makeExprFromStringExn("( ) [ ] { }"), wrkPreData.parens, "wrkPreData.parens" )
+                assertEqMsg( wrkPreData.wrkCtx->ctxStrToIntsExn("( ) [ ] { }"), wrkPreData.parens, "wrkPreData.parens" )
             }
             | _ => failMsg("A non-empty context was expected")
         }

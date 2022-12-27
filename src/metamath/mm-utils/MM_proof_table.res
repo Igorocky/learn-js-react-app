@@ -14,7 +14,7 @@ type proofRecord = {
 type proofTable = array<proofRecord>
 
 let printProofRec = (ctx,r) => {
-    let exprStr = ctx->ctxExprToStrExn(r.expr)
+    let exprStr = ctx->ctxIntsToStrExn(r.expr)
     let proofStr = switch r.proof {
         | Hypothesis({label}) => "hyp: " ++ label
         | Assertion({args, label}) => args->Js_array2.joinWith(", ") ++ " " ++ label

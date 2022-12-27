@@ -12,9 +12,9 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
-    let expr = exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(ctx, _)
+    let expr = exprStr->getSpaceSeparatedValuesAsArray->ctxSymsToIntsExn(ctx, _)
     let frms = prepareFrmSubsData(ctx)
-    let parenCnt = parenCntMake(ctx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
+    let parenCnt = parenCntMake(ctx->ctxSymsToIntsExn(["(", ")", "{", "}", "[", "]"]))
     let hyps = ctx->getAllHyps
     let disj = ctx->getAllDisj
 

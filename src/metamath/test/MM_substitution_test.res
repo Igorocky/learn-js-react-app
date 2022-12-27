@@ -14,7 +14,7 @@ let testIterateConstParts = (~frmExprStr:string, ~exprStr:string, ~expectedConst
         | None => failMsg("Cannot find 'test' frame in testIterateConstParts.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
-    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" "))
+    let expr = ctx->ctxSymsToIntsExn(exprStr->Js_string2.split(" "))
 
     //when
     let (actualConstParts, actualMatchingConstParts) = test_iterateConstParts(~ctx, ~frmExpr, ~expr)
@@ -35,7 +35,7 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
         | None => failMsg("Cannot find 'test' frame in testIterateSubstitutions.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
-    let expr = ctx->makeExprExn(exprStr->Js_string2.split(" ")->Js_array2.map(Js.String2.trim)->Js_array2.filter(s => s != ""))
+    let expr = ctx->ctxSymsToIntsExn(exprStr->Js_string2.split(" ")->Js_array2.map(Js.String2.trim)->Js_array2.filter(s => s != ""))
 
     //when
     let actualSubs = test_iterateSubstitutions(~ctx, ~frmExpr, ~expr)
@@ -46,7 +46,7 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
             exprs->Js_array2.mapi((s,i) => {
                 frm.frameVarToSymb->Belt_MapInt.getExn(i)
                     ++ ": "
-                    ++ ctxExprToStrExn(ctx,s)
+                    ++ ctxIntsToStrExn(ctx,s)
             })
             ->Js_array2.sortInPlace
         })

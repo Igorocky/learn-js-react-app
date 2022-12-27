@@ -369,36 +369,36 @@ let forEachHypothesisInDeclarationOrderPriv: (mmContextContents, hypothesis => o
 let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) => option<'a> = 
     (ctx, consumer) => forEachHypothesisInDeclarationOrderPriv(ctx.contents, consumer)
 
-let symToInt = (ctx:mmContextContents,sym) => {
+let ctxSymToIntPriv = (ctx:mmContextContents,sym) => {
     ctx->forEachCtxInReverseOrder(ctx => {
         ctx.symToInt->mutableMapStrGet(sym)
     })
 }
 
-let symToIntExn = (ctx:mmContextContents,sym) => {
-    switch symToInt(ctx,sym) {
+let ctxSymToIntExnPriv = (ctx:mmContextContents,sym) => {
+    switch ctxSymToIntPriv(ctx,sym) {
         | Some(i) => i
         | None => raise(MmException({msg:`The symbol '${sym}' is not declared.`}))
     }
 }
 
-let makeExprExnPriv: (mmContextContents,array<string>) => expr = (ctx, symbols) => {
-    symbols->Js_array2.map(ctx->symToIntExn)
+let ctxSymsToIntsExnPriv: (mmContextContents,array<string>) => expr = (ctx, symbols) => {
+    symbols->Js_array2.map(ctx->ctxSymToIntExnPriv)
 }
 
-let makeExprExn: (mmContext,array<string>) => expr = (ctx, symbols) => makeExprExnPriv(ctx.contents, symbols)
+let ctxSymsToIntsExn: (mmContext,array<string>) => expr = (ctx, symbols) => ctxSymsToIntsExnPriv(ctx.contents, symbols)
 
-let makeExprFromStringExn: (mmContext,string) => expr = (ctx, str) => makeExprExnPriv(ctx.contents, str->getSpaceSeparatedValuesAsArray)
+let ctxStrToIntsExn: (mmContext,string) => expr = (ctx, str) => ctxSymsToIntsExnPriv(ctx.contents, str->getSpaceSeparatedValuesAsArray)
 
-let ctxSymbToInt = (ctx:mmContext, sym:string):option<int> => {
-    symToInt(ctx.contents,sym)
+let ctxSymToInt = (ctx:mmContext, sym:string):option<int> => {
+    ctxSymToIntPriv(ctx.contents,sym)
 }
 
-let ctxSymbToIntExn = (ctx:mmContext, sym:string):int => {
-    ctx.contents->symToIntExn(sym)
+let ctxSymToIntExn = (ctx:mmContext, sym:string):int => {
+    ctx.contents->ctxSymToIntExnPriv(sym)
 }
 
-let ctxIntToStrPriv = (ctx:mmContextContents,i):option<string> => {
+let ctxIntToSymPriv = (ctx:mmContextContents,i):option<string> => {
     ctx->forEachCtxInReverseOrder(ctx => {
         if (i >= 0) {
             if (i < ctx.varsBaseIdx) {
@@ -417,33 +417,33 @@ let ctxIntToStrPriv = (ctx:mmContextContents,i):option<string> => {
     })
 }
 
-let ctxIntToStrExnPriv = (ctx:mmContextContents,i) => {
-    ctxIntToStrPriv(ctx,i)->Belt.Option.getExn
+let ctxIntToSymExnPriv = (ctx:mmContextContents,i) => {
+    ctxIntToSymPriv(ctx,i)->Belt.Option.getExn
 }
 
-let ctxIntToStrExn = (ctx:mmContext,i) => ctxIntToStrExnPriv(ctx.contents,i)
+let ctxIntToSymExn = (ctx:mmContext,i) => ctxIntToSymExnPriv(ctx.contents,i)
 
-let ctxIntArrToStrArrExn = (ctx,expr) => expr->Js_array2.map(ctxIntToStrExn(ctx, _))
+let ctxIntsToSymsExn = (ctx,expr) => expr->Js_array2.map(ctxIntToSymExn(ctx, _))
 
-let ctxIntToStr = (ctx:mmContext,i) => ctxIntToStrPriv(ctx.contents,i)
+let ctxIntToSym = (ctx:mmContext,i) => ctxIntToSymPriv(ctx.contents,i)
 
-let ctxExprToStrExnPriv: (mmContextContents, expr) => string = (ctx, expr) => {
-    expr->Js_array2.map(ctxIntToStrExnPriv(ctx, _))->Js_array2.joinWith(" ")
+let ctxIntsToStrExnPriv: (mmContextContents, expr) => string = (ctx, expr) => {
+    expr->Js_array2.map(ctxIntToSymExnPriv(ctx, _))->Js_array2.joinWith(" ")
 }
 
-let ctxExprToStrExn: (mmContext, expr) => string = (ctx, expr) => ctxExprToStrExnPriv(ctx.contents,expr)
+let ctxIntsToStrExn: (mmContext, expr) => string = (ctx, expr) => ctxIntsToStrExnPriv(ctx.contents,expr)
 
-let frmIntToStrExnPriv: (mmContextContents, frame, int) => string = (ctx, frame, i) => {
-    if (i < 0) {ctx->ctxIntToStrExnPriv(i)} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)}
+let frmIntToSymExnPriv: (mmContextContents, frame, int) => string = (ctx, frame, i) => {
+    if (i < 0) {ctx->ctxIntToSymExnPriv(i)} else {frame.frameVarToSymb->Belt_MapInt.getExn(i)}
 }
 
-let frmIntToStrExn: (mmContext, frame, int) => string = (ctx, frame, i) => frmIntToStrExnPriv(ctx.contents,frame,i)
+let frmIntToSymExn: (mmContext, frame, int) => string = (ctx, frame, i) => frmIntToSymExnPriv(ctx.contents,frame,i)
 
-let frmExprToStrExnPriv: (mmContextContents, frame, expr) => string = (ctx, frame, expr) => {
-    expr->Js_array2.map(frmIntToStrExnPriv(ctx, frame, _))->Js_array2.joinWith(" ")
+let frmIntsToStrExnPriv: (mmContextContents, frame, expr) => string = (ctx, frame, expr) => {
+    expr->Js_array2.map(frmIntToSymExnPriv(ctx, frame, _))->Js_array2.joinWith(" ")
 }
 
-let frmExprToStrExn: (mmContext, frame, expr) => string = (ctx, frame, expr) => frmExprToStrExnPriv(ctx.contents, frame, expr)
+let frmIntsToStrExn: (mmContext, frame, expr) => string = (ctx, frame, expr) => frmIntsToStrExnPriv(ctx.contents, frame, expr)
 
 let extractMandatoryVariables = (ctx:mmContextContents,asrt): mutableSetInt => {
     let res = mutableSetIntMake()
@@ -529,7 +529,7 @@ let getNestingLevel: mmContext => int = ctx => getNestingLevelPriv(ctx.contents)
 let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int> = (ctx, ~onProgress=?, ()) => {
     let ctx = ctx.contents
     let getAllConsts = (ctx:mmContextContents) => {
-        let allConsts = ["(", ")", "[", "]", "{", "}"]->Js.Array2.filter(ctx->isConstPriv)->makeExprExnPriv(ctx, _)
+        let allConsts = ["(", ")", "[", "]", "{", "}"]->Js.Array2.filter(ctx->isConstPriv)->ctxSymsToIntsExnPriv(ctx, _)
         let predefiend = Belt_SetInt.fromArray(allConsts)
         ctx->forEachCtxInDeclarationOrder(ctx => {
             let maxC = ctx.constsBaseIdx + ctx.consts->Js.Array2.length - 1
@@ -748,7 +748,7 @@ let addDisj: (mmContext,array<string>) => unit = (ctx, vars) => {
     switch vars->Js_array2.find(sym => !(ctx->isVarPriv(sym))) {
         | Some(sym) => raise(MmException({msg:`The symbol '${sym}' is not a variable but it is used in a disjoint statement.`}))
         | None => {
-            let varInts = vars->Js_array2.map(ctx->symToIntExn)
+            let varInts = vars->Js_array2.map(ctx->ctxSymToIntExnPriv)
             let maxIdx = varInts->Js_array2.length - 1
             for i in 0 to maxIdx {
                 for j in i+1 to maxIdx {
@@ -771,11 +771,11 @@ let addFloating: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (c
         raise(MmException({msg:`Cannot reuse the label '${label}'`}))
     } else {
         let varName = exprStr[1]
-        let varInt = ctx->symToIntExn(varName)
+        let varInt = ctx->ctxSymToIntExnPriv(varName)
         if (ctx->getTypeOfVar(varInt)->Belt_Option.isSome) {
             raise(MmException({msg:`Cannot redefine typecode for the variable '${varName}'`}))
         } else {
-            let expr = makeExprExnPriv(ctx, exprStr)
+            let expr = ctxSymsToIntsExnPriv(ctx, exprStr)
             let hyp = {typ:F, label, expr}
             ctx.hyps->Js_array2.push(hyp)->ignore
             ctx.symToHyp->mutableMapStrPut(label, hyp)
@@ -790,7 +790,7 @@ let addEssential: (mmContext, ~label:string, ~exprStr:array<string>) => unit = (
     } else if (!(ctx->isConstPriv(exprStr[0]))) {
         raise(MmException({msg:`The first symbol in an essential expression must be a constant.`}))
     } else {
-        let expr = makeExprExnPriv(ctx, exprStr)
+        let expr = ctxSymsToIntsExnPriv(ctx, exprStr)
         let hyp = {typ:E, label, expr}
         ctx.hyps->Js_array2.push(hyp)->ignore
         ctx.symToHyp->mutableMapStrPut(label, hyp)
@@ -842,7 +842,7 @@ let createFrameVarToSymbMap = (ctx:mmContextContents, mandatoryHypotheses:array<
         }
     })
     Belt_MapInt.fromArray(
-        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering->Belt_MapInt.getExn(v), ctxIntToStrExnPriv(ctx,v)))
+        allVars->mutableSetIntToArray->Js_array2.map(v => (renumbering->Belt_MapInt.getExn(v), ctxIntToSymExnPriv(ctx,v)))
     )
 }
 
@@ -866,10 +866,10 @@ let createFramePriv: (mmContextContents, string, array<string>) => frame = (ctx,
     } else if (!(ctx->isConstPriv(exprStr[0]))) {
         raise(MmException({msg:`The first symbol in an assertion expression must be a constant.`}))
     } else {
-        switch exprStr->Js_array2.find(sym => ctx->symToInt(sym)->Belt_Option.isNone) {
+        switch exprStr->Js_array2.find(sym => ctx->ctxSymToIntPriv(sym)->Belt_Option.isNone) {
             | Some(sym) => raise(MmException({msg:`The symbol '${sym}' must be either a constant or a variable.`}))
             | None => {
-                let asrt: expr = exprStr->Js_array2.map(symToIntExn(ctx, _))
+                let asrt: expr = exprStr->Js_array2.map(ctxSymToIntExnPriv(ctx, _))
                 let mandatoryVars: mutableSetInt = extractMandatoryVariables(ctx, asrt)
                 let mandatoryDisj: mutableMapInt<mutableSetInt> = extractMandatoryDisj(ctx, mandatoryVars)
                 let mandatoryHypotheses: array<hypothesis> = extractMandatoryHypotheses(ctx, mandatoryVars)
@@ -984,7 +984,7 @@ let generateNewVarNames = (ctx:mmContext, types:array<int>): array<string> => {
     let cnt = ref(0)
     let res = []
     for i in 0 to maxI {
-        let typeStr = ctx->ctxIntToStrExn(types[i])
+        let typeStr = ctx->ctxIntToSymExn(types[i])
         cnt.contents = cnt.contents + 1
         let newName = ref(typeStr ++ cnt.contents->Belt_Int.toString)
         while (ctx->isConst(newName.contents) || ctx->isVar(newName.contents)) {

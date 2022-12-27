@@ -14,7 +14,7 @@ describe("findParentheses", _ => {
 
         //then
         assertEq(
-            actualFoundParens->Js_array2.map(ctxIntToStrExn(ctx, _)),
+            actualFoundParens->Js_array2.map(ctxIntToSymExn(ctx, _)),
             ["(",")","[","]","{","}","<.",".>"]
         )
     })
@@ -29,8 +29,8 @@ describe("applySingleStmt", _ => {
         ctx->applySingleStmt(Const({symbols:["c1"]}))
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
     })
@@ -43,18 +43,18 @@ describe("applySingleStmt", _ => {
         ctx->applySingleStmt(Const({symbols:["c1", "c2", "c3"]}))
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
 
-        assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-        assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+        assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+        assertEq( ctx->ctxIntToSymExn(-2), "c2" )
         assertEq( ctx->isConst("c2"), true )
         assertEq( ctx->isVar("c2"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c3"), -3 )
-        assertEq( ctx->ctxIntToStrExn(-3), "c3" )
+        assertEq( ctx->ctxSymToIntExn("c3"), -3 )
+        assertEq( ctx->ctxIntToSymExn(-3), "c3" )
         assertEq( ctx->isConst("c3"), true )
         assertEq( ctx->isVar("c3"), false )
     })
@@ -74,13 +74,13 @@ describe("applySingleStmt", _ => {
                 //then
                 assertEq( msg, "An attempt to declare a constant 'c3' in an inner block." )
 
-                assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-                assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+                assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+                assertEq( ctx->ctxIntToSymExn(-1), "c1" )
                 assertEq( ctx->isConst("c1"), true )
                 assertEq( ctx->isVar("c1"), false )
 
-                assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-                assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+                assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+                assertEq( ctx->ctxIntToSymExn(-2), "c2" )
                 assertEq( ctx->isConst("c2"), true )
                 assertEq( ctx->isVar("c2"), false )
             }
@@ -99,18 +99,18 @@ describe("addLocalConst", _ => {
         ctx->addLocalConst("c3")
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
 
-        assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-        assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+        assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+        assertEq( ctx->ctxIntToSymExn(-2), "c2" )
         assertEq( ctx->isConst("c2"), true )
         assertEq( ctx->isVar("c2"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c3"), -3 )
-        assertEq( ctx->ctxIntToStrExn(-3), "c3" )
+        assertEq( ctx->ctxSymToIntExn("c3"), -3 )
+        assertEq( ctx->ctxIntToSymExn(-3), "c3" )
         assertEq( ctx->isConst("c3"), true )
         assertEq( ctx->isVar("c3"), false )
     })
@@ -126,23 +126,23 @@ describe("addLocalConst", _ => {
         ctx->addLocalConst("c4")
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
 
-        assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-        assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+        assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+        assertEq( ctx->ctxIntToSymExn(-2), "c2" )
         assertEq( ctx->isConst("c2"), true )
         assertEq( ctx->isVar("c2"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c3"), -3 )
-        assertEq( ctx->ctxIntToStrExn(-3), "c3" )
+        assertEq( ctx->ctxSymToIntExn("c3"), -3 )
+        assertEq( ctx->ctxIntToSymExn(-3), "c3" )
         assertEq( ctx->isConst("c3"), true )
         assertEq( ctx->isVar("c3"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c4"), -4 )
-        assertEq( ctx->ctxIntToStrExn(-4), "c4" )
+        assertEq( ctx->ctxSymToIntExn("c4"), -4 )
+        assertEq( ctx->ctxIntToSymExn(-4), "c4" )
         assertEq( ctx->isConst("c4"), true )
         assertEq( ctx->isVar("c4"), false )
     })
@@ -161,23 +161,23 @@ describe("closeChildContext", _ => {
         ctx->closeChildContext
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
 
-        assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-        assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+        assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+        assertEq( ctx->ctxIntToSymExn(-2), "c2" )
         assertEq( ctx->isConst("c2"), true )
         assertEq( ctx->isVar("c2"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c3"), -3 )
-        assertEq( ctx->ctxIntToStrExn(-3), "c3" )
+        assertEq( ctx->ctxSymToIntExn("c3"), -3 )
+        assertEq( ctx->ctxIntToSymExn(-3), "c3" )
         assertEq( ctx->isConst("c3"), true )
         assertEq( ctx->isVar("c3"), false )
         
-        assertEq( ctx->ctxSymbToIntExn("c4"), -4 )
-        assertEq( ctx->ctxIntToStrExn(-4), "c4" )
+        assertEq( ctx->ctxSymToIntExn("c4"), -4 )
+        assertEq( ctx->ctxIntToSymExn(-4), "c4" )
         assertEq( ctx->isConst("c4"), true )
         assertEq( ctx->isVar("c4"), false )
     })
@@ -196,23 +196,23 @@ describe("resetToParentContext", _ => {
         ctx->resetToParentContext
 
         //then
-        assertEq( ctx->ctxSymbToIntExn("c1"), -1 )
-        assertEq( ctx->ctxIntToStrExn(-1), "c1" )
+        assertEq( ctx->ctxSymToIntExn("c1"), -1 )
+        assertEq( ctx->ctxIntToSymExn(-1), "c1" )
         assertEq( ctx->isConst("c1"), true )
         assertEq( ctx->isVar("c1"), false )
 
-        assertEq( ctx->ctxSymbToIntExn("c2"), -2 )
-        assertEq( ctx->ctxIntToStrExn(-2), "c2" )
+        assertEq( ctx->ctxSymToIntExn("c2"), -2 )
+        assertEq( ctx->ctxIntToSymExn(-2), "c2" )
         assertEq( ctx->isConst("c2"), true )
         assertEq( ctx->isVar("c2"), false )
         
-        assertEq( ctx->ctxSymbToInt("c3")->Belt_Option.isNone, true )
-        assertEq( ctx->ctxIntToStr(-3)->Belt_Option.isNone, true )
+        assertEq( ctx->ctxSymToInt("c3")->Belt_Option.isNone, true )
+        assertEq( ctx->ctxIntToSym(-3)->Belt_Option.isNone, true )
         assertEq( ctx->isConst("c3"), false )
         assertEq( ctx->isVar("c3"), false )
         
-        assertEq( ctx->ctxSymbToInt("c4")->Belt_Option.isNone, true )
-        assertEq( ctx->ctxIntToStr(-4)->Belt_Option.isNone, true )
+        assertEq( ctx->ctxSymToInt("c4")->Belt_Option.isNone, true )
+        assertEq( ctx->ctxIntToSym(-4)->Belt_Option.isNone, true )
         assertEq( ctx->isConst("c4"), false )
         assertEq( ctx->isVar("c4"), false )
     })

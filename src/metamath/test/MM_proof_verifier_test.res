@@ -21,11 +21,11 @@ describe("verifyProof", _ => {
         }
 
         //when
-        let proof = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
+        let proof = verifyProof(ctx, ctxSymsToIntsExn(ctx, exprStr), proof)
 
         //then
         assertEq(
-            proof->getExprFromNode->ctxExprToStrExn(ctx, _),
+            proof->getExprFromNode->ctxIntsToStrExn(ctx, _),
             "|- t = t"
         )
     })
@@ -49,7 +49,7 @@ describe("verifyProof", _ => {
         //when
         let errorMsg = ref("")
         try {
-            let _ = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
+            let _ = verifyProof(ctx, ctxSymsToIntsExn(ctx, exprStr), proof)
         } catch {
             | MmException({msg}) => errorMsg.contents = msg
         }
@@ -73,11 +73,11 @@ describe("verifyProof", _ => {
         }
 
         //when
-        let proof = verifyProof(ctx, makeExprExn(ctx, exprStr), proof)
+        let proof = verifyProof(ctx, ctxSymsToIntsExn(ctx, exprStr), proof)
 
         //then
         assertEq(
-            proof->getExprFromNode->ctxExprToStrExn(ctx, _),
+            proof->getExprFromNode->ctxIntsToStrExn(ctx, _),
             "|- ( ( ph <-> ps ) <-> -. ( ( ph -> ps ) -> -. ( ps -> ph ) ) )"
         )
     })

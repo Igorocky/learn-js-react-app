@@ -149,14 +149,14 @@ let testApplyAssertions = (
         workCtx->openChildContext
         let maxWorkCtxVar = workCtx->getNumOfVars - 1
         let workVarHypLabels = workCtx->generateNewLabels(~prefix="workVar", ~amount=res.newVarTypes->Js_array2.length)
-        let workVarTypes = res.newVarTypes->Js_array2.map(workCtx->ctxIntToStrExn)
+        let workVarTypes = res.newVarTypes->Js_array2.map(workCtx->ctxIntToSymExn)
         let workVarNames = workCtx->generateNewVarNames(res.newVarTypes)
         let disjArrStr = []
         res.newDisj->disjForEachArr(disj => {
             disjArrStr->Js.Array2.push(
                 "[ " ++ 
                 disj->Js.Array2.map(v => {
-                    if (v <= maxWorkCtxVar) {workCtx->ctxIntToStrExn(v)} else {workVarNames[v-maxWorkCtxVar-1]}
+                    if (v <= maxWorkCtxVar) {workCtx->ctxIntToSymExn(v)} else {workVarNames[v-maxWorkCtxVar-1]}
                 })->Js_array2.joinWith(" ") ++ 
                 " ]"
             )->ignore
@@ -185,7 +185,7 @@ let testApplyAssertions = (
                     | None => {
                         let newStmtLabel = workCtx->generateNewLabels(~prefix="provable", ~amount=1)
                         let label = newStmtLabel[0]
-                        let exprArrStr = argExpr->Js_array2.map(workCtx->ctxIntToStrExn)
+                        let exprArrStr = argExpr->Js_array2.map(workCtx->ctxIntToSymExn)
                         workCtx->applySingleStmt(Provable({
                             label, 
                             expr:exprArrStr,
@@ -197,7 +197,7 @@ let testApplyAssertions = (
                 }
             }
         })
-        let asrtExprStr = workCtx->ctxExprToStrExn(
+        let asrtExprStr = workCtx->ctxIntsToStrExn(
             applySubs(
                 ~frmExpr=frame.asrt,
                 ~subs=res.subs,
@@ -231,13 +231,13 @@ let testApplyAssertions = (
     additionalStatements->Js_array2.forEach(preCtx->applySingleStmt)
     let workCtx = createContext(~parent=preCtx, ())
     let frms = prepareFrmSubsData(workCtx)
-    let parenCnt = parenCntMake(workCtx->makeExprExn(["(", ")", "{", "}", "[", "]"]))
+    let parenCnt = parenCntMake(workCtx->ctxSymsToIntsExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
     let statements = statements->Js_array2.map(((label,exprStr)) => {
         {
             label, 
-            expr:exprStr->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)
+            expr:exprStr->getSpaceSeparatedValuesAsArray->ctxSymsToIntsExn(workCtx,_)
         }
     })
 
@@ -249,7 +249,7 @@ let testApplyAssertions = (
         ~statements,
         ~parenCnt,
         ~frameFilter,
-        ~result=?result->Belt_Option.map(str => str->getSpaceSeparatedValuesAsArray->makeExprExn(workCtx,_)),
+        ~result=?result->Belt_Option.map(str => str->getSpaceSeparatedValuesAsArray->ctxSymsToIntsExn(workCtx,_)),
         ~onMatchFound = res => {
             switch actualResults->Belt_MutableMapString.get(res.asrtLabel) {
                 | None => {

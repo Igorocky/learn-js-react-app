@@ -55,16 +55,16 @@ let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) =
 let getNestingLevel: mmContext => int
 let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
 
-let ctxSymbToInt: (mmContext, string) => option<int>
-let ctxSymbToIntExn: (mmContext, string) => int
-let makeExprExn: (mmContext,array<string>) => expr
-let makeExprFromStringExn: (mmContext, string) => expr
-let ctxIntToStr: (mmContext, int) => option<string>
-let ctxIntToStrExn: (mmContext, int) => string
-let ctxIntArrToStrArrExn: (mmContext, expr) => array<string>
-let ctxExprToStrExn: (mmContext, expr) => string
-let frmIntToStrExn: (mmContext, frame, int) => string
-let frmExprToStrExn: (mmContext, frame, expr) => string
+let ctxSymToInt: (mmContext, string) => option<int>
+let ctxIntToSym: (mmContext, int) => option<string>
+let ctxSymToIntExn: (mmContext, string) => int
+let ctxSymsToIntsExn: (mmContext,array<string>) => expr
+let ctxStrToIntsExn: (mmContext, string) => expr
+let ctxIntToSymExn: (mmContext, int) => string
+let ctxIntsToSymsExn: (mmContext, expr) => array<string>
+let ctxIntsToStrExn: (mmContext, expr) => string
+let frmIntToSymExn: (mmContext, frame, int) => string
+let frmIntsToStrExn: (mmContext, frame, expr) => string
 let createFrame: (mmContext, string, array<string>) => frame
 
 let generateNewVarNames: (mmContext, array<int>) => array<string>

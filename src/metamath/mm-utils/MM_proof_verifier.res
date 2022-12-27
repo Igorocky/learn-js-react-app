@@ -264,8 +264,8 @@ let verifyProof: (mmContext, expr, proof) => proofNode = (ctx, expr, proof) => {
     } else if (stack->getExprFromStack(0) != expr) {
         raise(MmException({msg:
             `stack[0] != expr` 
-                ++ `\nstack[0] is '${stack->getExprFromStack(0)->ctxExprToStrExn(ctx,_)}'`
-                ++ `\nexpr is     '${expr->ctxExprToStrExn(ctx,_)}'`
+                ++ `\nstack[0] is '${stack->getExprFromStack(0)->ctxIntsToStrExn(ctx,_)}'`
+                ++ `\nexpr is     '${expr->ctxIntsToStrExn(ctx,_)}'`
         }))
     } else {
         stack[0]

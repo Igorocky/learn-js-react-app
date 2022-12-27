@@ -575,9 +575,9 @@ let createParensInt = (st,wrkCtx):array<int> => {
     for i in 0 to maxI {
         let leftParen = parensStr[i*2]
         let rightParen = parensStr[i*2+1]
-        switch wrkCtx->ctxSymbToInt(leftParen) {
+        switch wrkCtx->ctxSymToInt(leftParen) {
             | Some(leftParenInt) if wrkCtx->isConst(leftParen) => {
-                switch wrkCtx->ctxSymbToInt(rightParen) {
+                switch wrkCtx->ctxSymToInt(rightParen) {
                     | Some(rightParenInt) if wrkCtx->isConst(rightParen) => {
                         parensInt->Js.Array2.push(leftParenInt)->ignore
                         parensInt->Js.Array2.push(rightParenInt)->ignore
@@ -676,7 +676,7 @@ let setExprAndJstf = (stmt:userStmt,wrkCtx:mmContext):userStmt => {
         try {
             {
                 ...stmt,
-                expr: Some(wrkCtx->makeExprExn(stmt.cont->contToArrStr)),
+                expr: Some(wrkCtx->ctxSymsToIntsExn(stmt.cont->contToArrStr)),
                 jstf: parseJstf(stmt.jstfText)
             }
         } catch {
@@ -766,11 +766,11 @@ let createNewVars = (st:editorState, varTypes:array<int>):(editorState,array<int
                 let newVarNames = wrkCtx->generateNewVarNames(varTypes)
                 let newHypLabels = wrkCtx->generateNewLabels(~prefix="var", ~amount=numOfVars)
                 wrkCtx->applySingleStmt(Var({symbols:newVarNames}))
-                let varTypeNames = wrkCtx->ctxIntArrToStrArrExn(varTypes)
+                let varTypeNames = wrkCtx->ctxIntsToSymsExn(varTypes)
                 newHypLabels->Js.Array2.forEachi((label,i) => {
                     wrkCtx->applySingleStmt(Floating({label, expr:[varTypeNames[i], newVarNames[i]]}))
                 })
-                let newVarInts = wrkCtx->makeExprExn(newVarNames)
+                let newVarInts = wrkCtx->ctxSymsToIntsExn(newVarNames)
                 let newVarsText = newHypLabels->Js.Array2.mapi((label,i) => {
                     `${label} ${varTypeNames[i]} ${newVarNames[i]}`
                 })->Js_array2.joinWith("\n")
@@ -792,11 +792,11 @@ let createNewDisj = (st:editorState, newDisj:disjMutable):editorState => {
         | None => raise(MmException({msg:`Cannot create new disjoints without wrkPreData.`}))
         | Some({wrkCtx}) => {
             newDisj->disjForEachArr(varInts => {
-                wrkCtx->applySingleStmt(Disj({vars:wrkCtx->ctxIntArrToStrArrExn(varInts)}))
+                wrkCtx->applySingleStmt(Disj({vars:wrkCtx->ctxIntsToSymsExn(varInts)}))
             })
             let newDisjTextLines = []
             newDisj->disjForEachArr(varInts => {
-                newDisjTextLines->Js.Array2.push(wrkCtx->ctxIntArrToStrArrExn(varInts))->ignore
+                newDisjTextLines->Js.Array2.push(wrkCtx->ctxIntsToSymsExn(varInts))->ignore
             })
             if (newDisjTextLines->Js.Array2.length == 0) {
                 st
@@ -860,7 +860,7 @@ let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorS
                                         | Some(ctxVar) => ctxVar
                                     }
                                 })
-                                ->ctxExprToStrExn(wrkCtx, _)
+                                ->ctxIntsToStrExn(wrkCtx, _)
                             let (st, newStmtId) = addNewStmt(stMut.contents)
                             stMut.contents = st
                             stMut.contents = updateStmt(stMut.contents, newStmtId, stmt => {
@@ -886,7 +886,7 @@ let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorS
                                 | Some(ctxVar) => ctxVar
                             }
                         })
-                        ->ctxExprToStrExn(wrkCtx, _)
+                        ->ctxIntsToStrExn(wrkCtx, _)
                     let (st, newStmtId) = addNewStmt(st)
                     let jstfText = argLabels->Js.Array2.joinWith(" ") ++ ": " ++ applRes.asrtLabel
                     let st = updateStmt(st, newStmtId, stmt => {
