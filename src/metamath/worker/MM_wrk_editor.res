@@ -609,7 +609,7 @@ let refreshWrkPreData = (st:editorState):editorState => {
         st
     } else {
         let st = removeAllErrorsInEditorState(st)
-        let wrkCtx = st.preCtx->cloneContext
+        let wrkCtx = createContext(~parent=st.preCtx, ())
         let st = parseConstants(st,wrkCtx)
         let st = parseVariables(st,wrkCtx)
         let st = parseDisjoints(st,wrkCtx)
