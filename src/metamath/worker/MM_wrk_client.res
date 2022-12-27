@@ -1,4 +1,5 @@
 open MM_wrk_api
+open Common
 
 let webworker: option<{..}> = %raw("typeof window !== 'undefined' ? window.webWorkerInst : undefined")
 let sendToWorkerPriv: workerRequest => unit = req => {
@@ -45,7 +46,7 @@ webworker->Belt_Option.forEach(webworker => {
         clients->Expln_utils_common.arrForEach(client => {
             if (client.id == resp.clientId) {
                 if (client.traceEnabled) {
-                    Js.Console.log(`[clientId=${resp.clientId->Belt_Int.toString}] client received a response`)
+                    Js.Console.log(`${currTimeStr()} [clientId=${resp.clientId->Belt_Int.toString}] client received a response`)
                 }
                 client.callback(resp.body)
                 Some(())
@@ -74,7 +75,7 @@ let beginWorkerInteraction = (
     })
     localSendToWorker.contents = req => {
         if (enableTrace) {
-            Js.Console.log(`[clientId=${id.contents->Belt_Int.toString}] client is sending a request, procName = ${procName}`)
+            Js.Console.log(`${currTimeStr()} [clientId=${id.contents->Belt_Int.toString}] client is sending a request, procName = ${procName}`)
         }
         sendToWorkerPriv({clientId:id.contents, procName, body:serialize(req), traceEnabled: enableTrace})
     }

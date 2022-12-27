@@ -1,7 +1,6 @@
 open MM_context
 open MM_wrk_client
 open MM_parenCounter
-open MM_substitution
 open MM_wrk_editor
 
 let procName = "MM_wrk_ctx"

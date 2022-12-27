@@ -1,0 +1,1 @@
+let currTimeStr: unit => string

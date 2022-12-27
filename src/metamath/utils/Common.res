@@ -1,0 +1,1 @@
+let currTimeStr = () => Js.Date.now()->Js.Date.fromFloat->Js.Date.toISOString

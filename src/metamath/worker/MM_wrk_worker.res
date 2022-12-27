@@ -1,4 +1,5 @@
 open MM_wrk_api
+open Common
 
 @val external sendToClient: workerResponse => unit = "postMessage"
 
@@ -36,11 +37,11 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
 
 let processRequest: workerRequest => unit = req => {
     if (req.traceEnabled) {
-        Js.Console.log(`[clientId=${req.clientId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
+        Js.Console.log(`${currTimeStr()} [clientId=${req.clientId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
     }
     processors->Belt_MapString.get(req.procName)->Belt_Option.forEach(processor => processor(~req, ~sendToClient=resp=>{
         if (req.traceEnabled) {
-            Js.Console.log(`[clientId=${resp.clientId->Belt_Int.toString}] worker is sending a response`)
+            Js.Console.log(`${currTimeStr()} [clientId=${resp.clientId->Belt_Int.toString}] worker is sending a response`)
         }
         sendToClient(resp)
     }))
