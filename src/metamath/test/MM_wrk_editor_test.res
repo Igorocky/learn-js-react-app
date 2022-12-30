@@ -4,6 +4,7 @@ open MM_context
 open MM_proof_tree
 open MM_wrk_editor
 open MM_wrk_settings
+open MM_substitution
 
 let createEditorState = (mmFile) => {
     let mmFileText = Expln_utils_files.readStringFromFile(mmFile)
@@ -20,10 +21,8 @@ let createEditorState = (mmFile) => {
 
         preCtxV: 1,
         preCtx: ctx,
+        frms: prepareFrmSubsData(ctx),
 
-        constsText: "",
-        constsEditMode: false,
-        constsErr: None,
 
         varsText: "",
         varsEditMode: false,
@@ -34,7 +33,7 @@ let createEditorState = (mmFile) => {
         disjErr: None,
         disj: Belt_MapInt.fromArray([]),
 
-        wrkPreData: None,
+        wrkCtx: None,
 
         nextStmtId: 0,
         stmts: [],
@@ -55,64 +54,18 @@ let getVarType = (ctx:mmContext, vName:string) => {
 
 let demo0 = "./src/metamath/test/resources/demo0.mm"
 
-describe("refreshWrkPreData", _ => {
-    it("detects an error when a const is declared twice", _ => {
-        //given
-        let st = createEditorState(demo0)
-        let st = completeConstsEditMode(st, "term")
-
-        //when
-        let st = refreshWrkPreData(st)
-
-        //then
-        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "An attempt to re-declare the math symbol 'term' as a constant.")
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
-    })
-    
-    it("detects an error when a const is declared with the same name as existing variable", _ => {
-        //given
-        let st = createEditorState(demo0)
-        let st = completeConstsEditMode(st, "t")
-
-        //when
-        let st = refreshWrkPreData(st)
-
-        //then
-        assertEq(st.constsErr->Belt_Option.getWithDefault(""), "An attempt to re-declare the math symbol 't' as a constant.")
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
-    })
-    
-    it("creates wrkCtx when only additional constants are defined and there are no errors", _ => {
-        //given
-        let st = createEditorState(demo0)
-        let st = completeConstsEditMode(st, "c1 c2")
-
-        //when
-        let st = refreshWrkPreData(st)
-
-        //then
-        switch st.wrkPreData {
-            | Some(wrkPreData) => {
-                assertEqMsg(wrkPreData.ver, "1 1 c1 c2", "wrkCtxVer")
-                assertEqMsg(wrkPreData.wrkCtx->isConst("c1"), true, "c1 is const")
-                assertEqMsg(wrkPreData.wrkCtx->isConst("c2"), true, "c2 is const")
-            }
-            | _ => failMsg("A non-empty context was expected")
-        }
-    })
-    
+describe("refreshWrkCtx", _ => {
     it("detects an error in variable declaration", _ => {
         //given
         let st = createEditorState(demo0)
         let st = completeVarsEditMode(st, "hyp_v1 term v1 \n hyp_v2 term- v2")
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        assertEq(st.constsErr->Belt_Option.isNone, true)
         assertEq(st.varsErr->Belt_Option.getWithDefault(""), "The first symbol in a floating expression must be a constant.")
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
     })
     
     it("creates wrkCtx when only additional variables are defined and there are no errors", _ => {
@@ -121,16 +74,15 @@ describe("refreshWrkPreData", _ => {
         let st = completeVarsEditMode(st, "hyp_v1 term v1 \n hyp_v2 wff v2")
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        switch st.wrkPreData {
-            | Some(wrkPreData) => {
-                assertEqMsg(wrkPreData.ver, "1 1 hyp_v1 term v1 \n hyp_v2 wff v2", "wrkCtxVer")
-                assertEqMsg(wrkPreData.wrkCtx->isVar("v1"), true, "v1 is var")
-                assertEqMsg(getVarType(wrkPreData.wrkCtx, "v1"), "term", "v1 is term")
-                assertEqMsg(wrkPreData.wrkCtx->isVar("v2"), true, "v2 is var")
-                assertEqMsg(getVarType(wrkPreData.wrkCtx, "v2"), "wff", "v2 is wff")
+        switch st.wrkCtx {
+            | Some(wrkCtx) => {
+                assertEqMsg(wrkCtx->isVar("v1"), true, "v1 is var")
+                assertEqMsg(getVarType(wrkCtx, "v1"), "term", "v1 is term")
+                assertEqMsg(wrkCtx->isVar("v2"), true, "v2 is var")
+                assertEqMsg(getVarType(wrkCtx, "v2"), "wff", "v2 is wff")
             }
             | _ => failMsg("A non-empty context was expected")
         }
@@ -142,13 +94,12 @@ describe("refreshWrkPreData", _ => {
         let st = completeDisjEditMode(st, "t r \n r s-")
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        assertEq(st.constsErr->Belt_Option.isNone, true)
         assertEq(st.varsErr->Belt_Option.isNone, true)
         assertEq(st.disjErr->Belt_Option.getWithDefault(""), "The symbol 's-' is not a variable but it is used in a disjoint statement.")
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
     })
     
     it("creates wrkCtx when only additional disjoints are defined and there are no errors", _ => {
@@ -157,48 +108,23 @@ describe("refreshWrkPreData", _ => {
         let st = completeDisjEditMode(st, "t r \n r s")
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        switch st.wrkPreData {
-            | Some(wrkPreData) => {
-                assertEqMsg(wrkPreData.ver, "1 1 t r \n r s", "wrkCtxVer")
-                let ti = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["t"]))[0]
-                let ri = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["r"]))[0]
-                let si = (wrkPreData.wrkCtx->ctxSymsToIntsExn(["s"]))[0]
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(ti,ri), true, "t and r are disjoint")
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(ri,ti), true, "r and t are disjoint")
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(ri,si), true, "r and s are disjoint")
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(si,ri), true, "s and r are disjoint")
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(ti,si), false, "t and s are not disjoint")
-                assertEqMsg(wrkPreData.wrkCtx->isDisj(si,ti), false, "s and t are not disjoint")
+        switch st.wrkCtx {
+            | Some(wrkCtx) => {
+                let ti = (wrkCtx->ctxSymsToIntsExn(["t"]))[0]
+                let ri = (wrkCtx->ctxSymsToIntsExn(["r"]))[0]
+                let si = (wrkCtx->ctxSymsToIntsExn(["s"]))[0]
+                assertEqMsg(wrkCtx->isDisj(ti,ri), true, "t and r are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ri,ti), true, "r and t are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ri,si), true, "r and s are disjoint")
+                assertEqMsg(wrkCtx->isDisj(si,ri), true, "s and r are disjoint")
+                assertEqMsg(wrkCtx->isDisj(ti,si), false, "t and s are not disjoint")
+                assertEqMsg(wrkCtx->isDisj(si,ti), false, "s and t are not disjoint")
             }
             | _ => failMsg("A non-empty context was expected")
         }
-    })
-    
-    it("detects an error in an axiom", _ => {
-        //given
-        let st = createEditorState(demo0)
-        let (st, _) = addNewStmt(st)
-        let (st, _) = addNewStmt(st)
-        let hypId = st.stmts[0].id
-        let axId = st.stmts[1].id
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t."])})
-
-        //when
-        let st = refreshWrkPreData(st)
-
-        //then
-        assertEq(st.constsErr->Belt_Option.isNone, true)
-        assertEq(st.varsErr->Belt_Option.isNone, true)
-        assertEq(st.disjErr->Belt_Option.isNone, true)
-        assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
-        assertEq(st.stmts[0].stmtErr->Belt_Option.getWithDefault(""), "The symbol 't.' must be either a constant or a variable.")
-        assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
-        assertEq(st.stmts[1].stmtErr->Belt_Option.isNone, true)
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
     })
     
     it("detects an error in a hypothesis", _ => {
@@ -206,67 +132,47 @@ describe("refreshWrkPreData", _ => {
         let st = createEditorState(demo0)
         let (st, _) = addNewStmt(st)
         let (st, _) = addNewStmt(st)
-        let hypId = st.stmts[0].id
-        let axId = st.stmts[1].id
+        let prId = st.stmts[0].id
+        let hypId = st.stmts[1].id
+        let st = updateStmt(st, prId, stmt => {...stmt, typ:#p, label:"pr", cont:Text(["|-", "t", "+", "t"])})
         let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0."])})
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        assertEq(st.constsErr->Belt_Option.isNone, true)
         assertEq(st.varsErr->Belt_Option.isNone, true)
         assertEq(st.disjErr->Belt_Option.isNone, true)
-        assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
-        assertEq(st.stmts[0].stmtErr->Belt_Option.isNone, true)
-        assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
-        assertEq(st.stmts[1].stmtErr->Belt_Option.getWithDefault(""), "The symbol '0.' is not declared.")
-        assertEq(st.wrkPreData->Belt_Option.isNone, true)
+        assertEqMsg(st.stmts[0].id, hypId, "the hypothesis is the first")
+        assertEq(st.stmts[0].stmtErr->Belt_Option.getWithDefault(""), "The symbol '0.' is not declared.")
+        assertEqMsg(st.stmts[1].id, prId, "the provable is the second")
+        assertEq(st.stmts[1].stmtErr->Belt_Option.isNone, true)
+        assertEq(st.wrkCtx->Belt_Option.isNone, true)
     })
     
-    it("creates wrkCtx when there are few correct axioms and hypotheses", _ => {
+    it("creates wrkCtx when there are few correct hypotheses", _ => {
         //given
         let st = createEditorState(demo0)
         let (st, _) = addNewStmt(st)
         let (st, _) = addNewStmt(st)
-        let hypId = st.stmts[0].id
-        let axId = st.stmts[1].id
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
+        let hyp1Id = st.stmts[0].id
+        let hyp2Id = st.stmts[1].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "0", "+", "0"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "t", "+", "t"])})
 
         //when
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //then
-        switch st.wrkPreData {
-            | Some(wrkPreData) => {
-                assertEqMsg(wrkPreData.ver, "1 1 ::: ax |- t + t :::::: hyp |- 0 + 0 :::", "wrkCtxVer")
-
-                assertEqMsg(st.stmts[0].id, axId, "the axiom is the first")
+        switch st.wrkCtx {
+            | Some(wrkCtx) => {
+                assertEqMsg(st.stmts[0].id, hyp1Id, "hyp1 is the first")
                 assertEq(st.stmts[0].stmtErr->Belt_Option.isNone, true)
-                assertEqMsg(st.stmts[1].id, hypId, "the hypothesis is the second")
+                assertEqMsg(st.stmts[1].id, hyp2Id, "hyp2 is the second")
                 assertEq(st.stmts[1].stmtErr->Belt_Option.isNone, true)
 
-                assertEqMsg(wrkPreData.wrkCtx->isAsrt("ax"), true, "ax is an assertion")
-                assertEqMsg(wrkPreData.wrkCtx->isHyp("hyp"), true, "hyp is a hypothesis")
-            }
-            | _ => failMsg("A non-empty context was expected")
-        }
-    })
-
-    it("filters incorrect parentheses when creating parens for wrkSettings", _ => {
-        //given
-        let st = createEditorState(demo0)
-        let st = setSettings(st, 2, {...st.settings, parens: "( ) [ ]. [ ] <.| |.> { }"})
-
-        //when
-        let st = refreshWrkPreData(st)
-
-        //then
-        switch st.wrkPreData {
-            | Some(wrkPreData) => {
-                assertEqMsg( wrkPreData.wrkCtx->ctxStrToIntsExn("( ) [ ] { }"), wrkPreData.parens, "wrkPreData.parens" )
+                assertEqMsg(wrkCtx->isHyp("hyp1"), true, "hyp1 is a hypothesis")
+                assertEqMsg(wrkCtx->isHyp("hyp2"), true, "hyp2 is a hypothesis")
             }
             | _ => failMsg("A non-empty context was expected")
         }
@@ -283,13 +189,13 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+-", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"])})
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -310,15 +216,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp"
+            jstfText: "pr1 hyp1"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -327,7 +233,7 @@ describe("prepareProvablesForUnification", _ => {
         assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
         assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
         assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
-        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot parse justification: 'pr1 hyp' [1].")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "Cannot parse justification: 'pr1 hyp1' [1].")
     })
 
     it("detects a ref error in a provable's justification when asrt label refers to a hypothesis", _ => {
@@ -339,15 +245,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : hyp"
+            jstfText: "pr1 hyp1 : hyp1"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -356,7 +262,7 @@ describe("prepareProvablesForUnification", _ => {
         assertEqMsg(st.stmts[2].id, pr1Id, "pr1 is the third")
         assertEq(st.stmts[2].stmtErr->Belt_Option.isNone, true)
         assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
-        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "The label 'hyp' doesn't refer to any assertion.")
+        assertEq(st.stmts[3].stmtErr->Belt_Option.getWithDefault(""), "The label 'hyp1' doesn't refer to any assertion.")
     })
 
     it("detects a ref error in a provable's justification when asrt label refers to another provable", _ => {
@@ -368,15 +274,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : pr1"
+            jstfText: "pr1 hyp1 : pr1"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -397,15 +303,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
             jstfText: "pr1 hyp-- : ax"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -426,15 +332,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"tt", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : ax"
+            jstfText: "pr1 hyp1 : mp"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -455,15 +361,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"mp", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : ax"
+            jstfText: "pr1 hyp1 : mp"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -484,15 +390,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : ax"
+            jstfText: "pr1 hyp1 : mp"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -513,15 +419,15 @@ describe("prepareProvablesForUnification", _ => {
         let (st, _) = addNewStmt(st)
         let pr1Id = st.stmts[0].id
         let pr2Id = st.stmts[1].id
-        let hypId = st.stmts[2].id
-        let axId = st.stmts[3].id
-        let st = updateStmt(st, axId, stmt => {...stmt, typ:#a, label:"ax", cont:Text(["|-", "t", "+", "t"])})
-        let st = updateStmt(st, hypId, stmt => {...stmt, typ:#e, label:"hyp", cont:Text(["|-", "0", "+", "0"])})
+        let hyp1Id = st.stmts[2].id
+        let hyp2Id = st.stmts[3].id
+        let st = updateStmt(st, hyp1Id, stmt => {...stmt, typ:#e, label:"hyp1", cont:Text(["|-", "t", "+", "t"])})
+        let st = updateStmt(st, hyp2Id, stmt => {...stmt, typ:#e, label:"hyp2", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr1Id, stmt => {...stmt, label:"pr1", cont:Text(["|-", "0", "+", "0"])})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, label:"pr2", cont:Text(["|-", "t", "term"]), 
-            jstfText: "pr1 hyp : ax"
+            jstfText: "pr1 hyp1 : mp"
         })
-        let st = refreshWrkPreData(st)
+        let st = refreshWrkCtx(st)
 
         //when
         let st = prepareProvablesForUnification(st)
@@ -535,6 +441,6 @@ describe("prepareProvablesForUnification", _ => {
         assertEqMsg(st.stmts[3].id, pr2Id, "pr2 is the fourth")
         assertEq(st.stmts[3].stmtErr->Belt_Option.isNone, true)
         assertEq(st.stmts[3].expr->Belt_Option.isSome, true)
-        assertEq(st.stmts[3].jstf, Some({args:["pr1", "hyp"], asrt:"ax"}))
+        assertEq(st.stmts[3].jstf, Some({args:["pr1", "hyp1"], asrt:"mp"}))
     })
 })

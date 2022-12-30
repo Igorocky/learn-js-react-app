@@ -34,7 +34,12 @@ let setTyp = (st,typ):state => {
 @react.component
 let make = (
     ~modalRef:modalRef,
-    ~wrkPreData:wrkPrecalcData,
+    ~preCtxVer: int,
+    ~preCtx: mmContext,
+    ~parenStr: string,
+    ~varsText: string,
+    ~disjText: string,
+    ~hyps: array<wrkCtxHyp>,
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
@@ -54,7 +59,12 @@ let make = (
         openModal(modalRef, _ => React.null)->promiseMap(modalId => {
             updateModal(modalRef, modalId, () => rndSearchProgressDialog())
             searchAssertions(
-                ~wrkPreData,
+                ~preCtxVer,
+                ~preCtx,
+                ~parenStr,
+                ~varsText,
+                ~disjText,
+                ~hyps,
                 ~typ=None, 
                 ~pattern=None
             )->promiseMap(found => {

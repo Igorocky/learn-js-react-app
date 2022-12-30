@@ -6,6 +6,7 @@ open MM_wrk_settings
 open MM_asrt_apply
 open MM_parenCounter
 open MM_substitution
+open MM_wrk_ctx
 
 type stmtCont =
     | Text(array<string>)
@@ -33,11 +34,10 @@ let strToCont = str => {
     Text(getSpaceSeparatedValuesAsArray(str))
 }
 
-type userStmtType = [ #a | #e | #p ]
+type userStmtType = [ #e | #p ]
 
 let userStmtTypeFromStr = str => {
     switch str {
-        | "a" => #a
         | "e" => #e
         | "p" => #p
         | _ => raise(MmException({msg:`Cannot convert '${str}' to userStmtType`}))
@@ -76,24 +76,13 @@ let createEmptyUserStmt = (id, typ, label):userStmt => {
     }
 }
 
-type wrkPrecalcData = {
-    ver: string,
-    wrkCtx: mmContext,
-    parens: array<int>,
-    parenCnt: parenCnt,
-    frms: Belt_MapString.t<frmSubsData>,
-}
-
 type editorState = {
     settingsV:int,
     settings:settings,
 
     preCtxV: int,
     preCtx: mmContext,
-
-    constsText: string,
-    constsEditMode: bool,
-    constsErr: option<string>,
+    frms: Belt_MapString.t<frmSubsData>,
 
     varsText: string,
     varsEditMode: bool,
@@ -104,7 +93,7 @@ type editorState = {
     disjErr: option<string>,
     disj: Belt_MapInt.t<Belt_SetInt.t>,
 
-    wrkPreData: option<wrkPrecalcData>,
+    wrkCtx: option<mmContext>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -201,8 +190,8 @@ let moveCheckedStmts = (st:editorState,up):editorState => {
 
 let createNewLabel = (st:editorState, prefix:string):string => {
     let isLabelDefinedInCtx = label => {
-        switch st.wrkPreData {
-            | Some({wrkCtx}) => wrkCtx->isHyp(label) || wrkCtx->isAsrt(label)
+        switch st.wrkCtx {
+            | Some(wrkCtx) => wrkCtx->isHyp(label) || wrkCtx->isAsrt(label)
             | None => false
         }
     }
@@ -272,21 +261,6 @@ let canGoEditModeForStmt = (st:editorState,stmtId) => {
     !(st.stmts->Js_array2.some(stmt => 
         stmt.id == stmtId && (stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.jstfEditMode)
     ))
-}
-
-let setConstsEditMode = st => {
-    {
-        ...st,
-        constsEditMode: true
-    }
-}
-
-let completeConstsEditMode = (st, newConstsText) => {
-    {
-        ...st,
-        constsText:newConstsText,
-        constsEditMode: false
-    }
 }
 
 let setVarsEditMode = st => {
@@ -404,7 +378,7 @@ let setSettings = (st, settingsV, settings) => {
 }
 
 let setPreCtx = (st, preCtxV, preCtx) => {
-    { ...st, preCtxV, preCtx }
+    { ...st, preCtxV, preCtx, frms: prepareFrmSubsData(preCtx) }
 }
 
 let stableSortStmts = (st, comp: (userStmt,userStmt)=>int) => {
@@ -437,9 +411,8 @@ let stableSortStmts = (st, comp: (userStmt,userStmt)=>int) => {
 let sortStmtsByType = st => {
     let stmtToInt = stmt => {
         switch stmt.typ {
-            | #a => 1
-            | #e => 2
-            | #p => 3
+            | #e => 1
+            | #p => 2
         }
     }
     st->stableSortStmts((a,b) => stmtToInt(a) - stmtToInt(b))
@@ -455,7 +428,6 @@ let removeAllErrorsInUserStmt = stmt => {
 let removeAllErrorsInEditorState = st => {
     {
         ...st,
-        constsErr: None,
         varsErr: None,
         disjErr: None,
         stmts: st.stmts->Js_array2.map(removeAllErrorsInUserStmt)
@@ -467,190 +439,49 @@ let userStmtHasErrors = stmt => {
 }
 
 let editorStateHasErrors = st => {
-    st.constsErr->Belt_Option.isSome ||
-        st.varsErr->Belt_Option.isSome ||
+    st.varsErr->Belt_Option.isSome ||
         st.disjErr->Belt_Option.isSome ||
         st.stmts->Js_array2.some(userStmtHasErrors)
 }
 
-let parseConstants = (st,wrkCtx) => {
-    if (editorStateHasErrors(st)) {
-        st
-    } else {
-        let constsArr = getSpaceSeparatedValuesAsArray(st.constsText)
-        if (constsArr->Js.Array2.length == 0) {
-            st
-        } else {
-            try {
-                constsArr->Js_array2.forEach(wrkCtx->addLocalConst)
-                st
-            } catch {
-                | MmException({msg}) => {...st, constsErr:Some(msg)}
-            }
+let parseWrkCtxErr = (st:editorState, wrkCtxErr:wrkCtxErr):editorState => {
+    let st = switch wrkCtxErr.varsErr {
+        | None => st
+        | Some(msg) => {
+            {...st, varsErr:Some(msg)}
         }
     }
-}
-
-let addVarFromString = (str,wrkCtx) => {
-    let arr = getSpaceSeparatedValuesAsArray(str)
-    if (arr->Js_array2.length != 3) {
-        raise(MmException({msg:`Cannot convert '${str}' to Var statement.`}))
-    } else {
-        wrkCtx->applySingleStmt(Var({symbols:[arr[2]]}))
-        wrkCtx->applySingleStmt(Floating({label:arr[0], expr:[arr[1], arr[2]]}))
-    }
-}
-
-let newLineRegex = %re("/[\n\r]/")
-let parseVariables = (st,wrkCtx) => {
-    if (editorStateHasErrors(st)) {
-        st
-    } else {
-        let varLines = st.varsText
-            ->Js_string2.splitByRe(newLineRegex)
-            ->Js_array2.map(so => so->Belt_Option.getWithDefault("")->Js_string2.trim)
-            ->Js_array2.filter(s => s->Js_string2.length > 0)
-        if (varLines->Js.Array2.length == 0) {
-            st
-        } else {
-            try {
-                varLines->Js_array2.forEach(addVarFromString(_,wrkCtx))
-                st
-            } catch {
-                | MmException({msg}) => {...st, varsErr:Some(msg)}
-            }
+    let st = switch wrkCtxErr.disjErr {
+        | None => st
+        | Some(msg) => {
+            {...st, disjErr:Some(msg)}
         }
     }
-}
-
-let addDisjFromString = (str,wrkCtx) => {
-    wrkCtx->applySingleStmt(Disj({vars:getSpaceSeparatedValuesAsArray(str)}))
-}
-
-let parseDisjoints = (st,wrkCtx) => {
-    if (editorStateHasErrors(st)) {
-        st
-    } else {
-        let disjLines = st.disjText
-            ->Js_string2.splitByRe(newLineRegex)
-            ->Js_array2.map(so => so->Belt_Option.getWithDefault("")->Js_string2.trim)
-            ->Js_array2.filter(s => s->Js_string2.length > 0)
-        if (disjLines->Js.Array2.length == 0) {
-            st
-        } else {
-            try {
-                disjLines->Js_array2.forEach(addDisjFromString(_,wrkCtx))
-                st
-            } catch {
-                | MmException({msg}) => {...st, disjErr:Some(msg)}
-            }
+    let st = switch wrkCtxErr.hypErr {
+        | None => st
+        | Some((stmtId, msg)) => {
+            st->updateStmt(stmtId, stmt => {...stmt, stmtErr:Some(msg)})
         }
     }
+    st
 }
 
-let addStmtToCtx = (stmt:userStmt, wrkCtx:mmContext):userStmt => {
-    if (stmt.typ != #a && stmt.typ != #e) {
-        raise(MmException({msg:`Cannot put a statement of type '${stmt.typ :> string}' to mm ctx.`}))
-    }
-    if (userStmtHasErrors(stmt)) {
-        stmt
-    } else {
-        try {
-            if (stmt.typ == #a) {
-                wrkCtx->applySingleStmt(Axiom({label:stmt.label, expr:stmt.cont->contToArrStr}))
-            } else if (stmt.typ == #e) {
-                wrkCtx->applySingleStmt(Essential({label:stmt.label, expr:stmt.cont->contToArrStr}))
-            }
-            stmt
-        } catch {
-            | MmException({msg}) => {...stmt, stmtErr:Some(msg)}
-        }
-    }
-}
-
-let createParensInt = (st,wrkCtx):array<int> => {
-    let parensStr = st.settings.parens->getSpaceSeparatedValuesAsArray
-    let parensInt = []
-    let maxI = parensStr->Js_array2.length / 2 - 1
-    for i in 0 to maxI {
-        let leftParen = parensStr[i*2]
-        let rightParen = parensStr[i*2+1]
-        switch wrkCtx->ctxSymToInt(leftParen) {
-            | Some(leftParenInt) if wrkCtx->isConst(leftParen) => {
-                switch wrkCtx->ctxSymToInt(rightParen) {
-                    | Some(rightParenInt) if wrkCtx->isConst(rightParen) => {
-                        parensInt->Js.Array2.push(leftParenInt)->ignore
-                        parensInt->Js.Array2.push(rightParenInt)->ignore
-                    }
-                    | _ => ()
-                }
-            }
-            | _ => ()
-        }
-    }
-    parensInt
-}
-
-let refreshWrkPreData = (st:editorState):editorState => {
+let refreshWrkCtx = (st:editorState):editorState => {
     let st = sortStmtsByType(st)
-    let actualWrkCtxVer = [
-        st.settingsV->Belt_Int.toString,
-        st.preCtxV->Belt_Int.toString,
-        st.constsText,
-        st.varsText,
-        st.disjText,
-        st.stmts->Js_array2.reduce(
-            (acc,stmt) => {
-                acc ++ if (stmt.typ == #a || stmt.typ == #e) {
-                    "::: " ++ stmt.label ++ " " ++ stmt.cont->contToArrStr->Js_array2.joinWith(" ") ++ " :::"
-                } else {
-                    ""
-                }
-            },
-            ""
-        )
-    ]->Js.Array2.filter(str => str->Js.String2.trim->Js_string2.length != 0)->Js.Array2.joinWith(" ")
-    let mustUpdate = switch st.wrkPreData {
-        | None => true
-        | Some({ver:existingWrkCtxVer}) if existingWrkCtxVer != actualWrkCtxVer => true
-        | _ => false
+    let st = removeAllErrorsInEditorState(st)
+    let wrkCtxRes = createWrkCtx(
+        ~preCtx=st.preCtx,
+        ~varsText=st.varsText,
+        ~disjText=st.disjText,
+        ~hyps=st.stmts
+            ->Js_array2.filter( stmt => stmt.typ == #e)
+            ->Js_array2.map( stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
+    )
+    let st = switch wrkCtxRes {
+        | Error(wrkCtxErr) => parseWrkCtxErr(st, wrkCtxErr)
+        | Ok(wrkCtx) => {...st, wrkCtx:Some(wrkCtx)}
     }
-    if (!mustUpdate) {
-        st
-    } else {
-        let st = removeAllErrorsInEditorState(st)
-        let wrkCtx = createContext(~parent=st.preCtx, ())
-        let st = parseConstants(st,wrkCtx)
-        let st = parseVariables(st,wrkCtx)
-        let st = parseDisjoints(st,wrkCtx)
-        let st = st.stmts->Js_array2.reduce(
-            (st,stmt) => {
-                if (editorStateHasErrors(st) || stmt.typ == #p) {
-                    st
-                } else {
-                    st->updateStmt(stmt.id, _ => addStmtToCtx(stmt,wrkCtx))
-                }
-            },
-            st
-        )
-        if (editorStateHasErrors(st)) {
-            {...st, wrkPreData:None}
-        } else {
-            let parensInt = createParensInt(st, wrkCtx)
-            {
-                ...st, 
-                wrkPreData: Some(
-                    {
-                        ver:actualWrkCtxVer, 
-                        wrkCtx, 
-                        parens: parensInt,
-                        parenCnt: parenCntMake(parensInt),
-                        frms: prepareFrmSubsData(wrkCtx),
-                    }
-                )
-            }
-        }
-    }
+    st
 }
 
 let parseJstf = jstfText => {
@@ -726,18 +557,18 @@ let validateStmtLabel = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_Mutabl
 }
 
 let prepareProvablesForUnification = (st:editorState):editorState => {
-    switch st.wrkPreData {
+    switch st.wrkCtx {
         | None => st
-        | Some(preData) => {
+        | Some(wrkCtx) => {
             let usedLabels = Belt_MutableSetString.make()
             st.stmts->Js_array2.reduce(
                 (st,stmt) => {
                     if (editorStateHasErrors(st) || stmt.typ != #p) {
                         st
                     } else {
-                        let stmt = setExprAndJstf(stmt, preData.wrkCtx)
-                        let stmt = validateJstfRefs(stmt, preData.wrkCtx, usedLabels)
-                        let stmt = validateStmtLabel(stmt, preData.wrkCtx, usedLabels)
+                        let stmt = setExprAndJstf(stmt, wrkCtx)
+                        let stmt = validateJstfRefs(stmt, wrkCtx, usedLabels)
+                        let stmt = validateStmtLabel(stmt, wrkCtx, usedLabels)
                         usedLabels->Belt_MutableSetString.add(stmt.label)
                         st->updateStmt(stmt.id, _ => stmt)
                     }
@@ -750,15 +581,15 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 
 let validateSyntax = st => {
     let st = removeAllErrorsInEditorState(st)
-    let st = refreshWrkPreData(st)
+    let st = refreshWrkCtx(st)
     let st = prepareProvablesForUnification(st)
     st
 }
 
 let createNewVars = (st:editorState, varTypes:array<int>):(editorState,array<int>) => {
-    switch st.wrkPreData {
-        | None => raise(MmException({msg:`Cannot create new variables without wrkPreData.`}))
-        | Some({wrkCtx}) => {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot create new variables without wrkCtx.`}))
+        | Some(wrkCtx) => {
             let numOfVars = varTypes->Js_array2.length
             if (numOfVars == 0) {
                 (st,[])
@@ -788,9 +619,9 @@ let createNewVars = (st:editorState, varTypes:array<int>):(editorState,array<int
 }
 
 let createNewDisj = (st:editorState, newDisj:disjMutable):editorState => {
-    switch st.wrkPreData {
-        | None => raise(MmException({msg:`Cannot create new disjoints without wrkPreData.`}))
-        | Some({wrkCtx}) => {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot create new disjoints without wrkCtx.`}))
+        | Some(wrkCtx) => {
             newDisj->disjForEachArr(varInts => {
                 wrkCtx->applySingleStmt(Disj({vars:wrkCtx->ctxIntsToSymsExn(varInts)}))
             })
@@ -812,10 +643,10 @@ let createNewDisj = (st:editorState, newDisj:disjMutable):editorState => {
 }
 
 let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorState => {
-    switch st.wrkPreData {
-        | None => raise(MmException({msg:`Cannot add assertion search result without wrkPreData.`}))
-        | Some({wrkCtx, frms}) => {
-            switch frms->Belt_MapString.get(applRes.asrtLabel) {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot add assertion search result without wrkCtx.`}))
+        | Some(wrkCtx) => {
+            switch st.frms->Belt_MapString.get(applRes.asrtLabel) {
                 | None => raise(MmException({msg:`Cannot find assertion with label '${applRes.asrtLabel}'.`}))
                 | Some(frm) => {
                     let (st, newCtxVarInts) = createNewVars(st,applRes.newVarTypes)

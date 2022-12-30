@@ -15,7 +15,7 @@ let contToArrStr: stmtCont => array<string>
 let contToStr: stmtCont => string
 let strToCont: string => stmtCont
 
-type userStmtType = [#a | #e | #p]
+type userStmtType = [#e | #p]
 let userStmtTypeFromStr: string => userStmtType
 
 type userStmt = {
@@ -40,24 +40,13 @@ type userStmt = {
 
 let createEmptyUserStmt: (string, userStmtType, string) => userStmt
 
-type wrkPrecalcData = {
-    ver: string,
-    wrkCtx: mmContext,
-    parens: array<int>,
-    parenCnt: parenCnt,
-    frms: Belt_MapString.t<frmSubsData>,
-}
-
 type editorState = {
     settingsV:int,
     settings:settings,
 
     preCtxV: int,
     preCtx: mmContext,
-
-    constsText: string,
-    constsEditMode: bool,
-    constsErr: option<string>,
+    frms: Belt_MapString.t<frmSubsData>,
 
     varsText: string,
     varsEditMode: bool,
@@ -68,7 +57,7 @@ type editorState = {
     disjErr: option<string>,
     disj: Belt_MapInt.t<Belt_SetInt.t>,
 
-    wrkPreData: option<wrkPrecalcData>,
+    wrkCtx: option<mmContext>,
 
     nextStmtId: int,
     stmts: array<userStmt>,
@@ -87,8 +76,6 @@ let addNewStmt: editorState => (editorState,string)
 let isSingleStmtChecked: editorState => bool
 let duplicateCheckedStmt: editorState => editorState
 let canGoEditModeForStmt: (editorState, string) => bool
-let setConstsEditMode: editorState => editorState
-let completeConstsEditMode: (editorState, string) => editorState
 let setVarsEditMode: editorState => editorState
 let completeVarsEditMode: (editorState, string) => editorState
 let setDisjEditMode: editorState => editorState
@@ -104,7 +91,7 @@ let completeJstfEditMode: (editorState, string, string) => editorState
 let setSettings: (editorState, int, settings) => editorState
 let setPreCtx: (editorState, int, mmContext) => editorState
 let editorStateHasErrors: editorState => bool
-let refreshWrkPreData: editorState => editorState
+let refreshWrkCtx: editorState => editorState
 let prepareProvablesForUnification: editorState => editorState
 let validateSyntax: editorState => editorState
 let addAsrtSearchResult: (editorState, applyAssertionResult) => editorState

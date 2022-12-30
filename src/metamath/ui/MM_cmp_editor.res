@@ -4,6 +4,8 @@ open Expln_React_Mui
 open Modal
 open MM_wrk_editor
 open MM_wrk_settings
+open MM_wrk_ctx
+open MM_substitution
 open Expln_utils_promise
 
 type userStmtLocStor = {
@@ -17,7 +19,6 @@ type userStmtLocStor = {
 }   
 
 type editorStateLocStor = {
-    constsText: string,
     varsText: string,
     disjText: string,
 
@@ -54,10 +55,7 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
 
         preCtxV,
         preCtx,
-
-        constsText: stateLocStor->Belt.Option.map(obj => obj.constsText)->Belt.Option.getWithDefault(""),
-        constsEditMode: false,
-        constsErr: None,
+        frms: prepareFrmSubsData(preCtx),
 
         varsText: stateLocStor->Belt.Option.map(obj => obj.varsText)->Belt.Option.getWithDefault(""),
         varsEditMode: false,
@@ -68,7 +66,7 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
         disjErr: None,
         disj: Belt_MapInt.fromArray([]),
 
-        wrkPreData: None,
+        wrkCtx: None,
 
         nextStmtId: stateLocStor->Belt.Option.map(obj => obj.nextStmtId)->Belt.Option.getWithDefault(0),
         stmts: 
@@ -81,7 +79,6 @@ let createInitialEditorState = (settingsV, settings, preCtxV, preCtx, stateLocSt
 
 let editorStateToEditorStateLocStor = (state:editorState):editorStateLocStor => {
     {
-        constsText: state.constsText,
         varsText: state.varsText,
         disjText: state.disjText,
         nextStmtId: state.nextStmtId,
@@ -108,7 +105,6 @@ let readEditorStateFromLocStor = (key:string):option<editorStateLocStor> => {
             open Expln_utils_jsonParse
             let parseResult = parseObj(stateLocStorStr, d=>{
                 {
-                    constsText: d->strOpt("constsText")->Belt_Option.getWithDefault(""),
                     varsText: d->strOpt("varsText")->Belt_Option.getWithDefault(""),
                     disjText: d->strOpt("disjText")->Belt_Option.getWithDefault(""),
                     nextStmtId: d->int("nextStmtId"),
@@ -184,7 +180,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let editIsActive = 
-        state.constsEditMode || state.varsEditMode ||
+        state.varsEditMode || state.disjEditMode ||
         state.stmts->Js.Array2.some(stmt => stmt.labelEditMode || stmt.typEditMode || stmt.contEditMode || stmt.jstfEditMode )
 
     let actAddNewStmt = () => setState(st => {
@@ -220,10 +216,23 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         setState(st => selectedResults->Js_array2.reduce( addAsrtSearchResult, st ))
     }
 
-    let rndSearchAsrtDialog = (~modalId, ~wrkPreData) => {
+    let rndSearchAsrtDialog = (
+        ~modalId, 
+        ~preCtxVer: int,
+        ~preCtx: mmContext,
+        ~parenStr: string,
+        ~varsText: string,
+        ~disjText: string,
+        ~hyps: array<wrkCtxHyp>,
+    ) => {
         <MM_cmp_search_asrt
             modalRef
-            wrkPreData
+            preCtxVer
+            preCtx
+            parenStr
+            varsText
+            disjText
+            hyps
             onCanceled={()=>closeModal(modalRef, modalId)}
             onResultsSelected={selectedResults=>{
                 closeModal(modalRef, modalId)
@@ -234,11 +243,21 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actSearchAsrt = () => {
-        switch state.wrkPreData {
+        switch state.wrkCtx {
             | None => ()
-            | Some(wrkPreData) => {
+            | Some(wrkCtx) => {
                 openModal(modalRef, _ => React.null)->promiseMap(modalId => {
-                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(~modalId, ~wrkPreData))
+                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(
+                        ~modalId, 
+                        ~preCtxVer=state.preCtxV,
+                        ~preCtx=state.preCtx,
+                        ~parenStr=state.settings.parens,
+                        ~varsText=state.varsText,
+                        ~disjText=state.disjText,
+                        ~hyps=state.stmts
+                            ->Js_array2.filter(stmt => stmt.typ == #e)
+                            ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr}),
+                    ))
                 })->ignore
             }
         }
@@ -311,21 +330,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         </Row>
     }
 
-    let rndConsts = () => {
-        <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
-            {React.string("Constants")}
-            <Col>
-                <MM_cmp_multiline_text
-                    text=state.constsText
-                    editMode=state.constsEditMode
-                    onEditRequested={() => actBeginEdit0(setConstsEditMode)}
-                    onEditDone={newText => actCompleteEdit(completeConstsEditMode(_,newText))}
-                />
-                {rndError(state.constsErr)}
-            </Col>
-        </Row>
-    }
-
     let rndVars = () => {
         <Row alignItems=#"flex-start" spacing=1. style=ReactDOM.Style.make(~marginLeft="7px", ~marginTop="7px", ())>
             {React.string("Variables")}
@@ -367,7 +371,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         header={rndButtons()}
         content={_ => {
             <Col>
-                {rndConsts()}
                 {rndVars()}
                 {rndDisj()}
                 {rndStmts()}
