@@ -9,7 +9,7 @@ open MM_context
 open MM_substitution
 open Modal
 
-type resultForRender = array<string>
+type resultForRender = React.element
 
 type state = {
     typ: string,
@@ -48,11 +48,21 @@ let setResults = (st,results,ctx,frms):state => {
         resultsForRender:Some(
             results->Js.Array2.map(result => {
                 switch frms->Belt_MapString.get(result.asrtLabel) {
-                    | None => [`Cannot find assertion '${result.asrtLabel}'`]
+                    | None => React.string(`Cannot find assertion '${result.asrtLabel}'`)
                     | Some(frm) => {
-                        frm.hypsE->Js_array2.map(hyp => {
-                            hyp.label ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, hyp.expr)
-                        })->Js_array2.concat([result.asrtLabel ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, frm.frame.asrt)])
+                        <Paper>
+                            <Col>
+                                {React.array(
+                                    frm.hypsE->Js_array2.mapi((hyp,i) => {
+                                        <React.Fragment key={i->Belt_Int.toString} >
+                                            {React.string(hyp.label ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, hyp.expr))}
+                                            <Divider/>
+                                        </React.Fragment>
+                                    })
+                                )}
+                                { React.string(result.asrtLabel ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, frm.frame.asrt)) }
+                            </Col>
+                        </Paper>
                     }
                 }
             })
@@ -141,30 +151,12 @@ let make = (
         />
     }
 
-    let rndResult = resultForRender => {
-        let lastIdx = resultForRender->Js_array2.length - 1
-        <Paper>
-            <Col>
-                {React.array(
-                    resultForRender->Js_array2.mapi((str,i) => {
-                        <React.Fragment key={i->Belt_Int.toString} >
-                            {React.string(str)}
-                            {
-                                if (i != lastIdx) {
-                                    <Divider/>
-                                } else {
-                                    React.null
-                                }
-                            }
-                        </React.Fragment>
-                    })
-                )}
-            </Col>
-        </Paper>
-    }
-
-    let rndPagination = () => {
-        <Pagination count=state.resultsMaxPage page=state.resultsPage onChange={(_,newPage) => actPageChange(newPage)} />
+    let rndPagination = totalNumOfResults => {
+        if (state.resultsPerPage < totalNumOfResults) {
+            <Pagination count=state.resultsMaxPage page=state.resultsPage onChange={(_,newPage) => actPageChange(newPage)} />
+        } else {
+            React.null
+        }
     }
 
     let rndResults = () => {
@@ -176,10 +168,11 @@ let make = (
                 let maxI = Js.Math.min_int(minI + state.resultsPerPage - 1, resultsForRender->Js_array2.length-1)
                 for i in minI to maxI {
                     let resultForRender = resultsForRender[i]
-                    items->Js.Array2.push(rndResult(resultForRender))->ignore
+                    items->Js.Array2.push(resultForRender)->ignore
                 }
+                let totalNumOfResults = resultsForRender->Js.Array2.length
                 <Col>
-                    {rndPagination()}
+                    {rndPagination(totalNumOfResults)}
                     <List>
                     {
                         items->Js_array2.mapi((item,i) => {
@@ -207,7 +200,7 @@ let make = (
                         })->React.array
                     }
                     </List>
-                    {rndPagination()}
+                    {rndPagination(totalNumOfResults)}
                 </Col>
             }
         }
