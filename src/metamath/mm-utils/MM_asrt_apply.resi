@@ -25,6 +25,7 @@ let applyAssertions: (
     ~parenCnt:parenCnt,
     ~frameFilter:frame=>bool=?,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
+    ~onProgress:float=>unit=?,
     ()
 ) => unit
 

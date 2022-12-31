@@ -1,6 +1,7 @@
 open MM_substitution
 open MM_context
 open MM_parenCounter
+open MM_progress_tracker
 
 type labeledExpr = {
     label:string,
@@ -300,9 +301,13 @@ let applyAssertions = (
     ~parenCnt:parenCnt,
     ~frameFilter:frame=>bool=_=>true,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
+    ~onProgress:option<float=>unit>=?,
     ()
 ):unit => {
     let numOfStmts = statements->Js_array2.length
+    let numOfFrames = frms->Belt_MapString.size->Belt_Int.toFloat
+    let progressState = ref(progressTrackerMake(~step=0.01, ~onProgress?, ()))
+    let framesProcessed = ref(0.)
     frms->Belt_MapString.forEach((_,frm) => {
         if (frameFilter(frm.frame)) {
             iterateSubstitutionsForResult(
@@ -373,5 +378,9 @@ let applyAssertions = (
                 }
             )->ignore
         }
+        framesProcessed.contents = framesProcessed.contents +. 1.
+        progressState.contents = progressState.contents->progressTrackerSetCurrPct(
+            framesProcessed.contents /. numOfFrames
+        )
     })
 }

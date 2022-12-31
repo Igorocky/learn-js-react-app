@@ -17,6 +17,7 @@ let searchAssertions: (
     ~hyps: array<wrkCtxHyp>,
     ~typ: option<int>,
     ~pattern: option<expr>,
+    ~onProgress:float=>unit,
 ) => promise<array<applyAssertionResult>>
 
 let processOnWorkerSide: (~req: request, ~sendToClient: response => unit) => unit

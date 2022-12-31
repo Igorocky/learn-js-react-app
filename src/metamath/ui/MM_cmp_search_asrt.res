@@ -104,15 +104,8 @@ let make = (
         setState(setResults(_, results, wrkCtx, frms))
     }
 
-    let rndSearchProgressDialog = () => {
-        <Paper style=ReactDOM.Style.make(~padding="5px", ())>
-            {React.string("Search is in progress...")}
-        </Paper>
-    }
-
     let actSearch = () => {
-        openModal(modalRef, _ => React.null)->promiseMap(modalId => {
-            updateModal(modalRef, modalId, () => rndSearchProgressDialog())
+        openModal(modalRef, () => rndProgress(~text="Searching", ~pct=0.))->promiseMap(modalId => {
             searchAssertions(
                 ~preCtxVer,
                 ~preCtx,
@@ -121,7 +114,8 @@ let make = (
                 ~disjText,
                 ~hyps,
                 ~typ=None, 
-                ~pattern=None
+                ~pattern=None,
+                ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Searching", ~pct))
             )->promiseMap(found => {
                 closeModal(modalRef, modalId)
                 actResultsRetrieved(found)

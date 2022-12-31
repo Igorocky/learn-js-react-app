@@ -9,6 +9,7 @@ type request =
     | FindAssertions({typ:option<int>, pattern:option<expr>})
 
 type response =
+    | OnProgress(float)
     | SearchResult({found:array<applyAssertionResult>})
 
 let searchAssertions = (
@@ -19,7 +20,8 @@ let searchAssertions = (
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
     ~typ:option<int>, 
-    ~pattern:option<expr>
+    ~pattern:option<expr>,
+    ~onProgress:float=>unit,
 ): promise<array<applyAssertionResult>> => {
     promise(resolve => {
         beginWorkerInteractionUsingCtx(
@@ -33,6 +35,7 @@ let searchAssertions = (
             ~initialRequest = FindAssertions({typ, pattern}),
             ~onResponse = (~resp, ~sendToWorker, ~endWorkerInteraction) => {
                 switch resp {
+                    | OnProgress(pct) => onProgress(pct)
                     | SearchResult({found}) => {
                         endWorkerInteraction()
                         resolve(found)
@@ -65,6 +68,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                     results->Js_array2.push(res)->ignore
                     Continue
                 },
+                ~onProgress = pct => sendToClient(OnProgress(pct)),
                 ()
             )
             sendToClient(SearchResult({found:results}))
