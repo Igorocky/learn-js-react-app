@@ -15,7 +15,7 @@ let searchAssertions: (
     ~varsText: string,
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
-    ~typ: option<int>,
+    ~typ: int,
     ~pattern: option<expr>,
     ~onProgress:float=>unit,
 ) => promise<array<applyAssertionResult>>

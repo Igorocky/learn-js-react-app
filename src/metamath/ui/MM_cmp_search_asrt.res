@@ -7,12 +7,14 @@ open MM_wrk_editor
 open MM_wrk_search_asrt
 open MM_context
 open MM_substitution
+open MM_parser
 open Modal
 
 type resultForRender = React.element
 
 type state = {
-    typ: string,
+    allTypes: array<int>,
+    typ: int,
     results: option<array<applyAssertionResult>>,
     resultsForRender: option<array<resultForRender>>,
     resultsPerPage:int,
@@ -21,22 +23,26 @@ type state = {
     checkedResultsIdx: array<int>
 }
 
-let makeInitialState = () => {
+let makeInitialState = (ctx, frms) => {
+    if (frms->Belt_MapString.size == 0) {
+        raise(MmException({msg:`Cannot search assertions when frms are empty.`}))
+    }
+    let allTypes = []
+    frms->Belt_MapString.forEach((_,frm) => {
+        let typ = frm.frame.asrt[0]
+        if (!(allTypes->Js_array2.includes(typ))) {
+            allTypes->Js_array2.push(typ)->ignore
+        }
+    })
     {
-        typ: "",
+        allTypes,
+        typ: allTypes[0],
         results: None,
         resultsForRender: None,
         resultsPerPage:10,
         resultsMaxPage:1,
         resultsPage:1,
         checkedResultsIdx: [],
-    }
-}
-
-let setTyp = (st,typ):state => {
-    {
-        ...st,
-        typ:typ
     }
 }
 
@@ -80,6 +86,13 @@ let setPage = (st,page):state => {
     }
 }
 
+let setType = (st,typ):state => {
+    {
+        ...st,
+        typ
+    }
+}
+
 let toggleResultChecked = (st,idx) => {
     if (st.checkedResultsIdx->Js_array2.includes(idx)) {
         {
@@ -108,11 +121,7 @@ let make = (
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
-    let (state, setState) = React.useState(makeInitialState)
-
-    let actTypUpdated = newTyp => {
-        setState(setTyp(_, newTyp))
-    }
+    let (state, setState) = React.useState(() => makeInitialState(wrkCtx, frms))
 
     let actResultsRetrieved = results => {
         setState(setResults(_, results, wrkCtx, frms))
@@ -127,7 +136,7 @@ let make = (
                 ~varsText,
                 ~disjText,
                 ~hyps,
-                ~typ=None, 
+                ~typ=state.typ,
                 ~pattern=None,
                 ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Searching", ~pct))
             )->promiseMap(found => {
@@ -154,6 +163,10 @@ let make = (
         }
     }
 
+    let actTypeChange = newTypeStr => {
+        setState(setType(_,wrkCtx->ctxSymToIntExn(newTypeStr)))
+    }
+
     let rndError = msgOpt => {
         switch msgOpt {
             | None => React.null
@@ -161,15 +174,34 @@ let make = (
         }
     }
     
-    let rndTyp = () => {
+    let rndTypOld = () => {
         <TextField 
             label="Type"
             size=#small
             style=ReactDOM.Style.make(~width="100px", ())
             autoFocus=true
-            value=state.typ
-            onChange=evt2str(actTypUpdated)
+            // value=state.typ
+            onChange=evt2str(actTypeChange)
         />
+    }
+    
+    let rndTyp = () => {
+        <FormControl size=#small>
+            <InputLabel id="asrt-type-select-label">"Type"</InputLabel>
+            <Select 
+                labelId="asrt-type-select-label"
+                value={wrkCtx->ctxIntToSymExn(state.typ)}
+                label="Type"
+                onChange=evt2str(actTypeChange)
+            >
+                {React.array(
+                    state.allTypes->Js_array2.map(typI => {
+                        let typStr = wrkCtx->ctxIntToSymExn(typI)
+                        <MenuItem key=typStr value=typStr>{React.string(typStr)}</MenuItem>
+                    })
+                )}
+            </Select>
+        </FormControl>
     }
 
     let rndFilters = () => {

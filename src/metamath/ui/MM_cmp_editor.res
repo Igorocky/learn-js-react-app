@@ -298,11 +298,19 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
                 {
                     rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, 
-                        ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)) && !thereAreSyntaxErrors )
+                        ~active= !editIsActive && 
+                                    !(mainCheckboxState->Belt_Option.getWithDefault(true)) && 
+                                    !thereAreSyntaxErrors &&
+                                    state.frms->Belt_MapString.size > 0
+                    )
                 }
                 {
                     rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, 
-                        ~active= !editIsActive && !(mainCheckboxState->Belt_Option.getWithDefault(true)) && !thereAreSyntaxErrors )
+                        ~active= !editIsActive && 
+                                    !(mainCheckboxState->Belt_Option.getWithDefault(true)) && 
+                                    !thereAreSyntaxErrors &&
+                                    state.stmts->Js_array2.length > 0
+                    )
                 }
             </Row>
         </Paper>

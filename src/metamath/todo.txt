@@ -1,3 +1,4 @@
+- remove unused vars.
 - rename ctxExprToStrExn like functions to match the pattern of ctxIntArrToStrArrExn.
 - add possibility to comment statements
 - fix a bug:
