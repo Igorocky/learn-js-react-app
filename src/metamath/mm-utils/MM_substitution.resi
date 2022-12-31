@@ -34,18 +34,8 @@ type subs = {
     isDefined: array<bool>,
 }
 
-type frameReduced = {
-    disj: Belt.Map.Int.t<Belt_SetInt.t>,
-    hyps: array<hypothesis>,
-    asrt: expr,
-    label: string,
-    varTypes: array<int>,
-    numOfVars: int,
-    numOfArgs: int,
-}
-
 type frmSubsData = {
-    frame: frameReduced,
+    frame: frame,
     hypsE: array<hypothesis>,
     numOfHypsE:int,
     frmConstParts:array<constParts>,

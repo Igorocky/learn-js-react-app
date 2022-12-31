@@ -298,7 +298,7 @@ let applyAssertions = (
     ~exactOrderOfStmts:bool=false,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
-    ~frameFilter:frameReduced=>bool=_=>true,
+    ~frameFilter:frame=>bool=_=>true,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
     ()
 ):unit => {

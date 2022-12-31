@@ -225,6 +225,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         ~disjText: string,
         ~hyps: array<wrkCtxHyp>,
         ~wrkCtx: mmContext,
+        ~frms: Belt_MapString.t<frmSubsData>,
     ) => {
         <MM_cmp_search_asrt
             modalRef
@@ -235,6 +236,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
             disjText
             hyps
             wrkCtx
+            frms
             onCanceled={()=>closeModal(modalRef, modalId)}
             onResultsSelected={selectedResults=>{
                 closeModal(modalRef, modalId)
@@ -260,6 +262,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                             ->Js_array2.filter(stmt => stmt.typ == #e)
                             ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr}),
                         ~wrkCtx,
+                        ~frms=state.frms,
                     ))
                 })->ignore
             }

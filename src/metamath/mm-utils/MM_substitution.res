@@ -35,18 +35,8 @@ type subs = {
     isDefined: array<bool>,
 }
 
-type frameReduced = {
-    disj: Belt.Map.Int.t<Belt_SetInt.t>,
-    hyps: array<hypothesis>,
-    asrt: expr,
-    label: string,
-    varTypes: array<int>,
-    numOfVars: int,
-    numOfArgs: int,
-}
-
 type frmSubsData = {
-    frame: frameReduced,
+    frame: frame,
     hypsE: array<hypothesis>,
     numOfHypsE:int,
     frmConstParts:array<constParts>,
@@ -485,15 +475,7 @@ let prepareFrmSubsData = (ctx):Belt_MapString.t<frmSubsData> => {
 
         let subs = createSubs(~numOfVars=frame.numOfVars)
         frms->Js_array2.push({
-            frame: {
-                disj: frame.disj,
-                hyps: frame.hyps,
-                asrt: frame.asrt,
-                label: frame.label,
-                varTypes: frame.varTypes,
-                numOfVars: frame.numOfVars,
-                numOfArgs: frame.numOfArgs,
-            },
+            frame,
             hypsE,
             numOfHypsE: hypsE->Js.Array2.length,
             frmConstParts:frmConstPartsArr,

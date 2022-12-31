@@ -420,7 +420,7 @@ let rec proveNode = (
 }
 and let checkTypes = (
     ~tree:proofTree,
-    ~frame:frameReduced,
+    ~frame:frame,
     ~args:array<proofTreeNode>,
 ):bool => {
     let nodesToTypecheck = []

@@ -39,7 +39,7 @@ let searchAssertions = (
                     }
                 }
             },
-            ~enableTrace=true,
+            ~enableTrace=false,
             ()
         )
     })

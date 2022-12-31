@@ -140,7 +140,7 @@ let testApplyAssertions = (
     ~stopAfter:string="",
     ~additionalStatements:array<stmt>,
     ~statements:array<(string,string)>,
-    ~frameFilter:frameReduced=>bool=_=>true,
+    ~frameFilter:frame=>bool=_=>true,
     ~result:option<string>=?,
     ~fileWithExpectedResult:string,
     ()

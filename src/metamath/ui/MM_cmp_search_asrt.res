@@ -6,19 +6,20 @@ open MM_wrk_ctx
 open MM_wrk_editor
 open MM_wrk_search_asrt
 open MM_context
+open MM_substitution
 open Modal
 
 type state = {
     typ: string,
-    result: option<array<applyAssertionResult>>,
-    checkedResultIdx: array<int>
+    results: option<array<applyAssertionResult>>,
+    checkedResultsIdx: array<int>
 }
 
 let makeInitialState = () => {
     {
         typ: "",
-        result: None,
-        checkedResultIdx: [],
+        results: None,
+        checkedResultsIdx: [],
     }
 }
 
@@ -29,11 +30,11 @@ let setTyp = (st,typ):state => {
     }
 }
 
-let setResult = (st,result):state => {
+let setResults = (st,results):state => {
     {
         ...st,
-        result:Some(result),
-        checkedResultIdx: [],
+        results:Some(results),
+        checkedResultsIdx: [],
     }
 }
 
@@ -47,6 +48,7 @@ let make = (
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
     ~wrkCtx: mmContext,
+    ~frms: Belt_MapString.t<frmSubsData>,
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
@@ -56,8 +58,8 @@ let make = (
         setState(setTyp(_, newTyp))
     }
 
-    let actResultRetrieved = result => {
-        setState(setResult(_, result))
+    let actResultsRetrieved = results => {
+        setState(setResults(_, results))
     }
 
     let rndSearchProgressDialog = () => {
@@ -80,7 +82,7 @@ let make = (
                 ~pattern=None
             )->promiseMap(found => {
                 closeModal(modalRef, modalId)
-                actResultRetrieved(found)
+                actResultsRetrieved(found)
             })
         })->ignore
     }
@@ -103,19 +105,42 @@ let make = (
         />
     }
 
-    let rndResult = () => {
-        switch state.result {
+    let rndResult = result => {
+        switch frms->Belt_MapString.get(result.asrtLabel) {
+            | None => React.string(`Cannot find assertion '${result.asrtLabel}'`)
+            | Some(frm) => {
+                <Paper>
+                    <Col>
+                        {React.array(
+                            frm.hypsE->Js_array2.map(hyp => {
+                                <React.Fragment key={hyp.label} >
+                                    {React.string(hyp.label ++ ": " ++ wrkCtx->frmIntsToStrExn(frm.frame, hyp.expr))}
+                                    <Divider/>
+                                </React.Fragment>
+                            })
+                        )}
+                        { React.string(result.asrtLabel ++ ": " ++ wrkCtx->frmIntsToStrExn(frm.frame, frm.frame.asrt)) }
+                    </Col>
+                </Paper>
+            }
+        }
+    }
+
+    let rndResults = () => {
+        switch state.results {
             | None => React.null
-            | Some(result) => {
+            | Some(results) => {
                 <List>
                 {
-                    result->Js_array2.mapi((res,i) => {
+                    results->Js_array2.mapi((result,i) => {
                         <ListItem key={i->Belt_Int.toString}>
-                            <Paper>
-                            {
-                                React.string(res.asrtLabel)
-                            }
-                            </Paper>
+                            <Row alignItems=#center>
+                                <Checkbox
+                                    // checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
+                                    // onChange={_ => actToggleMainCheckbox()}
+                                />
+                                {rndResult(result)}
+                            </Row>
                         </ListItem>
                     })->React.array
                 }
@@ -136,7 +161,7 @@ let make = (
     <Paper style=ReactDOM.Style.make(~padding="10px", ())>
         <Col spacing=1.>
             {rndTyp()}
-            {rndResult()}
+            {rndResults()}
             {rndButtons()}
         </Col>
     </Paper>

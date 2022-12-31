@@ -23,7 +23,7 @@ let applyAssertions: (
     ~exactOrderOfStmts:bool=?,
     ~result:expr=?,
     ~parenCnt:parenCnt,
-    ~frameFilter:frameReduced=>bool=?,
+    ~frameFilter:frame=>bool=?,
     ~onMatchFound:applyAssertionResult=>contunieInstruction,
     ()
 ) => unit
