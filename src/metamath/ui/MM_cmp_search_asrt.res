@@ -234,14 +234,17 @@ let make = (
     }
 
     let rndFilters = () => {
-        <Row>
-            {rndTyp()}
-            {rndPattern()}
-            <Button onClick={_=>actSearch()} variant=#contained>
-                {React.string("Search")}
-            </Button>
-            <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
-        </Row>
+        <Col>
+            <Row>
+                {rndTyp()}
+                {rndPattern()}
+                <Button onClick={_=>actSearch()} variant=#contained>
+                    {React.string("Search")}
+                </Button>
+                <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
+            </Row>
+            {rndError(state.patternErr)}
+        </Col>
     }
 
     let rndPagination = totalNumOfResults => {
