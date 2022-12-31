@@ -1,7 +1,7 @@
 open Expln_React_common
 open Expln_utils_promise
 
-type modalId = string
+type modalId
 
 type modalRef
 let useModalRef: unit => modalRef

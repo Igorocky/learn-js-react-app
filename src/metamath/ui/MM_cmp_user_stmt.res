@@ -150,7 +150,6 @@ let make = (
                     value=""
                     onChange=evt2str(actTypEditDone)
                 >
-                    <MenuItem value="a">{React.string("A")}</MenuItem>
                     <MenuItem value="e">{React.string("E")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>
                 </Select>

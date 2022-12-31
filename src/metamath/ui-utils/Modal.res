@@ -21,9 +21,9 @@ let modalRefToModalMethods: modalRef => modalMethods = modalRef => {
     }
 }
 
-let openModal:(modalRef, unit => reElem) => promise<modalId> = (modalRef, render) => modalRefToModalMethods(modalRef).openModal(render)
-let updateModal:(modalRef, modalId, unit => reElem) => unit = (modalRef, modalId, render) => modalRefToModalMethods(modalRef).updateModal(modalId, render)
-let closeModal:(modalRef, modalId) => unit = (modalRef, modalId) => modalRefToModalMethods(modalRef).closeModal(modalId)
+let openModal = (modalRef:modalRef, render:unit=>reElem):promise<modalId> => modalRefToModalMethods(modalRef).openModal(render)
+let updateModal = (modalRef:modalRef, modalId:modalId, render:unit=>reElem):unit => modalRefToModalMethods(modalRef).updateModal(modalId, render)
+let closeModal = (modalRef:modalRef, modalId:modalId):unit => modalRefToModalMethods(modalRef).closeModal(modalId)
 
 type modal = {
     id: modalId,
@@ -94,14 +94,17 @@ let make = (~modalRef:modalRef) => {
         )
     })
 
-    let numOfModals = state.modals->Js.Array2.length
-    if ( numOfModals == 0) {
-        React.null
-    } else {
-        <Dialog opn=true>
-            {state.modals[numOfModals-1].render()}
-        </Dialog>
+    <>
+    {
+        state.modals
+            ->Js.Array2.map(modal=>{
+                <Dialog key=modal.id opn=true>
+                    {modal.render()}
+                </Dialog>
+            })
+            ->React.array
     }
+    </>
 }
 
 let rndProgress: (~text:string, ~pct:float) => reElem = (~text:string, ~pct:float) => {

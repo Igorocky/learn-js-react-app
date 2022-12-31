@@ -10,7 +10,6 @@ open Modal
 
 type state = {
     typ: string,
-    typErr: option<string>,
     result: option<array<applyAssertionResult>>,
     checkedResultIdx: array<int>
 }
@@ -18,7 +17,6 @@ type state = {
 let makeInitialState = () => {
     {
         typ: "",
-        typErr: None,
         result: None,
         checkedResultIdx: [],
     }
@@ -31,6 +29,14 @@ let setTyp = (st,typ):state => {
     }
 }
 
+let setResult = (st,result):state => {
+    {
+        ...st,
+        result:Some(result),
+        checkedResultIdx: [],
+    }
+}
+
 @react.component
 let make = (
     ~modalRef:modalRef,
@@ -40,6 +46,7 @@ let make = (
     ~varsText: string,
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
+    ~wrkCtx: mmContext,
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
@@ -47,6 +54,10 @@ let make = (
 
     let actTypUpdated = newTyp => {
         setState(setTyp(_, newTyp))
+    }
+
+    let actResultRetrieved = result => {
+        setState(setResult(_, result))
     }
 
     let rndSearchProgressDialog = () => {
@@ -69,7 +80,7 @@ let make = (
                 ~pattern=None
             )->promiseMap(found => {
                 closeModal(modalRef, modalId)
-                onResultsSelected(found)
+                actResultRetrieved(found)
             })
         })->ignore
     }
@@ -82,17 +93,35 @@ let make = (
     }
     
     let rndTyp = () => {
-        <Col>
-            <TextField 
-                label="Type"
-                size=#small
-                style=ReactDOM.Style.make(~width="100px", ())
-                autoFocus=true
-                value=state.typ
-                onChange=evt2str(actTypUpdated)
-            />
-            {rndError(state.typErr)}
-        </Col>
+        <TextField 
+            label="Type"
+            size=#small
+            style=ReactDOM.Style.make(~width="100px", ())
+            autoFocus=true
+            value=state.typ
+            onChange=evt2str(actTypUpdated)
+        />
+    }
+
+    let rndResult = () => {
+        switch state.result {
+            | None => React.null
+            | Some(result) => {
+                <List>
+                {
+                    result->Js_array2.mapi((res,i) => {
+                        <ListItem key={i->Belt_Int.toString}>
+                            <Paper>
+                            {
+                                React.string(res.asrtLabel)
+                            }
+                            </Paper>
+                        </ListItem>
+                    })->React.array
+                }
+                </List>
+            }
+        }
     }
 
     let rndButtons = () => {
@@ -107,6 +136,7 @@ let make = (
     <Paper style=ReactDOM.Style.make(~padding="10px", ())>
         <Col spacing=1.>
             {rndTyp()}
+            {rndResult()}
             {rndButtons()}
         </Col>
     </Paper>
