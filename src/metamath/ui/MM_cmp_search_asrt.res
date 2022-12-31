@@ -9,9 +9,15 @@ open MM_context
 open MM_substitution
 open Modal
 
+type resultForRender = array<string>
+
 type state = {
     typ: string,
     results: option<array<applyAssertionResult>>,
+    resultsForRender: option<array<resultForRender>>,
+    resultsPerPage:int,
+    resultsMaxPage:int,
+    resultsPage:int,
     checkedResultsIdx: array<int>
 }
 
@@ -19,6 +25,10 @@ let makeInitialState = () => {
     {
         typ: "",
         results: None,
+        resultsForRender: None,
+        resultsPerPage:10,
+        resultsMaxPage:1,
+        resultsPage:1,
         checkedResultsIdx: [],
     }
 }
@@ -30,11 +40,33 @@ let setTyp = (st,typ):state => {
     }
 }
 
-let setResults = (st,results):state => {
+let setResults = (st,results,ctx,frms):state => {
+    let maxPage = Js.Math.ceil_int(results->Js_array2.length->Belt_Int.toFloat /. st.resultsPerPage->Belt_Int.toFloat)
     {
         ...st,
         results:Some(results),
+        resultsForRender:Some(
+            results->Js.Array2.map(result => {
+                switch frms->Belt_MapString.get(result.asrtLabel) {
+                    | None => [`Cannot find assertion '${result.asrtLabel}'`]
+                    | Some(frm) => {
+                        frm.hypsE->Js_array2.map(hyp => {
+                            hyp.label ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, hyp.expr)
+                        })->Js_array2.concat([result.asrtLabel ++ ": " ++ ctx->frmIntsToStrExn(frm.frame, frm.frame.asrt)])
+                    }
+                }
+            })
+        ),
+        resultsMaxPage: maxPage,
+        resultsPage: 1,
         checkedResultsIdx: [],
+    }
+}
+
+let setPage = (st,page):state => {
+    {
+        ...st,
+        resultsPage: Js.Math.max_int(0, Js.Math.min_int(st.resultsMaxPage, page)),
     }
 }
 
@@ -59,7 +91,7 @@ let make = (
     }
 
     let actResultsRetrieved = results => {
-        setState(setResults(_, results))
+        setState(setResults(_, results, wrkCtx, frms))
     }
 
     let rndSearchProgressDialog = () => {
@@ -87,6 +119,10 @@ let make = (
         })->ignore
     }
 
+    let actPageChange = newPage => {
+        setState(setPage(_, newPage))
+    }
+
     let rndError = msgOpt => {
         switch msgOpt {
             | None => React.null
@@ -105,46 +141,74 @@ let make = (
         />
     }
 
-    let rndResult = result => {
-        switch frms->Belt_MapString.get(result.asrtLabel) {
-            | None => React.string(`Cannot find assertion '${result.asrtLabel}'`)
-            | Some(frm) => {
-                <Paper>
-                    <Col>
-                        {React.array(
-                            frm.hypsE->Js_array2.map(hyp => {
-                                <React.Fragment key={hyp.label} >
-                                    {React.string(hyp.label ++ ": " ++ wrkCtx->frmIntsToStrExn(frm.frame, hyp.expr))}
+    let rndResult = resultForRender => {
+        let lastIdx = resultForRender->Js_array2.length - 1
+        <Paper>
+            <Col>
+                {React.array(
+                    resultForRender->Js_array2.mapi((str,i) => {
+                        <React.Fragment key={i->Belt_Int.toString} >
+                            {React.string(str)}
+                            {
+                                if (i != lastIdx) {
                                     <Divider/>
-                                </React.Fragment>
-                            })
-                        )}
-                        { React.string(result.asrtLabel ++ ": " ++ wrkCtx->frmIntsToStrExn(frm.frame, frm.frame.asrt)) }
-                    </Col>
-                </Paper>
-            }
-        }
+                                } else {
+                                    React.null
+                                }
+                            }
+                        </React.Fragment>
+                    })
+                )}
+            </Col>
+        </Paper>
+    }
+
+    let rndPagination = () => {
+        <Pagination count=state.resultsMaxPage page=state.resultsPage onChange={(_,newPage) => actPageChange(newPage)} />
     }
 
     let rndResults = () => {
-        switch state.results {
+        switch state.resultsForRender {
             | None => React.null
-            | Some(results) => {
-                <List>
-                {
-                    results->Js_array2.mapi((result,i) => {
-                        <ListItem key={i->Belt_Int.toString}>
-                            <Row alignItems=#center>
-                                <Checkbox
-                                    // checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
-                                    // onChange={_ => actToggleMainCheckbox()}
-                                />
-                                {rndResult(result)}
-                            </Row>
-                        </ListItem>
-                    })->React.array
+            | Some(resultsForRender) => {
+                let items = []
+                let minI = (state.resultsPage - 1) * state.resultsPerPage
+                let maxI = Js.Math.min_int(minI + state.resultsPerPage - 1, resultsForRender->Js_array2.length-1)
+                for i in minI to maxI {
+                    let resultForRender = resultsForRender[i]
+                    items->Js.Array2.push(rndResult(resultForRender))->ignore
                 }
-                </List>
+                <Col>
+                    {rndPagination()}
+                    <List>
+                    {
+                        items->Js_array2.mapi((item,i) => {
+                            <ListItem key={i->Belt_Int.toString}>
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <Checkbox
+                                                    // checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
+                                                    // onChange={_ => actToggleMainCheckbox()}
+                                                />
+                                            </td>
+                                            <td>
+                                                item
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                // <Row alignItems=#center>
+                                    
+                                    
+                                // </Row>
+                            </ListItem>
+                        })->React.array
+                    }
+                    </List>
+                    {rndPagination()}
+                </Col>
             }
         }
     }
