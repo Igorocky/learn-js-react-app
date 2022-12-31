@@ -15,6 +15,8 @@ type resultForRender = React.element
 type state = {
     allTypes: array<int>,
     typ: int,
+    patternStr: string,
+    patternErr: option<string>,
     results: option<array<applyAssertionResult>>,
     resultsForRender: option<array<resultForRender>>,
     resultsPerPage:int,
@@ -23,7 +25,7 @@ type state = {
     checkedResultsIdx: array<int>
 }
 
-let makeInitialState = (ctx, frms) => {
+let makeInitialState = (frms) => {
     if (frms->Belt_MapString.size == 0) {
         raise(MmException({msg:`Cannot search assertions when frms are empty.`}))
     }
@@ -37,6 +39,8 @@ let makeInitialState = (ctx, frms) => {
     {
         allTypes,
         typ: allTypes[0],
+        patternStr: "",
+        patternErr: None,
         results: None,
         resultsForRender: None,
         resultsPerPage:10,
@@ -93,6 +97,20 @@ let setType = (st,typ):state => {
     }
 }
 
+let setPatternStr = (st,patternStr):state => {
+    {
+        ...st,
+        patternStr
+    }
+}
+
+let setPatternErr = (st,patternErr):state => {
+    {
+        ...st,
+        patternErr
+    }
+}
+
 let toggleResultChecked = (st,idx) => {
     if (st.checkedResultsIdx->Js_array2.includes(idx)) {
         {
@@ -121,29 +139,36 @@ let make = (
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
-    let (state, setState) = React.useState(() => makeInitialState(wrkCtx, frms))
+    let (state, setState) = React.useState(() => makeInitialState(frms))
 
     let actResultsRetrieved = results => {
         setState(setResults(_, results, wrkCtx, frms))
     }
 
     let actSearch = () => {
-        openModal(modalRef, () => rndProgress(~text="Searching", ~pct=0.))->promiseMap(modalId => {
-            searchAssertions(
-                ~preCtxVer,
-                ~preCtx,
-                ~parenStr,
-                ~varsText,
-                ~disjText,
-                ~hyps,
-                ~typ=state.typ,
-                ~pattern=None,
-                ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Searching", ~pct))
-            )->promiseMap(found => {
-                closeModal(modalRef, modalId)
-                actResultsRetrieved(found)
-            })
-        })->ignore
+        let incorrectSymbol = state.patternStr->getSpaceSeparatedValuesAsArray->Js_array2.find(sym => !(wrkCtx->isConst(sym)))
+        switch incorrectSymbol {
+            | Some(sym) => setState(setPatternErr(_, Some(`'${sym}' - is not a constant.`)))
+            | None => {
+                setState(setPatternErr(_, None))
+                openModal(modalRef, () => rndProgress(~text="Searching", ~pct=0.))->promiseMap(modalId => {
+                    searchAssertions(
+                        ~preCtxVer,
+                        ~preCtx,
+                        ~parenStr,
+                        ~varsText,
+                        ~disjText,
+                        ~hyps,
+                        ~typ=state.typ,
+                        ~pattern=wrkCtx->ctxStrToIntsExn(state.patternStr),
+                        ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Searching", ~pct))
+                    )->promiseMap(found => {
+                        closeModal(modalRef, modalId)
+                        actResultsRetrieved(found)
+                    })
+                })->ignore
+            }
+        }
     }
 
     let actPageChange = newPage => {
@@ -167,6 +192,10 @@ let make = (
         setState(setType(_,wrkCtx->ctxSymToIntExn(newTypeStr)))
     }
 
+    let actPatternChange = newPatternStr => {
+        setState(setPatternStr(_,newPatternStr))
+    }
+
     let rndError = msgOpt => {
         switch msgOpt {
             | None => React.null
@@ -174,14 +203,14 @@ let make = (
         }
     }
     
-    let rndTypOld = () => {
+    let rndPattern = () => {
         <TextField 
-            label="Type"
+            label="Pattern"
             size=#small
-            style=ReactDOM.Style.make(~width="100px", ())
+            style=ReactDOM.Style.make(~width="300px", ())
             autoFocus=true
-            // value=state.typ
-            onChange=evt2str(actTypeChange)
+            value=state.patternStr
+            onChange=evt2str(actPatternChange)
         />
     }
     
@@ -207,6 +236,7 @@ let make = (
     let rndFilters = () => {
         <Row>
             {rndTyp()}
+            {rndPattern()}
             <Button onClick={_=>actSearch()} variant=#contained>
                 {React.string("Search")}
             </Button>
@@ -248,14 +278,15 @@ let make = (
                     <List>
                     {
                         items->Js_array2.mapi((item,i) => {
-                            <ListItem key={i->Belt_Int.toString}>
+                            let resIdx = minI + i
+                            <ListItem key={resIdx->Belt_Int.toString}>
                                 <table>
                                     <tbody>
                                         <tr>
                                             <td>
                                                 <Checkbox
-                                                    checked={state.checkedResultsIdx->Js.Array2.includes(i)}
-                                                    onChange={_ => actToggleResultChecked(i)}
+                                                    checked={state.checkedResultsIdx->Js.Array2.includes(resIdx)}
+                                                    onChange={_ => actToggleResultChecked(resIdx)}
                                                 />
                                             </td>
                                             <td>

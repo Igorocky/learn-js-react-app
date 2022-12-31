@@ -16,8 +16,10 @@ let searchAssertions: (
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
     ~typ: int,
-    ~pattern: option<expr>,
+    ~pattern: array<int>,
     ~onProgress:float=>unit,
 ) => promise<array<applyAssertionResult>>
 
 let processOnWorkerSide: (~req: request, ~sendToClient: response => unit) => unit
+
+let frameMatchesPattern: (frame, array<int>) => bool
