@@ -80,6 +80,20 @@ let setPage = (st,page):state => {
     }
 }
 
+let toggleResultChecked = (st,idx) => {
+    if (st.checkedResultsIdx->Js_array2.includes(idx)) {
+        {
+            ...st,
+            checkedResultsIdx: st.checkedResultsIdx->Js.Array2.filter(i => i != idx)
+        }
+    } else {
+        {
+            ...st,
+            checkedResultsIdx: st.checkedResultsIdx->Js.Array2.concat([idx])
+        }
+    }
+}
+
 @react.component
 let make = (
     ~modalRef:modalRef,
@@ -127,6 +141,19 @@ let make = (
         setState(setPage(_, newPage))
     }
 
+    let actToggleResultChecked = idx => {
+        setState(toggleResultChecked(_,idx))
+    }
+
+    let actChooseSelected = () => {
+        switch state.results {
+            | None => ()
+            | Some(results) => {
+                onResultsSelected(results->Js_array2.filteri((res,i) => state.checkedResultsIdx->Js.Array2.includes(i)))
+            }
+        }
+    }
+
     let rndError = msgOpt => {
         switch msgOpt {
             | None => React.null
@@ -145,12 +172,31 @@ let make = (
         />
     }
 
+    let rndFilters = () => {
+        <Row>
+            {rndTyp()}
+            <Button onClick={_=>actSearch()} variant=#contained>
+                {React.string("Search")}
+            </Button>
+            <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
+        </Row>
+    }
+
     let rndPagination = totalNumOfResults => {
         if (state.resultsPerPage < totalNumOfResults) {
             <Pagination count=state.resultsMaxPage page=state.resultsPage onChange={(_,newPage) => actPageChange(newPage)} />
         } else {
             React.null
         }
+    }
+
+    let rndResultButtons = () => {
+        <Row>
+            <Button onClick={_=>actChooseSelected()} variant=#contained>
+                {React.string("Choose selected")}
+            </Button>
+            <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
+        </Row>
     }
 
     let rndResults = () => {
@@ -176,8 +222,8 @@ let make = (
                                         <tr>
                                             <td>
                                                 <Checkbox
-                                                    // checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
-                                                    // onChange={_ => actToggleMainCheckbox()}
+                                                    checked={state.checkedResultsIdx->Js.Array2.includes(i)}
+                                                    onChange={_ => actToggleResultChecked(i)}
                                                 />
                                             </td>
                                             <td>
@@ -195,25 +241,16 @@ let make = (
                     }
                     </List>
                     {rndPagination(totalNumOfResults)}
+                    {rndResultButtons()}
                 </Col>
             }
         }
     }
 
-    let rndButtons = () => {
-        <Row>
-            <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
-            <Button onClick={_=>actSearch()} variant=#contained>
-                {React.string("Search")}
-            </Button>
-        </Row>
-    }
-
     <Paper style=ReactDOM.Style.make(~padding="10px", ())>
         <Col spacing=1.>
-            {rndTyp()}
+            {rndFilters()}
             {rndResults()}
-            {rndButtons()}
         </Col>
     </Paper>
 }
