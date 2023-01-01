@@ -1,5 +1,6 @@
+- write tests for both versions of verifyDisjoints (in MM_subs and MM_wrk_editor)
+- refactor verifyDisjoints for frms to iterate by disjoint pairs instead of variables
 - remove unused vars.
-- rename ctxExprToStrExn like functions to match the pattern of ctxIntArrToStrArrExn.
 - add possibility to comment statements
 - fix a bug:
     1. load demo0.mm with an error

@@ -257,7 +257,7 @@ let extractNewDisj = (
         if (n <= maxCtxVar && m <= maxCtxVar) {
             isDisjInCtx(n,m)
         } else {
-            result->addDisjPairToMap(n,m)
+            result->disjAddPair(n,m)
             true
         }
     })

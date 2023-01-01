@@ -181,13 +181,15 @@ let mutableSetIntClone = (orig:mutableSetInt) => {
     set
 }
 
-let addDisjPairToMap = (disjMap:disjMutable, n, m) => {
-    let min = if (n <= m) {n} else {m}
-    let max = if (n <= m) {m} else {n}
+let disjAddPair = (disjMap:disjMutable, n, m) => {
+    if (n != m) {
+        let min = if (n <= m) {n} else {m}
+        let max = if (n <= m) {m} else {n}
 
-    switch disjMap->mutableMapIntGet(min) {
-        | None => disjMap->mutableMapIntPut(min, mutableSetIntMakeFromArray([max]))
-        | Some(set) => set->mutableSetIntAdd(max)
+        switch disjMap->mutableMapIntGet(min) {
+            | None => disjMap->mutableMapIntPut(min, mutableSetIntMakeFromArray([max]))
+            | Some(set) => set->mutableSetIntAdd(max)
+        }
     }
 }
 
@@ -485,7 +487,7 @@ let extractMandatoryDisj = (ctx:mmContextContents, mandatoryVars:mutableSetInt):
             if (mandatoryVars->mutableSetIntHas(n)) {
                 ms->mutableSetIntForEach(m => {
                     if (mandatoryVars->mutableSetIntHas(m)) {
-                        addDisjPairToMap(mandatoryDisj, n, m)
+                        disjAddPair(mandatoryDisj, n, m)
                     }
                 })
             }
@@ -666,7 +668,7 @@ let getAllDisj = (ctx:mmContext):disjMutable => {
     ctx.contents->forEachCtxInReverseOrder(ctx => {
         ctx.disj->mutableMapIntForEach((n,ms) => {
             ms->mutableSetIntForEach(m => {
-                disj->addDisjPairToMap(n,m)
+                disj->disjAddPair(n,m)
             })
         })
         None
@@ -762,7 +764,7 @@ let addVar: (mmContext,string) => unit = (ctx,vName) => {
     }
 }
 
-let addDisjPair = (ctx:mmContextContents, n, m) => addDisjPairToMap(ctx.disj,n,m)
+let addDisjPair = (ctx:mmContextContents, n, m) => disjAddPair(ctx.disj,n,m)
 
 let addDisj: (mmContext,array<string>) => unit = (ctx, vars) => {
     let ctx = ctx.contents

@@ -453,6 +453,7 @@ describe("findPossibleSubs", _ => {
         let ctx = st.wrkCtx->Belt_Option.getExn
         let t = ctx->ctxSymToIntExn("t")
         let r = ctx->ctxSymToIntExn("r")
+        let s = ctx->ctxSymToIntExn("s")
 
         //when
         let possibleSubs = findPossibleSubs(
@@ -468,10 +469,12 @@ describe("findPossibleSubs", _ => {
                 Belt_MapInt.fromArray([
                     (t, ctx->ctxStrToIntsExn("( t + t )")),
                     (r, ctx->ctxStrToIntsExn("( t + r ) + ( t + s )")),
+                    (s, ctx->ctxStrToIntsExn("s")),
                 ]),
                 Belt_MapInt.fromArray([
                     (t, ctx->ctxStrToIntsExn("( t + t ) + ( t + r )")),
                     (r, ctx->ctxStrToIntsExn("( t + s )")),
+                    (s, ctx->ctxStrToIntsExn("s")),
                 ])
             ]
         )

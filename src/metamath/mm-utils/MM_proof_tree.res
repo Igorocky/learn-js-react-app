@@ -331,7 +331,7 @@ let rec proveNode = (
                 tree.newVarTypes->Belt_MutableMapInt.set(newVar,newVarType)
             })
             applResult.newDisj->disjForEach((nv,mv) => {
-                tree.disj->addDisjPairToMap(
+                tree.disj->disjAddPair(
                     switch vToNewVar->Belt_MutableMapInt.get(nv) {
                         | None => raise(MmException({msg:`Cannot convert ${nv->Belt_Int.toString} to a newVar`}))
                         | Some(nv) => nv

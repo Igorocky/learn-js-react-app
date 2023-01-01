@@ -73,7 +73,7 @@ let generateNewVarNames: (mmContext, array<int>) => array<string>
 let generateNewLabels: (mmContext, ~prefix:string, ~amount:int) => array<string>
 
 let disjMutableMake: unit => disjMutable
-let addDisjPairToMap: (disjMutable, int, int) => unit
+let disjAddPair: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool
 let disjForEachArr: (disjMutable, array<int> => unit) => unit
 let disjForEach: (disjMutable, (int,int) => unit) => unit

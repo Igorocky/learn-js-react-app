@@ -64,6 +64,8 @@ type editorState = {
     checkedStmtIds: array<string>,
 }
 
+type wrkSubs = Belt_MapInt.t<expr>
+
 let updateStmt: (editorState, string, userStmt => userStmt) => editorState
 let isStmtChecked: (editorState, string) => bool
 let toggleStmtChecked: (editorState, string) => editorState
