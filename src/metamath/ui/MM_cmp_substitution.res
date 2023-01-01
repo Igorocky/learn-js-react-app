@@ -158,9 +158,13 @@ let make = (
     }
 
     let rndResultButtons = () => {
+        let onlyOneSubstitutionIsAvailable = switch state.results {
+            | None => false
+            | Some(results) => results->Js_array2.length == 1
+        }
         <Row>
             <Button onClick={_=>actChooseSelected()} variant=#contained disabled={state.checkedResultIdx < 0}>
-                {React.string("Apply selected")}
+                {React.string(if onlyOneSubstitutionIsAvailable {"Apply substitution"} else {"Apply selected"})}
             </Button>
             <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
         </Row>
@@ -196,28 +200,41 @@ let make = (
         switch state.results {
             | None => React.null
             | Some(results) => {
-                <Col>
-                    {
-                        results->Js_array2.mapi((res,i) => {
-                            <table key={i->Belt_Int.toString}>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <Checkbox
-                                                checked={state.checkedResultIdx == i}
-                                                onChange={_ => actToggleResultChecked(i)}
-                                            />
-                                        </td>
-                                        <td>
-                                            {rndWrkSubs(res)}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        })->React.array
-                    }
-                    {rndResultButtons()}
-                </Col>
+                let numOfResults = results->Js.Array2.length
+                if (numOfResults == 0) {
+                    <span>
+                    {React.string("No substitution can be extracted from the provided expressions.")}
+                    </span>
+                } else {
+                    <Col>
+                        {
+                            results->Js_array2.mapi((res,i) => {
+                                <table key={i->Belt_Int.toString}>
+                                    <tbody>
+                                        <tr>
+                                            {
+                                                if (numOfResults > 1) {
+                                                    <td>
+                                                        <Checkbox
+                                                            checked={state.checkedResultIdx == i}
+                                                            onChange={_ => actToggleResultChecked(i)}
+                                                        />
+                                                    </td>
+                                                } else {
+                                                    React.null
+                                                }
+                                            }
+                                            <td>
+                                                {rndWrkSubs(res)}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            })->React.array
+                        }
+                        {rndResultButtons()}
+                    </Col>
+                }
             }
         }
     }
