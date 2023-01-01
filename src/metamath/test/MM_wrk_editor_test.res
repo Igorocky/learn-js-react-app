@@ -53,7 +53,8 @@ let getVarType = (ctx:mmContext, vName:string) => {
 }
 
 let demo0 = "./src/metamath/test/resources/demo0.mm"
-let demo0Subs = "./src/metamath/test/resources/demo0-for-editor-subs-test.mm"
+let findPossibleSubsSimpleCase = "./src/metamath/test/resources/findPossibleSubs-test-data/simple-case.mm"
+let findPossibleSubsDisjointsCase = "./src/metamath/test/resources/findPossibleSubs-test-data/disjoints-case.mm"
 
 describe("refreshWrkCtx", _ => {
     it("detects an error in variable declaration", _ => {
@@ -449,7 +450,7 @@ describe("prepareProvablesForUnification", _ => {
 describe("findPossibleSubs", _ => {
     it("finds all possible substitutions", _ => {
         //given
-        let st = createEditorState(demo0Subs)->validateSyntax
+        let st = createEditorState(findPossibleSubsSimpleCase)->validateSyntax
         let ctx = st.wrkCtx->Belt_Option.getExn
         let t = ctx->ctxSymToIntExn("t")
         let r = ctx->ctxSymToIntExn("r")
@@ -478,6 +479,41 @@ describe("findPossibleSubs", _ => {
                 ])
             ]
         )
+    })
+
+    it("doesn't return substitutions which don't satisfy disjoints", _ => {
+        //given
+        let st = createEditorState(findPossibleSubsDisjointsCase)
+        let st = completeDisjEditMode(st, "x, y")
+        let st = validateSyntax(st)
+        let ctx = st.wrkCtx->Belt_Option.getExn
+
+        //when
+        let possibleSubs = findPossibleSubs(
+            st, 
+            ctx->ctxStrToIntsExn("y"),
+            ctx->ctxStrToIntsExn("z"),
+        )
+
+        //then
+        assertEq( possibleSubs, [] )
+    })
+
+    it("returns substitutions which satisfy disjoints", _ => {
+        //given
+        let st = createEditorState(findPossibleSubsDisjointsCase)
+        let st = validateSyntax(st)
+        let ctx = st.wrkCtx->Belt_Option.getExn
+
+        //when
+        let possibleSubs = findPossibleSubs(
+            st, 
+            ctx->ctxStrToIntsExn("y"),
+            ctx->ctxStrToIntsExn("z"),
+        )
+
+        //then
+        assertEq( possibleSubs->Js_array2.length, 1 )
     })
 })
 
