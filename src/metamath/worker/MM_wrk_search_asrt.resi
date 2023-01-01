@@ -15,6 +15,7 @@ let searchAssertions: (
     ~varsText: string,
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
+    ~label:string,
     ~typ: int,
     ~pattern: array<int>,
     ~onProgress:float=>unit,

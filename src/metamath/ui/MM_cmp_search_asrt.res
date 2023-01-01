@@ -13,6 +13,7 @@ open Modal
 type resultForRender = React.element
 
 type state = {
+    label:string,
     allTypes: array<int>,
     typ: int,
     patternStr: string,
@@ -37,6 +38,7 @@ let makeInitialState = (frms) => {
         }
     })
     {
+        label: "",
         allTypes,
         typ: allTypes[0],
         patternStr: "",
@@ -87,6 +89,13 @@ let setPage = (st,page):state => {
     {
         ...st,
         resultsPage: Js.Math.max_int(0, Js.Math.min_int(st.resultsMaxPage, page)),
+    }
+}
+
+let setLabel = (st,label):state => {
+    {
+        ...st,
+        label
     }
 }
 
@@ -159,6 +168,7 @@ let make = (
                         ~varsText,
                         ~disjText,
                         ~hyps,
+                        ~label=state.label,
                         ~typ=state.typ,
                         ~pattern=wrkCtx->ctxStrToIntsExn(state.patternStr),
                         ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Searching", ~pct))
@@ -188,6 +198,10 @@ let make = (
         }
     }
 
+    let actLabelChange = str => {
+        setState(setLabel(_,str))
+    }
+
     let actTypeChange = newTypeStr => {
         setState(setType(_,wrkCtx->ctxSymToIntExn(newTypeStr)))
     }
@@ -214,6 +228,16 @@ let make = (
         />
     }
     
+    let rndLabel = () => {
+        <TextField 
+            label="Label"
+            size=#small
+            style=ReactDOM.Style.make(~width="100px", ())
+            value=state.label
+            onChange=evt2str(actLabelChange)
+        />
+    }
+    
     let rndTyp = () => {
         <FormControl size=#small>
             <InputLabel id="asrt-type-select-label">"Type"</InputLabel>
@@ -236,6 +260,7 @@ let make = (
     let rndFilters = () => {
         <Col>
             <Row>
+                {rndLabel()}
                 {rndTyp()}
                 {rndPattern()}
                 <Button onClick={_=>actSearch()} variant=#contained>

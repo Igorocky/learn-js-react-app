@@ -6,7 +6,7 @@ open MM_wrk_ctx
 let procName = "MM_wrk_search_asrt"
 
 type request = 
-    | FindAssertions({typ:int, pattern:array<int>})
+    | FindAssertions({label:string, typ:int, pattern:array<int>})
 
 type response =
     | OnProgress(float)
@@ -43,6 +43,7 @@ let searchAssertions = (
     ~varsText: string,
     ~disjText: string,
     ~hyps: array<wrkCtxHyp>,
+    ~label:string,
     ~typ:int, 
     ~pattern:array<int>,
     ~onProgress:float=>unit,
@@ -56,7 +57,7 @@ let searchAssertions = (
             ~disjText,
             ~hyps,
             ~procName,
-            ~initialRequest = FindAssertions({typ, pattern}),
+            ~initialRequest = FindAssertions({label:label->Js.String2.toLowerCase, typ, pattern}),
             ~onResponse = (~resp, ~sendToWorker, ~endWorkerInteraction) => {
                 switch resp {
                     | OnProgress(pct) => onProgress(pct)
@@ -74,7 +75,7 @@ let searchAssertions = (
 
 let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit => {
     switch req {
-        | FindAssertions({typ, pattern}) => {
+        | FindAssertions({label, typ, pattern}) => {
             let results = []
             applyAssertions(
                 ~maxVar = getWrkCtxExn()->getNumOfVars - 1,
@@ -82,7 +83,10 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                 ~isDisjInCtx = getWrkCtxExn()->isDisj,
                 ~statements = [],
                 ~parenCnt = getWrkParenCntExn(),
-                ~frameFilter = frame => frame.asrt[0] == typ && frameMatchesPattern(frame, pattern),
+                ~frameFilter = frame => 
+                    frame.label->Js.String2.toLowerCase->Js_string2.includes(label)
+                    && frame.asrt[0] == typ 
+                    && frameMatchesPattern(frame, pattern),
                 ~onMatchFound = res => {
                     results->Js_array2.push(res)->ignore
                     Continue
