@@ -4,6 +4,7 @@ open MM_substitution
 open MM_asrt_apply
 open MM_parenCounter
 open MM_proof_table
+open MM_progress_tracker
 
 type justification = {
     args: array<string>,
@@ -39,6 +40,12 @@ type proofTree = {
     newVarTypes: Belt_MutableMapInt.t<int>,
     disj: disjMutable,
     nodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
+}
+
+type proofTreeDto = {
+    newVars: array<expr>,
+    disj: disjMutable,
+    nodes: array<(expr, proofTreeNode)>,
 }
 
 let createEmptyProofTree = (
@@ -449,7 +456,11 @@ let proofTreeProve = (
     ~disj: disjMutable,
     ~stmts: array<rootStmt>,
     ~searchDepth: int,
+    ~onProgress:option<float=>unit>=?,
+    ()
 ):proofTree => {
+    let stmtsProcessed = ref(0.)
+    let progressState = ref(progressTrackerMake(~step=0.01, ~onProgress?, ()))
     let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
     for stmtIdx in 0 to stmts->Js_array2.length - 1 {
         let rootNode = addExprToProve(
@@ -461,6 +472,10 @@ let proofTreeProve = (
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
             ~searchDepth,
+        )
+        stmtsProcessed.contents = stmtsProcessed.contents +. 1.
+        progressState.contents = progressState.contents->progressTrackerSetCurrPct(
+            stmtsProcessed.contents /. (stmtIdx + 1)->Belt_Int.toFloat
         )
     }
     tree

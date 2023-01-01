@@ -33,11 +33,15 @@ let processors: Belt_MapString.t<requestProcessor> = Belt_MapString.fromArray([
         MM_wrk_search_asrt.procName, 
         makeRequestProcessor(MM_wrk_search_asrt.processOnWorkerSide)
     ),
+    (
+        MM_wrk_unify.procName, 
+        makeRequestProcessor(MM_wrk_unify.processOnWorkerSide)
+    ),
 ])
 
 let processRequest: workerRequest => unit = req => {
     if (req.traceEnabled) {
-        Js.Console.log(`${currTimeStr()} [clientId=${req.clientId->Belt_Int.toString}] worker receved a request, procName = ${req.procName}`)
+        Js.Console.log(`${currTimeStr()} [clientId=${req.clientId->Belt_Int.toString}] worker received a request, procName = ${req.procName}`)
     }
     processors->Belt_MapString.get(req.procName)->Belt_Option.forEach(processor => processor(~req, ~sendToClient=resp=>{
         if (req.traceEnabled) {

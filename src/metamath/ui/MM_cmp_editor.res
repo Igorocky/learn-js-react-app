@@ -5,6 +5,7 @@ open Modal
 open MM_wrk_editor
 open MM_wrk_settings
 open MM_wrk_ctx
+open MM_wrk_unify
 open MM_substitution
 open Expln_utils_promise
 
@@ -279,7 +280,35 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actUnify = () => {
-        setState(validateSyntax)
+        switch state.wrkCtx {
+            | None => ()
+            | Some(wrkCtx) => {
+                openModal(modalRef, () => rndProgress(~text="Unifying", ~pct=0.))->promiseMap(modalId => {
+                    unify(
+                        ~preCtxVer=state.preCtxV,
+                        ~preCtx=state.preCtx,
+                        ~parenStr=state.settings.parens,
+                        ~varsText=state.varsText,
+                        ~disjText=state.disjText,
+                        ~hyps={
+                            state.stmts
+                                ->Js_array2.filter(stmt => stmt.typ == #e)
+                                ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
+                        },
+                        ~stmts={
+                            // state.stmts
+                            //     ->Js_array2.filter(stmt => stmt.typ == #e)
+                            //     ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
+                            []
+                        },
+                        ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Unifying", ~pct))
+                    )->promiseMap(proofTree => {
+                        closeModal(modalRef, modalId)
+                        Js.Console.log2("proofTree", proofTree)
+                    })
+                })->ignore
+            }
+        }
     }
 
     let rndError = msgOpt => {

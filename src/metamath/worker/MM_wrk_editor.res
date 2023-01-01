@@ -761,6 +761,7 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
             }
         }),
         ~searchDepth=-1,
+        ()
     )
     typesToProve->Js_array2.every(typeExpr => {
         switch proofTree.nodes->Belt_MutableMap.get(typeExpr) {
