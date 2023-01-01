@@ -216,34 +216,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         setState(st => selectedResults->Js_array2.reduce( addAsrtSearchResult, st ))
     }
 
-    let rndSearchAsrtDialog = (
-        ~modalId, 
-        ~preCtxVer: int,
-        ~preCtx: mmContext,
-        ~parenStr: string,
-        ~varsText: string,
-        ~disjText: string,
-        ~hyps: array<wrkCtxHyp>,
-        ~wrkCtx: mmContext,
-        ~frms: Belt_MapString.t<frmSubsData>,
-    ) => {
-        <MM_cmp_search_asrt
-            modalRef
-            preCtxVer
-            preCtx
-            parenStr
-            varsText
-            disjText
-            hyps
-            wrkCtx
-            frms
-            onCanceled={()=>closeModal(modalRef, modalId)}
-            onResultsSelected={selectedResults=>{
-                closeModal(modalRef, modalId)
-                Js.Console.log2("selectedResults->Js_array2.length", selectedResults->Js_array2.length)
-                actAsrtSearchResultsSelected(selectedResults)
-            }}
-        />
+    let actWrkSubsSelected = wrkSubs => {
+        setState(st => st->applySubstitutionForEditor(wrkSubs))
     }
 
     let actSearchAsrt = () => {
@@ -251,19 +225,49 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
             | None => ()
             | Some(wrkCtx) => {
                 openModal(modalRef, _ => React.null)->promiseMap(modalId => {
-                    updateModal(modalRef, modalId, () => rndSearchAsrtDialog(
-                        ~modalId, 
-                        ~preCtxVer=state.preCtxV,
-                        ~preCtx=state.preCtx,
-                        ~parenStr=state.settings.parens,
-                        ~varsText=state.varsText,
-                        ~disjText=state.disjText,
-                        ~hyps=state.stmts
-                            ->Js_array2.filter(stmt => stmt.typ == #e)
-                            ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr}),
-                        ~wrkCtx,
-                        ~frms=state.frms,
-                    ))
+                    updateModal(modalRef, modalId, () => {
+                        <MM_cmp_search_asrt
+                            modalRef
+                            preCtxVer=state.preCtxV
+                            preCtx=state.preCtx
+                            parenStr=state.settings.parens
+                            varsText=state.varsText
+                            disjText=state.disjText
+                            hyps={
+                                state.stmts
+                                    ->Js_array2.filter(stmt => stmt.typ == #e)
+                                    ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
+                            }
+                            wrkCtx
+                            frms=state.frms
+                            onCanceled={()=>closeModal(modalRef, modalId)}
+                            onResultsSelected={selectedResults=>{
+                                closeModal(modalRef, modalId)
+                                actAsrtSearchResultsSelected(selectedResults)
+                            }}
+                        />
+                    })
+                })->ignore
+            }
+        }
+    }
+
+    let actSubstitute = () => {
+        switch state.wrkCtx {
+            | None => ()
+            | Some(wrkCtx) => {
+                openModal(modalRef, _ => React.null)->promiseMap(modalId => {
+                    updateModal(modalRef, modalId, () => {
+                        <MM_cmp_substitution
+                            editorState=state
+                            wrkCtx
+                            onCanceled={()=>closeModal(modalRef, modalId)}
+                            onSubstitutionSelected={wrkSubs=>{
+                                closeModal(modalRef, modalId)
+                                actWrkSubsSelected(wrkSubs)
+                            }}
+                        />
+                    })
                 })->ignore
             }
         }
@@ -281,6 +285,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let rndButtons = () => {
+        let generalModificationActionIsEnabled =
+            !editIsActive
+            && !(mainCheckboxState->Belt_Option.getWithDefault(true))
+            && !thereAreSyntaxErrors
+            && state.frms->Belt_MapString.size > 0
         <Paper>
             <Row>
                 <Checkbox
@@ -296,22 +305,9 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
-                {
-                    rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, 
-                        ~active= !editIsActive && 
-                                    !(mainCheckboxState->Belt_Option.getWithDefault(true)) && 
-                                    !thereAreSyntaxErrors &&
-                                    state.frms->Belt_MapString.size > 0
-                    )
-                }
-                {
-                    rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, 
-                        ~active= !editIsActive && 
-                                    !(mainCheckboxState->Belt_Option.getWithDefault(true)) && 
-                                    !thereAreSyntaxErrors &&
-                                    state.stmts->Js_array2.length > 0
-                    )
-                }
+                { rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, ~active=generalModificationActionIsEnabled ) }
+                { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled ) }
+                { rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, ~active=generalModificationActionIsEnabled ) }
             </Row>
         </Paper>
     }

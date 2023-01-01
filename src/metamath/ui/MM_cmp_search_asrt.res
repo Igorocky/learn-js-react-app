@@ -257,7 +257,7 @@ let make = (
 
     let rndResultButtons = () => {
         <Row>
-            <Button onClick={_=>actChooseSelected()} variant=#contained>
+            <Button onClick={_=>actChooseSelected()} variant=#contained disabled={state.checkedResultsIdx->Js.Array2.length == 0}>
                 {React.string("Choose selected")}
             </Button>
             <Button onClick={_=>onCanceled()}> {React.string("Cancel")} </Button>
@@ -278,34 +278,26 @@ let make = (
                 let totalNumOfResults = resultsForRender->Js.Array2.length
                 <Col>
                     {rndPagination(totalNumOfResults)}
-                    <List>
                     {
                         items->Js_array2.mapi((item,i) => {
                             let resIdx = minI + i
-                            <ListItem key={resIdx->Belt_Int.toString}>
-                                <table>
-                                    <tbody>
-                                        <tr>
-                                            <td>
-                                                <Checkbox
-                                                    checked={state.checkedResultsIdx->Js.Array2.includes(resIdx)}
-                                                    onChange={_ => actToggleResultChecked(resIdx)}
-                                                />
-                                            </td>
-                                            <td>
-                                                item
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                // <Row alignItems=#center>
-                                    
-                                    
-                                // </Row>
-                            </ListItem>
+                            <table key={resIdx->Belt_Int.toString}>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <Checkbox
+                                                checked={state.checkedResultsIdx->Js.Array2.includes(resIdx)}
+                                                onChange={_ => actToggleResultChecked(resIdx)}
+                                            />
+                                        </td>
+                                        <td>
+                                            item
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         })->React.array
                     }
-                    </List>
                     {rndPagination(totalNumOfResults)}
                     {rndResultButtons()}
                 </Col>

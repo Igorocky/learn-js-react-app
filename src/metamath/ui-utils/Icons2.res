@@ -57,3 +57,8 @@ module Search = {
     @module("@mui/icons-material/Search") @react.component
     external make: () => React.element = "default"
 }
+
+module TextRotationNone = {
+    @module("@mui/icons-material/TextRotationNone") @react.component
+    external make: () => React.element = "default"
+}
