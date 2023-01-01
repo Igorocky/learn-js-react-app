@@ -54,6 +54,8 @@ let forEachFrame: (mmContext, frame => option<'a>) => option<'a>
 let forEachHypothesisInDeclarationOrder: (mmContext, hypothesis => option<'a>) => option<'a>
 let getNestingLevel: mmContext => int
 let findParentheses: (mmContext, ~onProgress:float=>unit=?, unit) => array<int>
+let getTypeOfVar: (mmContext, int) => option<int>
+let getTypeOfVarExn: (mmContext, int) => int
 
 let ctxSymToInt: (mmContext, string) => option<int>
 let ctxIntToSym: (mmContext, int) => option<string>
@@ -65,18 +67,18 @@ let ctxIntsToSymsExn: (mmContext, expr) => array<string>
 let ctxIntsToStrExn: (mmContext, expr) => string
 let frmIntToSymExn: (mmContext, frame, int) => string
 let frmIntsToStrExn: (mmContext, frame, expr) => string
-let createFrame: (mmContext, string, array<string>) => frame
+let createFrame: (mmContext, string, array<string>, ~skipHyps:bool=?, ~skipFirstSymCheck:bool=?, ()) => frame
 
 let generateNewVarNames: (mmContext, array<int>) => array<string>
 let generateNewLabels: (mmContext, ~prefix:string, ~amount:int) => array<string>
-
-let exprEq: (expr,expr) => bool
 
 let disjMutableMake: unit => disjMutable
 let addDisjPairToMap: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool
 let disjForEachArr: (disjMutable, array<int> => unit) => unit
 let disjForEach: (disjMutable, (int,int) => unit) => unit
+
+let exprEq: (expr,expr) => bool
 
 module ExprCmp: {
   type identity

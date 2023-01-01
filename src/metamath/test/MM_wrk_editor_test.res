@@ -53,6 +53,7 @@ let getVarType = (ctx:mmContext, vName:string) => {
 }
 
 let demo0 = "./src/metamath/test/resources/demo0.mm"
+let demo0Subs = "./src/metamath/test/resources/demo0-for-editor-subs-test.mm"
 
 describe("refreshWrkCtx", _ => {
     it("detects an error in variable declaration", _ => {
@@ -91,7 +92,7 @@ describe("refreshWrkCtx", _ => {
     it("detects an error in disjoints declaration", _ => {
         //given
         let st = createEditorState(demo0)
-        let st = completeDisjEditMode(st, "t r \n r s-")
+        let st = completeDisjEditMode(st, "t, r \n r, s-")
 
         //when
         let st = refreshWrkCtx(st)
@@ -105,7 +106,7 @@ describe("refreshWrkCtx", _ => {
     it("creates wrkCtx when only additional disjoints are defined and there are no errors", _ => {
         //given
         let st = createEditorState(demo0)
-        let st = completeDisjEditMode(st, "t r \n r s")
+        let st = completeDisjEditMode(st, "t, r \n r, s")
 
         //when
         let st = refreshWrkCtx(st)
@@ -442,5 +443,37 @@ describe("prepareProvablesForUnification", _ => {
         assertEq(st.stmts[3].stmtErr->Belt_Option.isNone, true)
         assertEq(st.stmts[3].expr->Belt_Option.isSome, true)
         assertEq(st.stmts[3].jstf, Some({args:["pr1", "hyp1"], asrt:"mp"}))
+    })
+})
+
+describe("findPossibleSubs", _ => {
+    it("finds all possible substitutions", _ => {
+        //given
+        let st = createEditorState(demo0Subs)->validateSyntax
+        let ctx = st.wrkCtx->Belt_Option.getExn
+        let t = ctx->ctxSymToIntExn("t")
+        let r = ctx->ctxSymToIntExn("r")
+
+        //when
+        let possibleSubs = findPossibleSubs(
+            st, 
+            ctx->ctxStrToIntsExn("t + r"),
+            ctx->ctxStrToIntsExn("( t + t ) + ( t + r ) + ( t + s )"),
+        )
+
+        //then
+        assertEq(
+            possibleSubs,
+            [
+                Belt_MapInt.fromArray([
+                    (t, ctx->ctxStrToIntsExn("( t + t )")),
+                    (r, ctx->ctxStrToIntsExn("( t + r ) + ( t + s )")),
+                ]),
+                Belt_MapInt.fromArray([
+                    (t, ctx->ctxStrToIntsExn("( t + t ) + ( t + r )")),
+                    (r, ctx->ctxStrToIntsExn("( t + s )")),
+                ])
+            ]
+        )
     })
 })

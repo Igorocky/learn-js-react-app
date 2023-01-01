@@ -740,3 +740,83 @@ let addAsrtSearchResult = (st:editorState, applRes:applyAssertionResult):editorS
         }
     }
 }
+
+let verifyTypesForSubstitution = (settings, ctx, frms, subs:Belt_MapInt.t<expr>):bool => {
+    let typesToProve = subs
+        ->Belt_MapInt.toArray
+        ->Js_array2.map(((var,expr)) => [ctx->getTypeOfVarExn(var)]->Js.Array2.concat(expr))
+    let proofTree = proofTreeProve(
+        ~parenCnt=parenCntMake(prepareParenInts(ctx, settings.parens)),
+        ~frms,
+        ~hyps=ctx->getAllHyps,
+        ~maxVar=ctx->getNumOfVars - 1,
+        ~disj=ctx->getAllDisj,
+        ~stmts=typesToProve->Js_array2.mapi((typeExpr,i) => {
+            {
+                label: "typecheck-" ++ (i->Belt_Int.toString),
+                expr: typeExpr,
+                justification: None
+            }
+        }),
+        ~searchDepth=-1,
+    )
+    typesToProve->Js_array2.every(typeExpr => {
+        switch proofTree.nodes->Belt_MutableMap.get(typeExpr) {
+            | None => raise(MmException({msg:`Unexpected condition met: the proofTree was expected to contain nodes for each typeExpr.`}))
+            | Some(node) => node.proof->Belt_Option.isSome
+        }
+    })
+}
+
+let convertSubsToWrkSubs = (subs, frame, ctx):Belt_MapInt.t<expr> => {
+    let frameVarToCtxVar = frameVar => {
+        switch frame.frameVarToSymb->Belt_MapInt.get(frameVar) {
+            | None => raise(MmException({msg:`Cannot convert frameVar to ctxVar.`}))
+            | Some(ctxSym) => ctx->ctxSymToIntExn(ctxSym)
+        }
+    }
+    Belt_Array.range(1,frame.numOfVars)
+        ->Js.Array2.map(v => {
+            (
+                frameVarToCtxVar(v-1),
+                applySubs(
+                    ~frmExpr=[v-1],
+                    ~subs,
+                    ~createWorkVar = 
+                        _ => raise(MmException({msg:`Work variables are not supported in convertSubsToWrkSubs().`}))
+                )
+            )
+        })
+        ->Belt_MapInt.fromArray
+}
+
+let findPossibleSubs = (st, frmExpr, expr) => {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot search for substitutions without wrkCtx.`}))
+        | Some(wrkCtx) => {
+            let axLabel = (wrkCtx->generateNewLabels(~prefix="temp-ax-", ~amount=1))[0]
+            let frame = wrkCtx->createFrame(axLabel, wrkCtx->ctxIntsToSymsExn(frmExpr), ~skipHyps=true, ~skipFirstSymCheck=true, ())
+            let frm = prepareFrmSubsDataForFrame(frame)
+            let foundSubs = []
+            iterateSubstitutions(
+                ~frmExpr=frame.asrt,
+                ~expr,
+                ~frmConstParts = frm.frmConstParts[frm.numOfHypsE], 
+                ~constParts = frm.constParts[frm.numOfHypsE], 
+                ~varGroups = frm.varGroups[frm.numOfHypsE],
+                ~subs = frm.subs,
+                ~parenCnt=parenCntMake(prepareParenInts(wrkCtx, st.settings.parens)),
+                ~consumer = subs => {
+                    if ( verifyDisjoints(~frmDisj=frame.disj, ~subs, ~isDisjInCtx=wrkCtx->isDisj) ) {
+                        let finalSubs = convertSubsToWrkSubs(subs, frame, wrkCtx)
+                        if (verifyTypesForSubstitution(st.settings, wrkCtx, st.frms, finalSubs)) {
+                            foundSubs->Js_array2.push(finalSubs)->ignore
+                        }
+                    }
+                    Continue
+                }
+            )->ignore
+            foundSubs
+        }
+    }
+}

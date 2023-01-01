@@ -446,43 +446,45 @@ let createSubs = (~numOfVars:int) => {
     //let k = 
 //}
 
-//let iterateSubs: (~expr:expr, ~frmExpr:expr, ~frame:frame, ~consumer:subs=>contunieInstruction) => unit
+let prepareFrmSubsDataForFrame = (frame):frmSubsData => {
+    let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
+
+    let frmConstPartsArr:array<constParts> = []
+    let constPartsArr:array<constParts> = []
+    let varGroupsArr:array<array<varGroup>> = []
+
+    hypsE->Js_array2.forEach(hyp => {
+        let frmConstParts = createConstParts(hyp.expr)
+        let constParts = createMatchingConstParts(frmConstParts)
+        let varGroups = createVarGroups(~frmExpr=hyp.expr, ~frmConstParts)
+        frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
+        constPartsArr->Js.Array2.push(constParts)->ignore
+        varGroupsArr->Js.Array2.push(varGroups)->ignore
+    })
+
+    let frmConstParts = createConstParts(frame.asrt)
+    let constParts = createMatchingConstParts(frmConstParts)
+    let varGroups = createVarGroups(~frmExpr=frame.asrt, ~frmConstParts)
+    frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
+    constPartsArr->Js.Array2.push(constParts)->ignore
+    varGroupsArr->Js.Array2.push(varGroups)->ignore
+
+    let subs = createSubs(~numOfVars=frame.numOfVars)
+    {
+        frame,
+        hypsE,
+        numOfHypsE: hypsE->Js.Array2.length,
+        frmConstParts:frmConstPartsArr,
+        constParts:constPartsArr,
+        varGroups:varGroupsArr,
+        subs,
+    }
+}
 
 let prepareFrmSubsData = (ctx):Belt_MapString.t<frmSubsData> => {
     let frms = []
     ctx->forEachFrame(frame => {
-        let hypsE = frame.hyps->Js.Array2.filter(hyp => hyp.typ == E)
-
-        let frmConstPartsArr:array<constParts> = []
-        let constPartsArr:array<constParts> = []
-        let varGroupsArr:array<array<varGroup>> = []
-
-        hypsE->Js_array2.forEach(hyp => {
-            let frmConstParts = createConstParts(hyp.expr)
-            let constParts = createMatchingConstParts(frmConstParts)
-            let varGroups = createVarGroups(~frmExpr=hyp.expr, ~frmConstParts)
-            frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
-            constPartsArr->Js.Array2.push(constParts)->ignore
-            varGroupsArr->Js.Array2.push(varGroups)->ignore
-        })
-
-        let frmConstParts = createConstParts(frame.asrt)
-        let constParts = createMatchingConstParts(frmConstParts)
-        let varGroups = createVarGroups(~frmExpr=frame.asrt, ~frmConstParts)
-        frmConstPartsArr->Js.Array2.push(frmConstParts)->ignore
-        constPartsArr->Js.Array2.push(constParts)->ignore
-        varGroupsArr->Js.Array2.push(varGroups)->ignore
-
-        let subs = createSubs(~numOfVars=frame.numOfVars)
-        frms->Js_array2.push({
-            frame,
-            hypsE,
-            numOfHypsE: hypsE->Js.Array2.length,
-            frmConstParts:frmConstPartsArr,
-            constParts:constPartsArr,
-            varGroups:varGroupsArr,
-            subs,
-        })->ignore
+        frms->Js_array2.push(prepareFrmSubsDataForFrame(frame))->ignore
         None
     })->ignore
     Belt_MapString.fromArray(frms->Js_array2.map(frm => (frm.frame.label, frm)))

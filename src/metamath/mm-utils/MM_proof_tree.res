@@ -407,7 +407,7 @@ let rec proveNode = (
                             | None => {
                                 curNode.parents = Some([])
                                 addParentsWithoutNewVars(curNode)
-                                if (curNode.proof->Belt.Option.isNone && searchDepth <= curNode.dist) {
+                                if (curNode.proof->Belt.Option.isNone && curNode.dist <= searchDepth) {
                                     addParentsWithNewVars(curNode, None)
                                 }
                             }
@@ -435,7 +435,7 @@ and let checkTypes = (
             ~stmts = [],
             ~node,
             ~justification=None,
-            ~searchDepth = 0,
+            ~searchDepth = -1,
         )
         node.proof->Belt_Option.isSome
     })
