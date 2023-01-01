@@ -480,3 +480,36 @@ describe("findPossibleSubs", _ => {
         )
     })
 })
+
+describe("applySubstitutionForEditor", _ => {
+    it("applies substitutions correctly", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let (st, _) = addNewStmt(st)
+        let (st, _) = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, cont:Text("|- t + s"->getSpaceSeparatedValuesAsArray)})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, cont:Text("|- r = 0"->getSpaceSeparatedValuesAsArray)})
+        let st = validateSyntax(st)
+        let ctx = st.wrkCtx->Belt_Option.getExn
+        let wrkSubs = findPossibleSubs(
+            st, 
+            ctx->ctxStrToIntsExn("t = s"),
+            ctx->ctxStrToIntsExn("r = ( t + r )"),
+        )[0]
+
+        //when
+        let st = applySubstitutionForEditor(st, wrkSubs)
+
+        //then
+        assertEq(
+            st.stmts[0].cont->contToStr,
+            "|- r + ( t + r )"
+        )
+        assertEq(
+            st.stmts[1].cont->contToStr,
+            "|- r = 0"
+        )
+    })
+})

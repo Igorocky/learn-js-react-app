@@ -867,8 +867,54 @@ let findPossibleSubs = (st, frmExpr, expr):array<Belt_MapInt.t<expr>> => {
     }
 }
 
+let applyWrkSubs = (expr, subs): expr => {
+    let resultSize = ref(0)
+    expr->Js_array2.forEach(s => {
+        if (s < 0) {
+            resultSize.contents = resultSize.contents + 1
+        } else {
+            switch subs->Belt_MapInt.get(s) {
+                | None => raise(MmException({msg:`Cannot find a substitution for ${s->Belt_Int.toString} in applyWrkSubs.`}))
+                | Some(expr) => resultSize.contents = resultSize.contents + expr->Js_array2.length
+            }
+        }
+    })
+    let res = Expln_utils_common.createArray(resultSize.contents)
+    let e = ref(0)
+    let r = ref(0)
+    while (r.contents < resultSize.contents) {
+        let s = expr[e.contents]
+        if (s < 0) {
+            res[r.contents] = s
+            r.contents = r.contents + 1
+        } else {
+            let subExpr = subs->Belt_MapInt.getExn(s)
+            let len = subExpr->Js_array2.length
+            Expln_utils_common.copySubArray(~src=subExpr, ~srcFromIdx=0, ~dst=res, ~dstFromIdx=r.contents, ~len)
+            r.contents = r.contents + len
+        }
+        e.contents = e.contents + 1
+    }
+    res
+}
 
+let applySubstitutionForStmt = (ctx:mmContext, stmt:userStmt, subs:wrkSubs):userStmt => {
+    let expr = ctx->ctxSymsToIntsExn(stmt.cont->contToArrStr)
+    let newExpr = applyWrkSubs(expr, subs)
+    {
+        ...stmt,
+        cont: Text(ctx->ctxIntsToSymsExn(newExpr))
+    }
+}
 
-// let applySubstitution = (st, subs:array<Belt_MapInt.t<expr>>):editorState => {
-
-// }
+let applySubstitutionForEditor = (st, subs:wrkSubs):editorState => {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot apply substitution without wrkCtx.`}))
+        | Some(wrkCtx) => {
+            {
+                ...st,
+                stmts: st.stmts->Js_array2.map(stmt => applySubstitutionForStmt(wrkCtx,stmt,subs))
+            }
+        }
+    }
+}
