@@ -99,3 +99,4 @@ let validateSyntax: editorState => editorState
 let addAsrtSearchResult: (editorState, applyAssertionResult) => editorState
 let findPossibleSubs: (editorState, expr, expr) => array<Belt_MapInt.t<expr>>
 let applySubstitutionForEditor: (editorState, wrkSubs) => editorState
+let removeUnusedVars: editorState => editorState

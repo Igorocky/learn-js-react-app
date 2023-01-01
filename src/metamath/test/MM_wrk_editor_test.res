@@ -549,3 +549,28 @@ describe("applySubstitutionForEditor", _ => {
         )
     })
 })
+
+describe("removeUnusedVars", _ => {
+    it("removes unused variables", _ => {
+        //given
+        let st = createEditorState(demo0)
+        let st = completeVarsEditMode(st,"v1 term a \n v2 term b \n v3 term c \n v4 term d")
+        let st = completeDisjEditMode(st,"a,b,c \n d,c")
+        let (st, _) = addNewStmt(st)
+        let (st, _) = addNewStmt(st)
+        let pr1Id = st.stmts[0].id
+        let pr2Id = st.stmts[1].id
+        let st = updateStmt(st, pr1Id, stmt => {...stmt, cont:Text("|- t + a"->getSpaceSeparatedValuesAsArray)})
+        let st = updateStmt(st, pr2Id, stmt => {...stmt, cont:Text("|- r = c"->getSpaceSeparatedValuesAsArray)})
+        let st = validateSyntax(st)
+
+        //when
+        let st = removeUnusedVars(st)
+
+        //then
+        assertEq( st.varsText, "v1 term a\nv3 term c" )
+        assertEq( st.disjText, "a,c" )
+        assertEq( st.stmts[0].cont->contToStr, "|- t + a" )
+        assertEq( st.stmts[1].cont->contToStr, "|- r = c" )
+    })
+})
