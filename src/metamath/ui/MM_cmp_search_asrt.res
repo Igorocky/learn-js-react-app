@@ -60,7 +60,7 @@ let setResults = (st,results,ctx,frms):state => {
                 switch frms->Belt_MapString.get(result.asrtLabel) {
                     | None => React.string(`Cannot find assertion '${result.asrtLabel}'`)
                     | Some(frm) => {
-                        <Paper>
+                        <Paper style=ReactDOM.Style.make(~padding="3px", ())>
                             <Col>
                                 {React.array(
                                     frm.hypsE->Js_array2.mapi((hyp,i) => {
