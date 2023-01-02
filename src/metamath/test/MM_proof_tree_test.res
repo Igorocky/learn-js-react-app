@@ -25,7 +25,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
         ~ctx,
         ~stmts = [
             {
-                label: "test-stmt",
+                label: None,
                 expr,
                 justification: None
             }

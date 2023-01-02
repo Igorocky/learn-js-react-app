@@ -5,6 +5,11 @@ open MM_substitution
 open MM_parenCounter
 open MM_asrt_apply
 
+type labeledExpr = {
+    label:string,
+    expr:expr
+}
+
 describe("iterateCombinations", _ => {
     it("iterates all possible combinations", _ => {
         //given
@@ -234,6 +239,7 @@ let testApplyAssertions = (
     let parenCnt = parenCntMake(workCtx->ctxSymsToIntsExn(["(", ")", "{", "}", "[", "]"]))
 
     let actualResults:Belt_MutableMapString.t<array<string>> = Belt_MutableMapString.make()
+    let stmtsForAppl = statements->Js_array2.map(((_,exprStr)) => ctxStrToIntsExn(workCtx,exprStr))
     let statements = statements->Js_array2.map(((label,exprStr)) => {
         {
             label, 
@@ -246,7 +252,7 @@ let testApplyAssertions = (
         ~maxVar = workCtx->getNumOfVars-1,
         ~isDisjInCtx = workCtx->isDisj,
         ~frms,
-        ~statements,
+        ~statements = stmtsForAppl,
         ~parenCnt,
         ~frameFilter,
         ~result=?result->Belt_Option.map(str => str->getSpaceSeparatedValuesAsArray->ctxSymsToIntsExn(workCtx,_)),

@@ -302,7 +302,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                                 ->Js_array2.filter(stmt => stmt.typ == #p)
                                 ->Js_array2.map(stmt => {
                                     {
-                                        label:stmt.label, 
+                                        label:Some(stmt.label),
                                         expr:
                                             switch stmt.expr {
                                                 | None => raise(MmException({msg:`Expr must be set for all statements before unification.`}))

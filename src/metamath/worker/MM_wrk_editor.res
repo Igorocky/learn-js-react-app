@@ -752,7 +752,7 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
         ~frms,
         ~stmts=typesToProve->Js_array2.mapi((typeExpr,i) => {
             {
-                label: "typecheck-" ++ (i->Belt_Int.toString),
+                label: None,
                 expr: typeExpr,
                 justification: None
             }

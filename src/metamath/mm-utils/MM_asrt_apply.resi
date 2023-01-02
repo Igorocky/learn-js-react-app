@@ -2,11 +2,6 @@ open MM_substitution
 open MM_context
 open MM_parenCounter
 
-type labeledExpr = {
-    label:string,
-    expr:expr
-}
-
 type applyAssertionResult = {
     newVars: array<int>,
     newVarTypes: array<int>,
@@ -19,7 +14,7 @@ let applyAssertions: (
     ~maxVar:int,
     ~frms:Belt_MapString.t<frmSubsData>,
     ~isDisjInCtx:(int,int)=>bool,
-    ~statements:array<labeledExpr>,
+    ~statements:array<expr>,
     ~exactOrderOfStmts:bool=?,
     ~result:expr=?,
     ~parenCnt:parenCnt,

@@ -43,7 +43,7 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
         ~ctx,
         ~stmts = [
             {
-                label: "test-stmt",
+                label: None,
                 expr,
                 justification: None
             }

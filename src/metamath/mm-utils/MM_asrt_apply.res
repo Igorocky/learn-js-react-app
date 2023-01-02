@@ -3,11 +3,6 @@ open MM_context
 open MM_parenCounter
 open MM_progress_tracker
 
-type labeledExpr = {
-    label:string,
-    expr:expr
-}
-
 type applyAssertionResult = {
     newVars: array<int>,
     newVarTypes: array<int>,
@@ -193,7 +188,7 @@ let rec iterateSubstitutionsForHyps = (
     ~workVars:workVars,
     ~frm:frmSubsData,
     ~parenCnt:parenCnt,
-    ~statements:array<labeledExpr>,
+    ~statements:array<expr>,
     ~comb:array<int>,
     ~hypIdx:int,
     ~onMatchFound: () => contunieInstruction
@@ -208,7 +203,7 @@ let rec iterateSubstitutionsForHyps = (
     } else if (comb[hypIdx] >= 0) {
         iterateSubstitutions(
             ~frmExpr = frm.hypsE[hypIdx].expr,
-            ~expr = statements[comb[hypIdx]].expr,
+            ~expr = statements[comb[hypIdx]],
             ~frmConstParts = frm.frmConstParts[hypIdx], 
             ~constParts = frm.constParts[hypIdx], 
             ~varGroups = frm.varGroups[hypIdx],
@@ -295,7 +290,7 @@ let applyAssertions = (
     ~maxVar:int,
     ~frms:Belt_MapString.t<frmSubsData>,
     ~isDisjInCtx:(int,int)=>bool,
-    ~statements:array<labeledExpr>,
+    ~statements:array<expr>,
     ~exactOrderOfStmts:bool=false,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
@@ -333,7 +328,7 @@ let applyAssertions = (
                                 (!exactOrderOfStmts || s == h) && stmtCanMatchHyp(
                                     ~frm,
                                     ~hypIdx=h,
-                                    ~stmt = statements[s].expr,
+                                    ~stmt = statements[s],
                                     ~hyp = frm.hypsE[h].expr,
                                     ~parenCnt,
                                 )

@@ -9,7 +9,7 @@ type justification = {
 }
 
 type rootStmt = {
-    label: string,
+    label: option<string>,
     expr: expr,
     justification: option<justification>,
 }
