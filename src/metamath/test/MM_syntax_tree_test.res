@@ -48,6 +48,7 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
                 justification: None
             }
         ],
+        ~syntaxProof=true,
         ()
     )
     let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn

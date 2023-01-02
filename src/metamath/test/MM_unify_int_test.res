@@ -50,6 +50,7 @@ let testUnification = (
                 justification: jstf
             }
         }),
+        ~syntaxProof=false,
         ()
     )
 

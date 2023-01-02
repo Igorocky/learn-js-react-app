@@ -182,6 +182,7 @@ let rec proveNode = (
     ~stmts:array<rootStmt>,
     ~node:proofTreeNode,
     ~justification: option<justification>,
+    ~syntaxProof:bool,
 ) => {
     let prevRootExprs = stmts->Js.Array2.map(({expr}) => expr)
     let nodesToCreateParentsFor = Belt_MutableQueue.make()
@@ -348,8 +349,9 @@ let rec proveNode = (
                         }
                         | None => {
                             curNode.parents = Some([])
-                            addParentsWithoutNewVars(curNode)
-                            if (curNode.proof->Belt.Option.isNone && curNode.label->Belt_Option.isSome) {
+                            if (syntaxProof) {
+                                addParentsWithoutNewVars(curNode)
+                            } else {
                                 addParentsWithNewVars(curNode, None)
                             }
                         }
@@ -376,6 +378,7 @@ and let checkTypes = (
             ~stmts = [],
             ~node,
             ~justification=None,
+            ~syntaxProof=true,
         )
         node.proof->Belt_Option.isSome
     })
@@ -386,6 +389,7 @@ let proofTreeProve = (
     ~frms: Belt_MapString.t<frmSubsData>,
     ~stmts: array<rootStmt>,
     ~parenCnt: parenCnt,
+    ~syntaxProof:bool,
     ~onProgress:option<float=>unit>=?,
     ()
 ):proofTree => {
@@ -409,6 +413,7 @@ let proofTreeProve = (
             ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx),
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
+            ~syntaxProof
         )
 
         stmtsProcessed.contents = stmtsProcessed.contents +. 1.

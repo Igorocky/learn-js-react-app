@@ -48,6 +48,7 @@ let proofTreeProve: (
     ~frms: Belt_MapString.t<frmSubsData>,
     ~stmts: array<rootStmt>,
     ~parenCnt: parenCnt,
+    ~syntaxProof:bool,
     ~onProgress: float=>unit = ?,
     ()
 ) => proofTree

@@ -758,6 +758,7 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
             }
         }),
         ~parenCnt=parenCntMake(prepareParenInts(ctx, settings.parens)),
+        ~syntaxProof=true,
         ()
     )
     typesToProve->Js_array2.every(typeExpr => {

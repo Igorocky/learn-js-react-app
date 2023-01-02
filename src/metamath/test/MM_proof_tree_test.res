@@ -30,6 +30,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
                 justification: None
             }
         ],
+        ~syntaxProof=true,
         ()
     )
     let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn

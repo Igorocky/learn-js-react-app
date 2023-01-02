@@ -55,6 +55,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                 ~frms = getWrkFrmsExn(),
                 ~ctx = getWrkCtxExn(),
                 ~stmts,
+                ~syntaxProof=false,
                 ~onProgress = pct => sendToClient(OnProgress(pct)),
                 ()
             )
