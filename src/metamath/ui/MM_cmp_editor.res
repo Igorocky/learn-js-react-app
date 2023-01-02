@@ -363,13 +363,15 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let rndStmt = (stmt:userStmt) => {
-        <Row alignItems=#"flex-start" key=stmt.id>
-            <Checkbox
-                disabled=editIsActive
-                checked={state->isStmtChecked(stmt.id)}
-                onChange={_ => actToggleStmtChecked(stmt.id)}
-            />
-            <Col>
+        <tr key=stmt.id >
+            <td>
+                <Checkbox
+                    disabled=editIsActive
+                    checked={state->isStmtChecked(stmt.id)}
+                    onChange={_ => actToggleStmtChecked(stmt.id)}
+                />
+            </td>
+            <td>
                 <MM_cmp_user_stmt
                     stmt
 
@@ -386,8 +388,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     onJstfEditDone={newJstf => actCompleteEdit(completeJstfEditMode(_,stmt.id,newJstf))}
                 />
                 {rndError(stmt.stmtErr)}
-            </Col>
-        </Row>
+            </td>
+        </tr>
     }
 
     let rndVars = () => {
@@ -421,9 +423,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let rndStmts = () => {
-        <Col>
-            { state.stmts->Js_array2.map(rndStmt)->React.array }
-        </Col>
+        <table>
+            <tbody>
+                { state.stmts->Js_array2.map(rndStmt)->React.array }
+            </tbody>
+        </table>
     }
 
     <ContentWithStickyHeader

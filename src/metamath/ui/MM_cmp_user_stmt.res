@@ -132,7 +132,10 @@ let make = (
                 {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actContEditDone)}
             </Row>
         } else {
-            <Paper onClick=altLeftClickHnd(_, onContEditRequested) style=ReactDOM.Style.make(~padding="1px 10px", ()) >
+            <Paper 
+                onClick=altLeftClickHnd(_, onContEditRequested) 
+                style=ReactDOM.Style.make(~padding="1px 10px", ~backgroundColor="rgb(255,255,235)", ()) 
+            >
             {
                 switch stmt.cont {
                     | Text(arr) => React.string(arr->Js_array2.joinWith(" "))
@@ -206,13 +209,33 @@ let make = (
         }
     }
 
-    <Col spacing=1.>
-        <Row style=ReactDOM.Style.make(~marginTop="5px", ()) alignItems=#center>
-            {rndLabel()}
-            {rndTyp()}
-            {rndCont()}
-            {rndInfoBtn()}
-        </Row>
-        {rndInfoBody()}
-    </Col>
+    <table>
+        <tbody>
+            <tr>
+                <td>
+                    {rndLabel()}
+                </td>
+                <td>
+                    {rndTyp()}
+                </td>
+                <td>
+                    {rndCont()}
+                </td>
+                <td>
+                    {rndInfoBtn()}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    {React.null}
+                </td>
+                <td>
+                    {React.null}
+                </td>
+                <td colSpan=2 >
+                    {rndInfoBody()}
+                </td>
+            </tr>
+        </tbody>
+    </table>
 }

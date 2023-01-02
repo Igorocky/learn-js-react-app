@@ -436,6 +436,13 @@ let removeAllErrorsInEditorState = st => {
     }
 }
 
+let removeAllExprsInEditorState = st => {
+    {
+        ...st,
+        stmts: st.stmts->Js_array2.map(stmt => {...stmt, expr: None})
+    }
+}
+
 let userStmtHasErrors = stmt => {
     stmt.stmtErr->Belt_Option.isSome
 }
@@ -583,6 +590,7 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 
 let prepareEditorForUnification = st => {
     let st = removeAllErrorsInEditorState(st)
+    let st = removeAllExprsInEditorState(st)
     let st = refreshWrkCtx(st)
     let st = prepareProvablesForUnification(st)
     st
