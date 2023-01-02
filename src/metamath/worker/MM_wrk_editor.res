@@ -993,7 +993,7 @@ let userStmtSetJstfTextAndProof = (stmt,wrkCtx,proofNode:proofTreeNode):userStmt
             if (stmt.jstfText->Js_string2.trim == "") {
                 {
                     ...stmt,
-                    jstfText: jstfFromProof.args->Js_array2.joinWith(",") ++ " : " ++ jstfFromProof.asrt,
+                    jstfText: jstfFromProof.args->Js_array2.joinWith(" ") ++ " : " ++ jstfFromProof.asrt,
                     proof: Some(proofNode)
                 }
             } else {
