@@ -301,7 +301,7 @@ let rec proveNode = (
                     ~statements = stmts->Js.Array2.map(({label,expr}) => {label,expr}),
                     ~result = node.expr,
                     ~parenCnt=tree.parenCnt,
-                    ~frameFilter = _ => true,
+                    ~frameFilter = frame => frame.asrt[0] == node.expr[0],
                     ~onMatchFound = res => {
                         applResults->Js_array2.push(res)->ignore
                         Continue

@@ -276,7 +276,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
         | Some(_) => {
             switch wrkPrecalcData.contents.wrkCtx {
                 | Some(_) => sendToClient(Ok)
-                | None => ()
+                | None => raise(MmException({msg:`Could not create wrkCtx in the worker thread.`}))
             }
         }
     }

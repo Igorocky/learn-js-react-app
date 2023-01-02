@@ -7,6 +7,8 @@ open MM_wrk_settings
 open MM_wrk_ctx
 open MM_wrk_unify
 open MM_substitution
+open MM_parser
+open MM_proof_tree
 open Expln_utils_promise
 
 type userStmtLocStor = {
@@ -296,10 +298,19 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                                 ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
                         },
                         ~stmts={
-                            // state.stmts
-                            //     ->Js_array2.filter(stmt => stmt.typ == #e)
-                            //     ->Js_array2.map(stmt => {id:stmt.id, label:stmt.label, text:stmt.cont->contToStr})
-                            []
+                            state.stmts
+                                ->Js_array2.filter(stmt => stmt.typ == #p)
+                                ->Js_array2.map(stmt => {
+                                    {
+                                        label:stmt.label, 
+                                        expr:
+                                            switch stmt.expr {
+                                                | None => raise(MmException({msg:`Expr must be set for all statements before unification.`}))
+                                                | Some(expr) => expr
+                                            },
+                                        justification: stmt.jstf,
+                                    }
+                                })
                         },
                         ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Unifying", ~pct))
                     )->promiseMap(proofTree => {
