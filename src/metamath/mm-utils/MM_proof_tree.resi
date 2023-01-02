@@ -34,6 +34,7 @@ type proofTree = {
     newVars: Belt_MutableSet.t<expr,ExprCmp.identity>,
     disj: disjMutable,
     parenCnt:parenCnt,
+    rootNodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
     nodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
 }
 
@@ -49,6 +50,7 @@ let proofTreeProve: (
     ~stmts: array<rootStmt>,
     ~parenCnt: parenCnt,
     ~syntaxProof:bool,
+    ~allowEmptyArgs:bool=?,
     ~onProgress: float=>unit = ?,
     ()
 ) => proofTree

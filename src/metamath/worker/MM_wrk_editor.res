@@ -762,7 +762,7 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
         ()
     )
     typesToProve->Js_array2.every(typeExpr => {
-        switch proofTree.nodes->Belt_MutableMap.get(typeExpr) {
+        switch proofTree.rootNodes->Belt_MutableMap.get(typeExpr) {
             | None => raise(MmException({msg:`Unexpected condition met: the proofTree was expected to contain nodes for each typeExpr.`}))
             | Some(node) => node.proof->Belt_Option.isSome
         }

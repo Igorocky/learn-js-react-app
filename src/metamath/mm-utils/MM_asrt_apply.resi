@@ -16,6 +16,7 @@ let applyAssertions: (
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<expr>,
     ~exactOrderOfStmts:bool=?,
+    ~allowEmptyArgs:bool=?,
     ~result:expr=?,
     ~parenCnt:parenCnt,
     ~frameFilter:frame=>bool=?,

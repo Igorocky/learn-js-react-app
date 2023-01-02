@@ -37,6 +37,7 @@ type proofTree = {
     newVars: Belt_MutableSet.t<expr,ExprCmp.identity>,
     disj: disjMutable,
     parenCnt:parenCnt,
+    rootNodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
     nodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
 }
 
@@ -61,6 +62,7 @@ let createEmptyProofTree = (
         newVars: Belt_MutableSet.make(~id=module(ExprCmp)),
         disj,
         parenCnt,
+        rootNodes: Belt_MutableMap.make(~id=module(ExprCmp)),
         nodes: Belt_MutableMap.make(~id=module(ExprCmp)),
     }
 }
@@ -183,6 +185,7 @@ let rec proveNode = (
     ~node:proofTreeNode,
     ~justification: option<justification>,
     ~syntaxProof:bool,
+    ~allowEmptyArgs:bool,
 ) => {
     let prevRootExprs = stmts->Js.Array2.map(({expr}) => expr)
     let nodesToCreateParentsFor = Belt_MutableQueue.make()
@@ -236,7 +239,7 @@ let rec proveNode = (
         })
     }
 
-    let addParentsWithNewVars = (node,justification:option<justification>):unit => {
+    let addParentsWithNewVars = (node,justification):unit => {
         let applResults = []
         switch justification {
             | None => {
@@ -245,6 +248,7 @@ let rec proveNode = (
                     ~frms = tree.frms,
                     ~isDisjInCtx = tree.disj->disjContains,
                     ~statements = prevRootExprs,
+                    ~allowEmptyArgs,
                     ~result = node.expr,
                     ~parenCnt=tree.parenCnt,
                     ~onMatchFound = res => {
@@ -261,6 +265,7 @@ let rec proveNode = (
                     ~isDisjInCtx = tree.disj->disjContains,
                     ~statements = getStatementsFromJustification( ~tree, ~stmts, ~justification ),
                     ~exactOrderOfStmts=true,
+                    ~allowEmptyArgs,
                     ~result = node.expr,
                     ~parenCnt=tree.parenCnt,
                     ~frameFilter = frame => frame.label == justification.asrt,
@@ -293,16 +298,22 @@ let rec proveNode = (
                 | Some(frm) => frm.frame
             }
             let args = frame.hyps->Js_array2.map(hyp => {
-                createOrUpdateNode(
-                    ~tree,
-                    ~label=None,
-                    ~expr = applySubs(
-                        ~frmExpr = hyp.expr, 
-                        ~subs=applResult.subs,
-                        ~createWorkVar = _ => raise(MmException({msg:`New work variables are not expected here.`}))
-                    ),
-                    ~child=Some(node)
+                let argExpr = applySubs(
+                    ~frmExpr = hyp.expr, 
+                    ~subs=applResult.subs,
+                    ~createWorkVar = _ => raise(MmException({msg:`New work variables are not expected here.`}))
                 )
+                switch tree.rootNodes->Belt_MutableMap.get(argExpr) {
+                    | Some(existingNode) => existingNode
+                    | None => {
+                        createOrUpdateNode(
+                            ~tree,
+                            ~label=None,
+                            ~expr = argExpr,
+                            ~child=Some(node)
+                        )
+                    }
+                }
             })
             if (checkTypes(~tree, ~frame, ~args)) {
                 args->Js_array2.forEach(arg => {
@@ -324,41 +335,35 @@ let rec proveNode = (
         })->ignore
     }
 
-    switch justification {
-        | Some(justification) => {
-            node.parents = Some([])
-            addParentsWithNewVars(node,Some(justification))
-        }
-        | None => ()
-    }
-
-    nodesToCreateParentsFor->Belt_MutableQueue.add(node)
-    while (nodesToCreateParentsFor->Belt_MutableQueue.size > 0) {
-        let curNode = nodesToCreateParentsFor->Belt_MutableQueue.pop->Belt_Option.getExn
-        switch curNode.parents {
-            | Some(_) => ()
-            | None => {
-                if (tree.newVars->Belt_MutableSet.has(curNode.expr)) {
-                    curNode.parents = Some([VarType])
-                    markProved(curNode)
-                } else {
-                    switch tree.hypsByExpr->Belt_Map.get(curNode.expr) {
-                        | Some(hyp) => {
-                            curNode.parents = Some([Hypothesis({label:hyp.label})])
-                            markProved(curNode)
-                        }
-                        | None => {
-                            curNode.parents = Some([])
-                            if (syntaxProof) {
+    if (syntaxProof) {
+        let rootNode = node
+        nodesToCreateParentsFor->Belt_MutableQueue.add(node)
+        while (rootNode.proof->Belt_Option.isNone && nodesToCreateParentsFor->Belt_MutableQueue.size > 0) {
+            let curNode = nodesToCreateParentsFor->Belt_MutableQueue.pop->Belt_Option.getExn
+            switch curNode.parents {
+                | Some(_) => ()
+                | None => {
+                    if (tree.newVars->Belt_MutableSet.has(curNode.expr)) {
+                        curNode.parents = Some([VarType])
+                        markProved(curNode)
+                    } else {
+                        switch tree.hypsByExpr->Belt_Map.get(curNode.expr) {
+                            | Some(hyp) => {
+                                curNode.parents = Some([Hypothesis({label:hyp.label})])
+                                markProved(curNode)
+                            }
+                            | None => {
+                                curNode.parents = Some([])
                                 addParentsWithoutNewVars(curNode)
-                            } else {
-                                addParentsWithNewVars(curNode, None)
                             }
                         }
                     }
                 }
             }
         }
+    } else {
+        node.parents = Some([])
+        addParentsWithNewVars(node,justification)
     }
 }
 and let checkTypes = (
@@ -379,6 +384,7 @@ and let checkTypes = (
             ~node,
             ~justification=None,
             ~syntaxProof=true,
+            ~allowEmptyArgs=false,
         )
         node.proof->Belt_Option.isSome
     })
@@ -390,6 +396,7 @@ let proofTreeProve = (
     ~stmts: array<rootStmt>,
     ~parenCnt: parenCnt,
     ~syntaxProof:bool,
+    ~allowEmptyArgs:bool=false,
     ~onProgress:option<float=>unit>=?,
     ()
 ):proofTree => {
@@ -402,18 +409,21 @@ let proofTreeProve = (
     let tree = createEmptyProofTree(~frms, ~maxVar, ~disj, ~hyps, ~parenCnt, )
     let numOfStmts = stmts->Js_array2.length
     for stmtIdx in 0 to numOfStmts - 1 {
+        tree.nodes->Belt_MutableMap.clear
         let rootNode = createOrUpdateNode(
             ~tree, 
             ~label=stmts[stmtIdx].label, 
             ~expr=stmts[stmtIdx].expr, 
             ~child=None
         )
+        tree.rootNodes->Belt_MutableMap.set(rootNode.expr, rootNode)
         proveNode(
             ~tree,
             ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx),
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
-            ~syntaxProof
+            ~syntaxProof,
+            ~allowEmptyArgs,
         )
 
         stmtsProcessed.contents = stmtsProcessed.contents +. 1.

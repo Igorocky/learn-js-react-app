@@ -62,7 +62,7 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             sendToClient(Result({
                 newVars: proofTree.newVars->Belt_MutableSet.toArray,
                 disj: proofTree.disj,
-                nodes: proofTree.nodes->Belt_MutableMap.valuesToArray
+                nodes: proofTree.rootNodes->Belt_MutableMap.valuesToArray
             }))
         }
     }

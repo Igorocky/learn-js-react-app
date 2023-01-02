@@ -292,6 +292,7 @@ let applyAssertions = (
     ~isDisjInCtx:(int,int)=>bool,
     ~statements:array<expr>,
     ~exactOrderOfStmts:bool=false,
+    ~allowEmptyArgs:bool=true,
     ~result:option<expr>=?,
     ~parenCnt:parenCnt,
     ~frameFilter:frame=>bool=_=>true,
@@ -323,7 +324,7 @@ let applyAssertions = (
                         ~numOfHyps,
                         ~stmtCanMatchHyp = (s,h) => {
                             if (s == -1) {
-                                !exactOrderOfStmts
+                                !exactOrderOfStmts && allowEmptyArgs
                             } else {
                                 (!exactOrderOfStmts || s == h) && stmtCanMatchHyp(
                                     ~frm,
