@@ -143,16 +143,16 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     ))
 
     let setState = (update:editorState=>editorState) => {
-        setStatePriv(prev => {
-            let newSt = update(prev)
-            let newSt = validateSyntax(newSt)
-            let newSt = if (newSt.wrkCtx->Belt_Option.isSome) {
-                removeUnusedVars(newSt)
+        setStatePriv(st => {
+            let st = update(st)
+            let st = prepareEditorForUnification(st)
+            let st = if (st.wrkCtx->Belt_Option.isSome) {
+                removeUnusedVars(st)
             } else {
-                newSt
+                st
             }
-            editorSaveStateToLocStor(newSt, stateLocStorKey)
-            newSt
+            editorSaveStateToLocStor(st, stateLocStorKey)
+            st
         })
     }
 
@@ -281,7 +281,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         }
     }
 
-    let actUnify = () => {
+    let actUnifyAllResultsAreReady = proofTreeDto => {
+        setState(applyUnifyAllResults(_,proofTreeDto))
+    }
+
+    let actUnifyAll = () => {
         switch state.wrkCtx {
             | None => ()
             | Some(wrkCtx) => {
@@ -313,9 +317,10 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                                 })
                         },
                         ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Unifying", ~pct))
-                    )->promiseMap(proofTree => {
+                    )->promiseMap(proofTreeDto => {
                         closeModal(modalRef, modalId)
-                        Js.Console.log2("proofTree", proofTree)
+                        Js.Console.log2("proofTree", proofTreeDto)
+                        actUnifyAllResultsAreReady(proofTreeDto)
                     })
                 })->ignore
             }
@@ -352,7 +357,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
                 { rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, ~active=generalModificationActionIsEnabled ) }
                 { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled ) }
-                { rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnify, ~active=generalModificationActionIsEnabled ) }
+                { rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, ~active=generalModificationActionIsEnabled ) }
             </Row>
         </Paper>
     }

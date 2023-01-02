@@ -450,7 +450,7 @@ describe("prepareProvablesForUnification", _ => {
 describe("findPossibleSubs", _ => {
     it("finds all possible substitutions", _ => {
         //given
-        let st = createEditorState(findPossibleSubsSimpleCase)->validateSyntax
+        let st = createEditorState(findPossibleSubsSimpleCase)->prepareEditorForUnification
         let ctx = st.wrkCtx->Belt_Option.getExn
         let t = ctx->ctxSymToIntExn("t")
         let r = ctx->ctxSymToIntExn("r")
@@ -485,7 +485,7 @@ describe("findPossibleSubs", _ => {
         //given
         let st = createEditorState(findPossibleSubsDisjointsCase)
         let st = completeDisjEditMode(st, "x, y")
-        let st = validateSyntax(st)
+        let st = prepareEditorForUnification(st)
         let ctx = st.wrkCtx->Belt_Option.getExn
 
         //when
@@ -502,7 +502,7 @@ describe("findPossibleSubs", _ => {
     it("returns substitutions which satisfy disjoints", _ => {
         //given
         let st = createEditorState(findPossibleSubsDisjointsCase)
-        let st = validateSyntax(st)
+        let st = prepareEditorForUnification(st)
         let ctx = st.wrkCtx->Belt_Option.getExn
 
         //when
@@ -527,7 +527,7 @@ describe("applySubstitutionForEditor", _ => {
         let pr2Id = st.stmts[1].id
         let st = updateStmt(st, pr1Id, stmt => {...stmt, cont:Text("|- t + s"->getSpaceSeparatedValuesAsArray)})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, cont:Text("|- r = 0"->getSpaceSeparatedValuesAsArray)})
-        let st = validateSyntax(st)
+        let st = prepareEditorForUnification(st)
         let ctx = st.wrkCtx->Belt_Option.getExn
         let wrkSubs = findPossibleSubs(
             st, 
@@ -562,7 +562,7 @@ describe("removeUnusedVars", _ => {
         let pr2Id = st.stmts[1].id
         let st = updateStmt(st, pr1Id, stmt => {...stmt, cont:Text("|- t + a"->getSpaceSeparatedValuesAsArray)})
         let st = updateStmt(st, pr2Id, stmt => {...stmt, cont:Text("|- r = c"->getSpaceSeparatedValuesAsArray)})
-        let st = validateSyntax(st)
+        let st = prepareEditorForUnification(st)
 
         //when
         let st = removeUnusedVars(st)

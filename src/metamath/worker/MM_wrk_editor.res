@@ -581,7 +581,7 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
     }
 }
 
-let validateSyntax = st => {
+let prepareEditorForUnification = st => {
     let st = removeAllErrorsInEditorState(st)
     let st = refreshWrkCtx(st)
     let st = prepareProvablesForUnification(st)
@@ -944,8 +944,105 @@ let removeUnusedVars = (st:editorState):editorState => {
                     newDisjStrArr->Js.Array2.push(wrkCtx->ctxIntsToSymsExn(varInts)->Js_array2.joinWith(","))->ignore
                 })
                 let st = completeDisjEditMode(st, newDisjStrArr->Js.Array2.joinWith("\n"))
-                validateSyntax(st)
+                prepareEditorForUnification(st)
             }
         }
     }
+}
+
+let convertProofNodeToJustification = (wrkCtx, proofNode:proofTreeNode):option<justification> => {
+    switch proofNode.proof {
+        | Some(Assertion({args, label:asrtLabel})) => {
+            switch wrkCtx->getFrame(asrtLabel) {
+                | None => None
+                | Some(frame) => {
+                    let argLabels = []
+                    let argLabelsValid = ref(true)
+                    frame.hyps->Js_array2.forEachi((hyp,i) => {
+                        if (hyp.typ == E) {
+                            switch args->Belt_Array.get(i) {
+                                | None => argLabelsValid.contents = false
+                                | Some(argNode) => {
+                                    switch argNode.label {
+                                        | None => argLabelsValid.contents = false
+                                        | Some(argLabel) => argLabels->Js_array2.push(argLabel)->ignore
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    if (argLabelsValid.contents) {
+                        Some({
+                            args: argLabels,
+                            asrt: asrtLabel
+                        })
+                    } else {
+                        None
+                    }
+                }
+            }
+        }
+        | _ => None
+    }
+}
+
+let userStmtSetJstfTextAndProof = (stmt,wrkCtx,proofNode:proofTreeNode):userStmt => {
+    switch convertProofNodeToJustification(wrkCtx,proofNode) {
+        | None => stmt
+        | Some(jstfFromProof) => {
+            if (stmt.jstfText->Js_string2.trim == "") {
+                {
+                    ...stmt,
+                    jstfText: jstfFromProof.args->Js_array2.joinWith(",") ++ " : " ++ jstfFromProof.asrt,
+                    proof: Some(proofNode)
+                }
+            } else {
+                switch parseJstf(stmt.jstfText) {
+                    | None => stmt
+                    | Some(existingJstf) => {
+                        if (jstfFromProof == existingJstf) {
+                            {
+                                ...stmt,
+                                proof: Some(proofNode)
+                            }
+                        } else {
+                            stmt
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+let applyUnifyAllResults = (st,proofTreeDto) => {
+    switch st.wrkCtx {
+        | None => raise(MmException({msg:`Cannot applyUnifyAllResults without wrkCtx.`}))
+        | Some(wrkCtx) => {
+            let nodes = proofTreeDto.nodes->Js_array2.map(node => (node.expr,node))->Belt_MutableMap.fromArray(~id=module(ExprCmp))
+            st.stmts->Js_array2.reduce(
+                (st,stmt) => {
+                    let stmt = {...stmt, proof:None}
+                    if (stmt.typ == #p) {
+                        st->updateStmt(stmt.id, stmt => {
+                            switch stmt.expr {
+                                | None => stmt
+                                | Some(expr) => {
+                                    switch nodes->Belt_MutableMap.get(expr) {
+                                        | None => stmt
+                                        | Some(node) => userStmtSetJstfTextAndProof(stmt,wrkCtx,node)
+                                    }
+                                }
+                            }
+                        })
+                    } else {
+                        st
+                    }
+                },
+                st
+            )
+        }
+    }
+
+
 }
