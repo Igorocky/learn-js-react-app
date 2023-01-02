@@ -29,13 +29,13 @@ let testIterateSubstitutions = (~frmExprStr:string, ~exprStr:string, ~expectedSu
     let mmFileText = Expln_utils_files.readStringFromFile("./src/metamath/test/resources/substitutions-test.mm")
     let (ast, _) = parseMmFile(mmFileText, ())
     let ctx = loadContext(ast, ())
-    ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->Js_string2.split(" ")->Js_array2.map(Js.String2.trim)->Js_array2.filter(s => s != "")}))
+    ctx->applySingleStmt(Axiom({label:"test", expr: ("|- " ++ frmExprStr)->getSpaceSeparatedValuesAsArray}))
     let frm = switch ctx->getFrame("test") {
         | Some(frm) => frm
         | None => failMsg("Cannot find 'test' frame in testIterateSubstitutions.")
     }
     let frmExpr = frm.asrt->Js_array2.sliceFrom(1)
-    let expr = ctx->ctxSymsToIntsExn(exprStr->Js_string2.split(" ")->Js_array2.map(Js.String2.trim)->Js_array2.filter(s => s != ""))
+    let expr = ctx->ctxStrToIntsExn(exprStr)
 
     //when
     let actualSubs = test_iterateSubstitutions(~ctx, ~frmExpr, ~expr)

@@ -86,7 +86,14 @@ let createOrUpdateNode = (
         }
     }
     switch child {
-        | Some(child) => result.children->Js_array2.push(child)->ignore
+        | Some(child) => {
+            if (!exprEq(expr,child.expr)) {
+                switch result.children->Js.Array2.find(existingChild => exprEq(existingChild.expr,child.expr)) {
+                    | None => result.children->Js_array2.push(child)->ignore
+                    | Some(_) => ()
+                }
+            }
+        }
         | None => ()
     }
     result
@@ -389,7 +396,8 @@ let proofTreeProve = (
     let disj = ctx->getAllDisj
     let hyps = ctx->getAllHyps
     let tree = createEmptyProofTree(~frms, ~maxVar, ~disj, ~hyps, ~parenCnt, )
-    for stmtIdx in 0 to stmts->Js_array2.length - 1 {
+    let numOfStmts = stmts->Js_array2.length
+    for stmtIdx in 0 to numOfStmts - 1 {
         let rootNode = createOrUpdateNode(
             ~tree, 
             ~label=stmts[stmtIdx].label, 
@@ -405,7 +413,7 @@ let proofTreeProve = (
 
         stmtsProcessed.contents = stmtsProcessed.contents +. 1.
         progressState.contents = progressState.contents->progressTrackerSetCurrPct(
-            stmtsProcessed.contents /. (stmtIdx + 1)->Belt_Int.toFloat
+            stmtsProcessed.contents /. numOfStmts->Belt_Int.toFloat
         )
     }
     tree
