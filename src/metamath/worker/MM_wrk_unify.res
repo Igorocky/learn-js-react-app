@@ -53,18 +53,15 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
             let proofTree = proofTreeProve(
                 ~parenCnt = getWrkParenCntExn(),
                 ~frms = getWrkFrmsExn(),
-                ~hyps = getWrkCtxExn()->getAllHyps,
-                ~maxVar = getWrkCtxExn()->getNumOfVars - 1,
-                ~disj = getWrkCtxExn()->getAllDisj,
+                ~ctx = getWrkCtxExn(),
                 ~stmts,
-                ~searchDepth = 0,
                 ~onProgress = pct => sendToClient(OnProgress(pct)),
                 ()
             )
             sendToClient(Result({
                 newVars: proofTree.newVars->Belt_MutableSet.toArray,
                 disj: proofTree.disj,
-                nodes: proofTree.nodes->Belt_MutableMap.toArray,
+                nodes: proofTree.nodes->Belt_MutableMap.valuesToArray
             }))
         }
     }

@@ -40,9 +40,7 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
     let proofTree = proofTreeProve(
         ~parenCnt,
         ~frms,
-        ~hyps,
-        ~maxVar = ctx->getNumOfVars - 1,
-        ~disj,
+        ~ctx,
         ~stmts = [
             {
                 label: "test-stmt",
@@ -50,7 +48,6 @@ let testSyntaxTree = (~mmFile, ~exprStr, ~expectedSyntaxTree:syntaxTreeNodeTest)
                 justification: None
             }
         ],
-        ~searchDepth = 0,
         ()
     )
     let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn

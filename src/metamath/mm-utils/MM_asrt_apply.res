@@ -309,13 +309,14 @@ let applyAssertions = (
     let progressState = ref(progressTrackerMake(~step=0.01, ~onProgress?, ()))
     let framesProcessed = ref(0.)
     frms->Belt_MapString.forEach((_,frm) => {
-        if (frameFilter(frm.frame)) {
+        if (frameFilter(frm.frame) 
+            && result->Belt.Option.map(result => result[0] == frm.frame.asrt[0])->Belt_Option.getWithDefault(true)) {
             iterateSubstitutionsForResult(
                 ~frm,
                 ~result,
                 ~parenCnt,
                 ~consumer = _ => {
-                    let numOfHyps = frm.hypsE->Js_array2.length
+                    let numOfHyps = frm.numOfHypsE
                     let workVars = {
                         maxVar,
                         newVars: [],

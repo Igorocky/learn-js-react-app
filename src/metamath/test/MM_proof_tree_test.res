@@ -22,9 +22,7 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
     let proofTree = proofTreeProve(
         ~parenCnt,
         ~frms,
-        ~hyps,
-        ~maxVar = ctx->getNumOfVars - 1,
-        ~disj,
+        ~ctx,
         ~stmts = [
             {
                 label: "test-stmt",
@@ -32,7 +30,6 @@ let testCreateProof = (~mmFile, ~exprStr, ~expectedProof) => {
                 justification: None
             }
         ],
-        ~searchDepth = 0,
         ()
     )
     let proofNode = proofTree.nodes->Belt_MutableMap.get(expr)->Belt_Option.getExn

@@ -23,8 +23,6 @@ type rec proofTreeNode = {
     mutable parents: option<array<exprSource>>,
     mutable children: array<proofTreeNode>,
     mutable proof: option<exprSource>,
-    mutable dist: int,
-    mutable syntax: option<proofTreeNode>,
 }
 and exprSource =
     | VarType
@@ -32,63 +30,56 @@ and exprSource =
     | Assertion({args:array<proofTreeNode>, label:string})
 
 type proofTree = {
-    parenCnt:parenCnt,
     frms: Belt_MapString.t<frmSubsData>,
-    hyps: Belt_MutableMap.t<expr,hypothesis,ExprCmp.identity>,
+    hypsByExpr: Belt_Map.t<expr,hypothesis,ExprCmp.identity>,
+    hypsByLabel: Belt_MapString.t<hypothesis>,
     mutable maxVar:int,
     newVars: Belt_MutableSet.t<expr,ExprCmp.identity>,
-    newVarTypes: Belt_MutableMapInt.t<int>,
     disj: disjMutable,
+    parenCnt:parenCnt,
     nodes: Belt_MutableMap.t<expr,proofTreeNode,ExprCmp.identity>,
 }
 
 type proofTreeDto = {
     newVars: array<expr>,
     disj: disjMutable,
-    nodes: array<(expr, proofTreeNode)>,
+    nodes: array<proofTreeNode>,
 }
 
 let createEmptyProofTree = (
-    ~parenCnt:parenCnt,
     ~frms: Belt_MapString.t<frmSubsData>,
     ~hyps: Belt_MapString.t<hypothesis>,
     ~maxVar: int,
     ~disj: disjMutable,
+    ~parenCnt:parenCnt,
 ) => {
-    let hypsMap = Belt_MutableMap.make(~id=module(ExprCmp))
-    hyps->Belt_MapString.forEach((_,v) => {
-        hypsMap->Belt_MutableMap.set(v.expr, v)
-    })
     {
-        parenCnt,
         frms,
-        hyps: hypsMap,
-        newVars: Belt_MutableSet.make(~id=module(ExprCmp)),
-        newVarTypes: Belt_MutableMapInt.make(),
+        hypsByLabel: hyps,
+        hypsByExpr: hyps->Belt_MapString.toArray->Js_array2.map(((_,hyp)) => (hyp.expr, hyp))->Belt_Map.fromArray(~id=module(ExprCmp)),
         maxVar,
+        newVars: Belt_MutableSet.make(~id=module(ExprCmp)),
         disj,
-        nodes: Belt_MutableMap.make(~id=module(ExprCmp))
+        parenCnt,
+        nodes: Belt_MutableMap.make(~id=module(ExprCmp)),
     }
 }
 
-let addExprToProve = (
+let createOrUpdateNode = (
     ~tree:proofTree, 
-    ~expr:expr, 
     ~label:option<string>, 
-    ~dist:int, 
+    ~expr:expr, 
     ~child:option<proofTreeNode>
 ):proofTreeNode => {
     let result = switch tree.nodes->Belt_MutableMap.get(expr) {
         | Some(node) => node
         | None => {
             let node = {
-                expr,
                 label,
+                expr,
                 parents: None,
-                children: [],
                 proof: None,
-                dist,
-                syntax: None,
+                children: [],
             }
             tree.nodes->Belt_MutableMap.set(expr, node)->ignore
             node
@@ -106,14 +97,12 @@ let markProved = ( node:proofTreeNode ) => {
         switch node.parents {
             | None => None
             | Some(parents) => {
-                parents->Expln_utils_common.arrForEach(src => {
-                    switch src {
-                        | VarType | Hypothesis(_) => {
-                            Some(src)
-                        }
+                parents->Expln_utils_common.arrForEach(parent => {
+                    switch parent {
+                        | VarType | Hypothesis(_) => Some(parent)
                         | Assertion({args}) => {
                             if (args->Js_array2.every(arg => arg.proof->Belt_Option.isSome)) {
-                                Some(src)
+                                Some(parent)
                             } else {
                                 None
                             }
@@ -124,123 +113,126 @@ let markProved = ( node:proofTreeNode ) => {
         }
     }
 
-    let nodesToMarkProved = switch getProofFromParents(node) {
-        | None => None
-        | Some(src) => {
-            node.proof = Some(src)
-            Some(node.children->Belt_MutableQueue.fromArray)
-        }
-    }
-    while (nodesToMarkProved->Belt_Option.isSome 
-                && nodesToMarkProved->Belt_Option.getExn->Belt_MutableQueue.size > 0) {
-        let curNode = nodesToMarkProved->Belt_Option.getExn->Belt_MutableQueue.pop->Belt_Option.getExn
-        if (curNode.proof->Belt_Option.isNone) {
-            switch getProofFromParents(curNode) {
-                | None => ()
-                | Some(src) => {
-                    curNode.proof = Some(src)
-                    curNode.children->Js_array2.forEach(
-                        nodesToMarkProved->Belt_Option.getExn->Belt_MutableQueue.add
-                    )
-                }
-            }
-        }
-    }
-}
-
-let findMatchingParent = (
-    ~tree:proofTree,
-    ~node:proofTreeNode,
-    ~justification:justification
-): option<exprSource> => {
-    switch node.parents {
-        | Some(parents) => {
-            parents->Js_array2.find(parent => {
-                switch parent {
-                    | Assertion({args, label}) if label == justification.asrt => {
-                        let allArgsMatch = ref(true)
-                        let justifArgIdx = ref(0)
-                        switch tree.frms->Belt_MapString.get(label) {
-                            | None => raise(MmException({
-                                msg:`Cannot find an assertion with label ${label} in findMatchingParent().`
-                            }))
-                            | Some(frm) => {
-                                frm.frame.hyps->Js_array2.forEachi((hyp,hypIdx) => {
-                                    if (allArgsMatch.contents && hyp.typ == E) {
-                                        allArgsMatch.contents = 
-                                            args[hypIdx].label->Belt_Option.getWithDefault("") == justification.args[justifArgIdx.contents]
-                                        justifArgIdx.contents = justifArgIdx.contents + 1
-                                    }
-                                })
+    switch getProofFromParents(node) {
+        | None => ()
+        | Some(nodeProof) => {
+            node.proof = Some(nodeProof)
+            let nodesToMarkProved = node.children->Belt_MutableQueue.fromArray
+            let processedNodes = Belt_MutableSet.make(~id=module(ExprCmp))
+            while (nodesToMarkProved->Belt_MutableQueue.size > 0) {
+                let curNode = nodesToMarkProved->Belt_MutableQueue.pop->Belt_Option.getExn
+                if (!(processedNodes->Belt_MutableSet.has(curNode.expr))) {
+                    processedNodes->Belt_MutableSet.add(curNode.expr)
+                    if (curNode.proof->Belt_Option.isNone) {
+                        switch getProofFromParents(curNode) {
+                            | None => ()
+                            | Some(curNodeProof) => {
+                                curNode.proof = Some(curNodeProof)
+                                curNode.children->Js_array2.forEach( nodesToMarkProved->Belt_MutableQueue.add )
                             }
                         }
-                        allArgsMatch.contents
                     }
-                    | _ => false
-                }
-            })
-        }
-        | None => None
-    }
-}
-
-let getStatementFromJustification = (
-    ~tree:proofTree,
-    ~stmts:array<rootStmt>,
-    ~justification: justification,
-):array<labeledExpr> => {
-    let rootStmtsMap = Belt_MapString.fromArray(stmts->Js.Array2.map(({label,expr}) => (label, {label,expr})))
-    justification.args
-        ->Js_array2.map(label => {
-            switch rootStmtsMap->Belt_MapString.get(label) {
-                | Some(stmt) => Some(stmt)
-                | None => {
-                    let foundHyp = ref(None)
-                    tree.hyps->Belt_MutableMap.forEach((_,hyp) => {
-                        if (foundHyp.contents->Belt_Option.isNone
-                                && label == hyp.label) {
-                            foundHyp.contents = Some({label, expr:hyp.expr})
-                        }
-                    })
-                    foundHyp.contents
                 }
             }
-        })
-        ->Js_array2.filter(Belt_Option.isSome)
-        ->Js_array2.map(Belt_Option.getExn)
-}
-
-let clearParents = node => {
-    switch node.parents {
-        | None => ()
-        | Some(parents) => {
-            parents->Js_array2.forEach(parent => {
-                switch parent {
-                    | Assertion({args}) => {
-                        args->Js_array2.forEach(arg => {
-                            arg.children = arg.children->Js_array2.filter(child => child !== node)
-                        })
-                    }
-                    | _ => ()
-                }
-            })
-            node.parents = None
         }
     }
 }
+
+// let findMatchingParent = (
+//     ~tree:proofTree,
+//     ~node:proofTreeNode,
+//     ~justification:justification
+// ): option<exprSource> => {
+//     switch node.parents {
+//         | Some(parents) => {
+//             parents->Js_array2.find(parent => {
+//                 switch parent {
+//                     | Assertion({args, label}) if label == justification.asrt => {
+//                         let allArgsMatch = ref(true)
+//                         let justifArgIdx = ref(0)
+//                         switch tree.frms->Belt_MapString.get(label) {
+//                             | None => raise(MmException({
+//                                 msg:`Cannot find an assertion with label ${label} in findMatchingParent().`
+//                             }))
+//                             | Some(frm) => {
+//                                 frm.frame.hyps->Js_array2.forEachi((hyp,hypIdx) => {
+//                                     if (allArgsMatch.contents && hyp.typ == E) {
+//                                         allArgsMatch.contents = 
+//                                             args[hypIdx].label->Belt_Option.getWithDefault("") == justification.args[justifArgIdx.contents]
+//                                         justifArgIdx.contents = justifArgIdx.contents + 1
+//                                     }
+//                                 })
+//                             }
+//                         }
+//                         allArgsMatch.contents
+//                     }
+//                     | _ => false
+//                 }
+//             })
+//         }
+//         | None => None
+//     }
+// }
+
+let getStatementsFromJustification = (
+    ~tree:proofTree,
+    ~stmts:array<labeledExpr>,
+    ~justification: justification,
+):array<labeledExpr> => {
+    let getStmtByLabel = label => {
+        switch stmts->Js.Array2.find(stmt => stmt.label == label) {
+            | Some(stmt) => Some(stmt)
+            | None => {
+                switch tree.hypsByLabel->Belt_MapString.get(label) {
+                    | Some(hyp) => Some({label, expr:hyp.expr})
+                    | None => None
+                }
+            }
+        }
+    }
+    let rootStmtsMap = Belt_MapString.fromArray(stmts->Js.Array2.map(({label,expr}) => (label, {label,expr})))
+    let foundStmts = justification.args
+        ->Js_array2.map(getStmtByLabel)
+        ->Js_array2.filter(Belt_Option.isSome)
+        ->Js_array2.map(Belt_Option.getExn)
+    if (foundStmts->Js_array2.length == justification.args->Js.Array2.length) {
+        foundStmts
+    } else {
+        []
+    }
+}
+
+// let clearParents = node => {
+//     switch node.parents {
+//         | None => ()
+//         | Some(parents) => {
+//             parents->Js_array2.forEach(parent => {
+//                 switch parent {
+//                     | Assertion({args}) => {
+//                         args->Js_array2.forEach(arg => {
+//                             arg.children = arg.children->Js_array2.filter(child => child !== node)
+//                         })
+//                     }
+//                     | _ => ()
+//                 }
+//             })
+//             node.parents = None
+//         }
+//     }
+// }
 
 let rec proveNode = (
     ~tree:proofTree,
-    ~stmts:array<rootStmt>,
+    ~stmts:array<labeledExpr>,
     ~node:proofTreeNode,
     ~justification: option<justification>,
-    ~searchDepth:int,
 ) => {
+    let rootNode = node
     let nodesToCreateParentsFor = Belt_MutableQueue.make()
 
     let addParentsWithoutNewVars = (node):unit => {
         tree.frms->Belt_MapString.forEach((_,frm) => {
-            if (node.proof->Belt.Option.isNone) {
+            if (rootNode.proof->Belt.Option.isNone && node.proof->Belt.Option.isNone) {
                 let frmExpr = frm.frame.asrt
                 let expr = node.expr
                 if (frmExpr[0] == expr[0]) {
@@ -262,20 +254,17 @@ let rec proveNode = (
                                         ~createWorkVar = 
                                             _ => raise(MmException({msg:`Work variables are not supported in addParentsWithoutNewVars().`}))
                                     )
-                                    let arg = addExprToProve(
+                                    let arg = createOrUpdateNode(
                                         ~tree, 
-                                        ~expr=newExprToProve, 
                                         ~label=None,
-                                        ~dist=node.dist+1, 
+                                        ~expr=newExprToProve, 
                                         ~child=Some(node)
                                     )
                                     nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
                                     arg
                                 })
-                                node.parents->Belt_Option.getExn->Js_array2.push(Assertion({
-                                    args,
-                                    label: frm.frame.label
-                                }))->ignore
+                                let parent = Assertion({ args, label:frm.frame.label })
+                                node.parents->Belt.Option.getExn->Js_array2.push(parent)->ignore
                                 markProved(node)
                             }
                             if (node.proof->Belt.Option.isNone) {
@@ -298,10 +287,9 @@ let rec proveNode = (
                     ~maxVar = tree.maxVar,
                     ~frms = tree.frms,
                     ~isDisjInCtx = tree.disj->disjContains,
-                    ~statements = stmts->Js.Array2.map(({label,expr}) => {label,expr}),
+                    ~statements = stmts,
                     ~result = node.expr,
                     ~parenCnt=tree.parenCnt,
-                    ~frameFilter = frame => frame.asrt[0] == node.expr[0],
                     ~onMatchFound = res => {
                         applResults->Js_array2.push(res)->ignore
                         Continue
@@ -314,7 +302,7 @@ let rec proveNode = (
                     ~maxVar = tree.maxVar,
                     ~frms = tree.frms,
                     ~isDisjInCtx = tree.disj->disjContains,
-                    ~statements = getStatementFromJustification( ~tree, ~stmts, ~justification ),
+                    ~statements = getStatementsFromJustification( ~tree, ~stmts, ~justification ),
                     ~exactOrderOfStmts=true,
                     ~result = node.expr,
                     ~parenCnt=tree.parenCnt,
@@ -328,53 +316,50 @@ let rec proveNode = (
             }
         }
         applResults->Expln_utils_common.arrForEach(applResult => {
-            let vToNewVar = Belt_MutableMapInt.make()
+            let applNewVarToTreeNewVar = Belt_MutableMapInt.make()
             applResult.newVars->Js.Array2.forEachi((v,i) => {
                 tree.maxVar = tree.maxVar + 1
                 let newVar = tree.maxVar
-                vToNewVar->Belt_MutableMapInt.set(v,newVar)
+                applNewVarToTreeNewVar->Belt_MutableMapInt.set(v,newVar)
                 let newVarType = applResult.newVarTypes[i]
                 tree.newVars->Belt_MutableSet.add([newVarType, newVar])
-                tree.newVarTypes->Belt_MutableMapInt.set(newVar,newVarType)
             })
-            applResult.newDisj->disjForEach((nv,mv) => {
+            applResult.newDisj->disjForEach((n,m) => {
                 tree.disj->disjAddPair(
-                    switch vToNewVar->Belt_MutableMapInt.get(nv) {
-                        | None => raise(MmException({msg:`Cannot convert ${nv->Belt_Int.toString} to a newVar`}))
-                        | Some(nv) => nv
-                    },
-                    switch vToNewVar->Belt_MutableMapInt.get(mv) {
-                        | None => raise(MmException({msg:`Cannot convert ${mv->Belt_Int.toString} to a newVar`}))
-                        | Some(mv) => mv
-                    }
+                    applNewVarToTreeNewVar->Belt_MutableMapInt.getWithDefault(n, n),
+                    applNewVarToTreeNewVar->Belt_MutableMapInt.getWithDefault(m, m),
                 )
             })
             let frame = switch tree.frms->Belt_MapString.get(applResult.asrtLabel) {
-                | None => raise(MmException({msg:`Cannot find an assertion with label ${applResult.asrtLabel}.`}))
+                | None => 
+                    raise(MmException({msg:`Cannot find an assertion with label ${applResult.asrtLabel} in addParentsWithNewVars.`}))
                 | Some(frm) => frm.frame
             }
             let args = frame.hyps->Js_array2.map(hyp => {
-                addExprToProve(
+                createOrUpdateNode(
                     ~tree,
+                    ~label=None,
                     ~expr = applySubs(
                         ~frmExpr = hyp.expr, 
                         ~subs=applResult.subs,
                         ~createWorkVar = _ => raise(MmException({msg:`New work variables are not expected here.`}))
                     ),
-                    ~label=None,
-                    ~dist=node.dist+1,
                     ~child=Some(node)
                 )
             })
             if (checkTypes(~tree, ~frame, ~args)) {
-                args->Js_array2.forEach(nodesToCreateParentsFor->Belt_MutableQueue.add)
+                args->Js_array2.forEach(arg => {
+                    if (arg.parents->Belt.Option.isNone) {
+                        nodesToCreateParentsFor->Belt_MutableQueue.add(arg)
+                    }
+                })
                 node.parents->Belt_Option.getExn->Js_array2.push(Assertion({
                     args,
                     label: applResult.asrtLabel
                 }))->ignore
                 markProved(node)
             }
-            if (node.proof->Belt.Option.isSome) {
+            if (rootNode.proof->Belt.Option.isSome || node.proof->Belt.Option.isSome) {
                 Some(true)
             } else {
                 None
@@ -382,41 +367,36 @@ let rec proveNode = (
         })->ignore
     }
 
-    let justificationIsValid = switch justification {
-        | None => false
+    switch justification {
         | Some(justification) => {
+            node.parents = Some([])
             addParentsWithNewVars(node,Some(justification))
-            switch findMatchingParent(~tree, ~node, ~justification) {
-                | Some(_) => true
-                | None => false
-            }
         }
+        | None => ()
     }
-    if (!justificationIsValid) {
-        clearParents(node)
-        nodesToCreateParentsFor->Belt_MutableQueue.clear
-        nodesToCreateParentsFor->Belt_MutableQueue.add(node)
-        while (nodesToCreateParentsFor->Belt_MutableQueue.size > 0) {
-            let curNode = nodesToCreateParentsFor->Belt_MutableQueue.pop->Belt_Option.getExn
-            switch curNode.parents {
-                | Some(_) => ()
-                | None => {
-                    if (tree.newVars->Belt_MutableSet.has(curNode.expr)) {
-                        curNode.parents = Some([VarType])
-                        markProved(curNode)
-                    } else {
-                        let foundHyp = tree.hyps->Belt_MutableMap.get(curNode.expr)
-                        switch foundHyp {
-                            | Some(hyp) => {
-                                curNode.parents = Some([Hypothesis({label:hyp.label})])
-                                markProved(curNode)
-                            }
-                            | None => {
-                                curNode.parents = Some([])
-                                addParentsWithoutNewVars(curNode)
-                                if (curNode.proof->Belt.Option.isNone && curNode.dist <= searchDepth) {
-                                    addParentsWithNewVars(curNode, None)
-                                }
+
+    nodesToCreateParentsFor->Belt_MutableQueue.add(node)
+    while (rootNode.proof->Belt.Option.isNone && nodesToCreateParentsFor->Belt_MutableQueue.size > 0) {
+        let curNode = nodesToCreateParentsFor->Belt_MutableQueue.pop->Belt_Option.getExn
+        switch curNode.parents {
+            | Some(_) => ()
+            | None => {
+                if (tree.newVars->Belt_MutableSet.has(curNode.expr)) {
+                    curNode.parents = Some([VarType])
+                    markProved(curNode)
+                } else {
+                    switch tree.hypsByExpr->Belt_Map.get(curNode.expr) {
+                        | Some(hyp) => {
+                            curNode.parents = Some([Hypothesis({label:hyp.label})])
+                            markProved(curNode)
+                        }
+                        | None => {
+                            curNode.parents = Some([])
+                            addParentsWithoutNewVars(curNode)
+                            if (rootNode.proof->Belt.Option.isNone 
+                                    && curNode.proof->Belt.Option.isNone 
+                                    && curNode.label->Belt_Option.isSome) {
+                                addParentsWithNewVars(curNode, None)
                             }
                         }
                     }
@@ -442,36 +422,38 @@ and let checkTypes = (
             ~stmts = [],
             ~node,
             ~justification=None,
-            ~searchDepth = -1,
         )
         node.proof->Belt_Option.isSome
     })
 }
 
 let proofTreeProve = (
-    ~parenCnt: parenCnt,
+    ~ctx: mmContext,
     ~frms: Belt_MapString.t<frmSubsData>,
-    ~hyps: Belt_MapString.t<hypothesis>,
-    ~maxVar: int,
-    ~disj: disjMutable,
     ~stmts: array<rootStmt>,
-    ~searchDepth: int,
+    ~parenCnt: parenCnt,
     ~onProgress:option<float=>unit>=?,
     ()
 ):proofTree => {
     let stmtsProcessed = ref(0.)
     let progressState = ref(progressTrackerMake(~step=0.01, ~onProgress?, ()))
-    let tree = createEmptyProofTree(~parenCnt, ~frms, ~hyps, ~maxVar, ~disj)
+
+    let maxVar = ctx->getNumOfVars - 1
+    let disj = ctx->getAllDisj
+    let hyps = ctx->getAllHyps
+    let tree = createEmptyProofTree(~frms, ~maxVar, ~disj, ~hyps, ~parenCnt, )
     for stmtIdx in 0 to stmts->Js_array2.length - 1 {
-        let rootNode = addExprToProve(
-            ~tree, ~expr=stmts[stmtIdx].expr, ~label=Some(stmts[stmtIdx].label), ~dist=0, ~child=None
+        let rootNode = createOrUpdateNode(
+            ~tree, 
+            ~label=Some(stmts[stmtIdx].label), 
+            ~expr=stmts[stmtIdx].expr, 
+            ~child=None
         )
         proveNode(
             ~tree,
-            ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx),
+            ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx)->Js_array2.map(({label,expr}) => {label,expr}),
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
-            ~searchDepth,
         )
         stmtsProcessed.contents = stmtsProcessed.contents +. 1.
         progressState.contents = progressState.contents->progressTrackerSetCurrPct(

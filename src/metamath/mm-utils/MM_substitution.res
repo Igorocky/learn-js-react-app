@@ -524,42 +524,36 @@ let applySubs = (~frmExpr:expr, ~subs:subs, ~createWorkVar:int=>int): expr => {
 }
 
 let verifyDisjoints = (~frmDisj:Belt_MapInt.t<Belt_SetInt.t>, ~subs:subs, ~isDisjInCtx:(int,int)=>bool) => {
-    let maxVarNum = subs.size-1
     let res = ref(true)
-    for n in 0 to maxVarNum {
+    frmDisj->Belt_MapInt.forEach((n,ms) => {
         if (res.contents) {
-            switch frmDisj->Belt_MapInt.get(n) {
-                | Some(set) => {
-                    set->Belt_SetInt.forEach(m => {
+            ms->Belt_SetInt.forEach(m => {
+                if (res.contents) {
+                    let nExpr = subs.exprs[n]
+                    let nExprBegin = subs.begins[n]
+                    let nExprEnd = subs.ends[n]
+                    let mExpr = subs.exprs[m]
+                    let mExprBegin = subs.begins[m]
+                    let mExprEnd = subs.ends[m]
+                    for nExprI in nExprBegin to nExprEnd {
                         if (res.contents) {
-                            let nExpr = subs.exprs[n]
-                            let nExprBegin = subs.begins[n]
-                            let nExprEnd = subs.ends[n]
-                            let mExpr = subs.exprs[m]
-                            let mExprBegin = subs.begins[m]
-                            let mExprEnd = subs.ends[m]
-                            for ni in nExprBegin to nExprEnd {
-                                if (res.contents) {
-                                    let ns = nExpr[ni]
-                                    if (ns >= 0) {
-                                        for mi in mExprBegin to mExprEnd {
-                                            if (res.contents) {
-                                                let ms = mExpr[mi]
-                                                if (ms >= 0) {
-                                                    res.contents = ns != ms && isDisjInCtx(ns,ms)
-                                                }
-                                            }
+                            let nExprSym = nExpr[nExprI]
+                            if (nExprSym >= 0) {
+                                for mExprI in mExprBegin to mExprEnd {
+                                    if (res.contents) {
+                                        let mExprSym = mExpr[mExprI]
+                                        if (mExprSym >= 0) {
+                                            res.contents = nExprSym != mExprSym && isDisjInCtx(nExprSym, mExprSym)
                                         }
                                     }
                                 }
                             }
                         }
-                    })
+                    }
                 }
-                | None => ()
-            }
+            })
         }
-    }
+    })
     res.contents
 }
 

@@ -748,11 +748,8 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
         ->Belt_MapInt.toArray
         ->Js_array2.map(((var,expr)) => [ctx->getTypeOfVarExn(var)]->Js.Array2.concat(expr))
     let proofTree = proofTreeProve(
-        ~parenCnt=parenCntMake(prepareParenInts(ctx, settings.parens)),
+        ~ctx,
         ~frms,
-        ~hyps=ctx->getAllHyps,
-        ~maxVar=ctx->getNumOfVars - 1,
-        ~disj=ctx->getAllDisj,
         ~stmts=typesToProve->Js_array2.mapi((typeExpr,i) => {
             {
                 label: "typecheck-" ++ (i->Belt_Int.toString),
@@ -760,7 +757,7 @@ let verifyTypesForSubstitution = (~settings, ~ctx, ~frms, ~wrkSubs):bool => {
                 justification: None
             }
         }),
-        ~searchDepth=-1,
+        ~parenCnt=parenCntMake(prepareParenInts(ctx, settings.parens)),
         ()
     )
     typesToProve->Js_array2.every(typeExpr => {
