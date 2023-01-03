@@ -9,7 +9,6 @@ type parserProofTableRec = {
 type proof =
     | Uncompressed({labels:array<string>})
     | Compressed({labels:array<string>, compressedProofBlock:string})
-    | Table(array<parserProofTableRec>)
 
 type rec mmAstNode = {
     begin: int,

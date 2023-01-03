@@ -194,7 +194,7 @@ let testApplyAssertions = (
                         workCtx->applySingleStmt(Provable({
                             label, 
                             expr:exprArrStr,
-                            proof:Table([])
+                            proof:Uncompressed({labels:[]})
                         }))
                         args->Js_array2.push(`${label}: ${exprArrStr->Js_array2.joinWith(" ")}`)->ignore
                         argLabels->Js_array2.push(label)->ignore

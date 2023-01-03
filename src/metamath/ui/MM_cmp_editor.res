@@ -9,6 +9,7 @@ open MM_wrk_unify
 open MM_substitution
 open MM_parser
 open MM_proof_tree
+open MM_proof_table
 open Expln_utils_promise
 
 type userStmtLocStor = {
@@ -205,10 +206,15 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         })
     }
     let actToggleMainCheckbox = () => {
-        switch mainCheckboxState {
-            | Some(true) | None => setState(uncheckAllStmts)
-            | Some(false) => setState(checkAllStmts)
+        let action = switch mainCheckboxState {
+            | Some(true) | None => uncheckAllStmts
+            | Some(false) => checkAllStmts
         }
+        setStatePriv(st => {
+            let st = action(st)
+            editorSaveStateToLocStor(st, stateLocStorKey)
+            st
+        })
     }
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
@@ -338,6 +344,35 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         }
     }
 
+    let getTheOnlySelectedStmt = () => {
+        if (state.checkedStmtIds->Js_array2.length != 1) {
+            None
+        } else {
+            let stmtId = state.checkedStmtIds[0]
+            state.stmts->Js.Array2.find(stmt => stmt.id == stmtId)
+        }
+    }
+
+    let getSelectedProof = () => {
+        getTheOnlySelectedStmt()->Belt.Option.flatMap(stmt => stmt.proof)
+    }
+
+    let actExportProof = () => {
+        switch state.wrkCtx {
+            | None => ()
+            | Some(wrkCtx) => {
+                switch getSelectedProof() {
+                    | None => ()
+                    | Some(proofNode) => {
+                        let proofTable = proofTreeCreateProofTable(proofNode)
+                        let proof = createProof(wrkCtx, proofTable, proofTable->Js_array2.length-1)
+                        Js.Console.log2("proof", proof)
+                    }
+                }
+            }
+        }
+    }
+
     let rndError = msgOpt => {
         switch msgOpt {
             | None => React.null
@@ -350,7 +385,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
             !editIsActive
             && !(mainCheckboxState->Belt_Option.getWithDefault(true))
             && !thereAreSyntaxErrors
-            && state.frms->Belt_MapString.size > 0
+        let canExportProof = state.wrkCtx->Belt.Option.isSome && getSelectedProof()->Belt.Option.isSome
         <Paper>
             <Row>
                 <Checkbox
@@ -366,9 +401,17 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
-                { rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, ~active=generalModificationActionIsEnabled ) }
+                { 
+                    rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, 
+                        ~active=generalModificationActionIsEnabled && state.frms->Belt_MapString.size > 0
+                    ) 
+                }
                 { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled ) }
-                { rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, ~active=generalModificationActionIsEnabled ) }
+                { 
+                    rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, 
+                        ~active=generalModificationActionIsEnabled ) 
+                }
+                { rndIconButton(~icon=<Icons2.IosShare/>, ~onClick=actExportProof, ~active=canExportProof ) }
             </Row>
         </Paper>
     }

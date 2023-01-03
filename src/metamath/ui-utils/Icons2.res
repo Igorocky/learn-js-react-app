@@ -62,3 +62,8 @@ module TextRotationNone = {
     @module("@mui/icons-material/TextRotationNone") @react.component
     external make: () => React.element = "default"
 }
+
+module IosShare = {
+    @module("@mui/icons-material/IosShare") @react.component
+    external make: () => React.element = "default"
+}
