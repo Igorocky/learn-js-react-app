@@ -428,6 +428,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                             | None => ()
                             | Some(proofNode) => {
                                 let proofTable = proofTreeCreateProofTable(proofNode)
+                                proofTablePrint(wrkCtx, proofTable, "exported-proof")
                                 let proof = createProof(wrkCtx, proofTable, proofTable->Js_array2.length-1)
                                 openModal(modalRef, () => React.null)->promiseMap(modalId => {
                                     updateModal(modalRef, modalId, () => {

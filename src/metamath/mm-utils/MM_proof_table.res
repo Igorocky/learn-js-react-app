@@ -17,7 +17,7 @@ let printProofRec = (ctx,r) => {
     let exprStr = ctx->ctxIntsToStrExn(r.expr)
     let proofStr = switch r.proof {
         | Hypothesis({label}) => "hyp: " ++ label
-        | Assertion({args, label}) => args->Js_array2.joinWith(", ") ++ " " ++ label
+        | Assertion({args, label}) => args->Js_array2.map(i=>i+1)->Js_array2.joinWith(", ") ++ " " ++ label
     }
     `${proofStr} | ${exprStr}`
 }
@@ -25,7 +25,7 @@ let printProofRec = (ctx,r) => {
 let proofTablePrint = (ctx,tbl,title) => {
     Js.Console.log(`--- TBL ${title} ---------------------------------------------------------------------------`)
     tbl->Js_array2.map(printProofRec(ctx, _))->Js_array2.forEachi((str,i) => {
-        Js.Console.log(`${Belt_Int.toString(i)}: ${str}`)
+        Js.Console.log(`${Belt_Int.toString((i+1))}: ${str}`)
     })
     Js.Console.log("-----------------------------------------------------------------------------------")
 }

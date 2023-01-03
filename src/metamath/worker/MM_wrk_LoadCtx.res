@@ -59,6 +59,9 @@ let processOnWorkerSide = (~req: request, ~sendToClient: response => unit): unit
                         },
                         ()
                     )->ignore
+                    while (ctx->getNestingLevel != 0) {
+                        ctx->closeChildContext
+                    }
                     i.contents = i.contents + 1
                 }
                 sendToClient(MmContextLoadProgress({pct: 1.}))
