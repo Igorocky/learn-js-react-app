@@ -160,6 +160,7 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
             state.singleScopes->Js_array2.map(singleScope => {
                 <MM_cmp_context_selector_single 
                     key=singleScope.id
+                    fileName=singleScope.fileName
                     onFileChange=parseMmFileText(singleScope.id, _)
                     parseError={
                         switch singleScope.ast {

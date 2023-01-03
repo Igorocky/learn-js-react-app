@@ -6,6 +6,7 @@ type readInstr = [ #all | #stopBefore | #stopAfter]
 @react.component
 let make = (
     ~onFileChange:option<(string,string)>=>unit, 
+    ~fileName: option<string>,
     ~parseError:option<string>, 
     ~readInstr:readInstr,
     ~onReadInstrChange: string => unit,
@@ -48,6 +49,16 @@ let make = (
         />
     }
 
+    let rndFileSelector = () => {
+        if (fileName->Belt.Option.isNone || parseError->Belt_Option.isNone) {
+            <TextFileReader2 onChange=onFileChange />
+        } else {
+            <span>
+                {React.string(fileName->Belt_Option.getWithDefault("<fileName>"))}
+            </span>
+        }
+    }
+
     let rndReadInstr = () => {
         switch parseError {
             | Some(msg) => {
@@ -71,7 +82,7 @@ let make = (
 
     <Row alignItems=#center spacing=1. >
         {rndDeleteButton()}
-        <TextFileReader2 onChange=onFileChange />
+        {rndFileSelector()}
         {rndReadInstr()}
     </Row>
 }
