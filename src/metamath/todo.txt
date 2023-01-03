@@ -1,3 +1,4 @@
+- close all child contexts on context loaded.
 - add confirmation when removing statements.
 - write tests for both versions of verifyDisjoints (in MM_subs and MM_wrk_editor)
 - refactor verifyDisjoints for frms to iterate by disjoint pairs instead of variables

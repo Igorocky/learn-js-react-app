@@ -18,6 +18,8 @@ let strToCont: string => stmtCont
 type userStmtType = [#e | #p]
 let userStmtTypeFromStr: string => userStmtType
 
+type proofStatus = [ #ready | #waiting | #noJstf | #jstfIsIncorrect ]
+
 type userStmt = {
     id: string,
 
@@ -27,7 +29,7 @@ type userStmt = {
     typEditMode: bool,
     cont: stmtCont,
     contEditMode: bool,
-
+    
     jstfText: string,
     jstfEditMode: bool,
 
@@ -36,6 +38,7 @@ type userStmt = {
     expr: option<expr>,
     jstf: option<justification>,
     proof: option<proofTreeNode>,
+    proofStatus: option<proofStatus>,
 }
 
 let createEmptyUserStmt: (string, userStmtType, string) => userStmt

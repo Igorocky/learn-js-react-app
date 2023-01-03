@@ -44,6 +44,8 @@ let userStmtTypeFromStr = str => {
     }
 }
 
+type proofStatus = [ #ready | #waiting | #noJstf | #jstfIsIncorrect ]
+
 type userStmt = {
     id: string,
 
@@ -62,6 +64,7 @@ type userStmt = {
     expr: option<expr>,
     jstf: option<justification>,
     proof: option<proofTreeNode>,
+    proofStatus: option<proofStatus>,
 }
 
 let createEmptyUserStmt = (id, typ, label):userStmt => {
@@ -72,7 +75,7 @@ let createEmptyUserStmt = (id, typ, label):userStmt => {
         cont:Text([]), contEditMode:true,
         jstfText:"", jstfEditMode:false,
         stmtErr: None,
-        expr:None, jstf:None, proof:None, 
+        expr:None, jstf:None, proof:None, proofStatus:None,
     }
 }
 
@@ -436,10 +439,10 @@ let removeAllErrorsInEditorState = st => {
     }
 }
 
-let removeAllExprsInEditorState = st => {
+let removeAllProofData = st => {
     {
         ...st,
-        stmts: st.stmts->Js_array2.map(stmt => {...stmt, expr: None})
+        stmts: st.stmts->Js_array2.map(stmt => {...stmt, expr: None, jstf: None, proof: None, proofStatus: None})
     }
 }
 
@@ -590,7 +593,7 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 
 let prepareEditorForUnification = st => {
     let st = removeAllErrorsInEditorState(st)
-    let st = removeAllExprsInEditorState(st)
+    let st = removeAllProofData(st)
     let st = refreshWrkCtx(st)
     let st = prepareProvablesForUnification(st)
     st
@@ -958,9 +961,9 @@ let removeUnusedVars = (st:editorState):editorState => {
     }
 }
 
-let convertProofNodeToJustification = (wrkCtx, proofNode:proofTreeNode):option<justification> => {
-    switch proofNode.proof {
-        | Some(Assertion({args, label:asrtLabel})) => {
+let exprSrcToJstf = (wrkCtx, exprSrc:exprSource):option<justification> => {
+    switch exprSrc {
+        | Assertion({args, label:asrtLabel}) => {
             switch wrkCtx->getFrame(asrtLabel) {
                 | None => None
                 | Some(frame) => {
@@ -995,26 +998,59 @@ let convertProofNodeToJustification = (wrkCtx, proofNode:proofTreeNode):option<j
 }
 
 let userStmtSetJstfTextAndProof = (stmt,wrkCtx,proofNode:proofTreeNode):userStmt => {
-    switch convertProofNodeToJustification(wrkCtx,proofNode) {
-        | None => stmt
-        | Some(jstfFromProof) => {
-            if (stmt.jstfText->Js_string2.trim == "") {
-                {
-                    ...stmt,
-                    jstfText: jstfFromProof.args->Js_array2.joinWith(" ") ++ " : " ++ jstfFromProof.asrt,
-                    proof: Some(proofNode)
-                }
-            } else {
-                switch parseJstf(stmt.jstfText) {
-                    | None => stmt
-                    | Some(existingJstf) => {
-                        if (jstfFromProof == existingJstf) {
+    switch proofNode.proof {
+        | Some(proofSrc) => {
+            switch exprSrcToJstf(wrkCtx,proofSrc) {
+                | None => stmt
+                | Some(jstfFromProof) => {
+                    switch stmt.jstf {
+                        | None => {
                             {
                                 ...stmt,
-                                proof: Some(proofNode)
+                                jstfText: jstfFromProof.args->Js_array2.joinWith(" ") ++ " : " ++ jstfFromProof.asrt,
+                                proof: Some(proofNode),
                             }
-                        } else {
-                            stmt
+                        }
+                        | Some(existingJstf) => {
+                            if (jstfFromProof == existingJstf) {
+                                {
+                                    ...stmt,
+                                    proof: Some(proofNode)
+                                }
+                            } else {
+                                stmt
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        | None => stmt
+    }
+    
+}
+
+let userStmtSetProofStatus = (stmt,wrkCtx,proofNode:proofTreeNode):userStmt => {
+    let parentEqJstf = (parentSrc, jstf) => {
+        switch exprSrcToJstf(wrkCtx, parentSrc) {
+            | None => false
+            | Some(parentJstf) => parentJstf == jstf
+        }
+    }
+
+    switch stmt.proof {
+        | Some(_) => {...stmt, proofStatus:Some(#ready)}
+        | None => {
+            switch stmt.jstf {
+                | None => {...stmt, proofStatus:Some(#noJstf)}
+                | Some(jstf) => {
+                    switch proofNode.parents {
+                        | None => {...stmt, proofStatus:Some(#jstfIsIncorrect)}
+                        | Some(parents) => {
+                            switch parents->Js.Array2.find(parentEqJstf(_, jstf)) {
+                                | Some(_) => {...stmt, proofStatus:Some(#waiting)}
+                                | None => {...stmt, proofStatus:Some(#jstfIsIncorrect)}
+                            }
                         }
                     }
                 }
@@ -1030,7 +1066,7 @@ let applyUnifyAllResults = (st,proofTreeDto) => {
             let nodes = proofTreeDto.nodes->Js_array2.map(node => (node.expr,node))->Belt_MutableMap.fromArray(~id=module(ExprCmp))
             st.stmts->Js_array2.reduce(
                 (st,stmt) => {
-                    let stmt = {...stmt, proof:None}
+                    let stmt = {...stmt, proof:None, proofStatus: None}
                     if (stmt.typ == #p) {
                         st->updateStmt(stmt.id, stmt => {
                             switch stmt.expr {
@@ -1038,7 +1074,11 @@ let applyUnifyAllResults = (st,proofTreeDto) => {
                                 | Some(expr) => {
                                     switch nodes->Belt_MutableMap.get(expr) {
                                         | None => stmt
-                                        | Some(node) => userStmtSetJstfTextAndProof(stmt,wrkCtx,node)
+                                        | Some(node) => {
+                                            let stmt = userStmtSetJstfTextAndProof(stmt,wrkCtx,node)
+                                            let stmt = userStmtSetProofStatus(stmt,wrkCtx,node)
+                                            stmt
+                                        }
                                     }
                                 }
                             }
@@ -1051,6 +1091,4 @@ let applyUnifyAllResults = (st,proofTreeDto) => {
             )
         }
     }
-
-
 }

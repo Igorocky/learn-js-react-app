@@ -146,6 +146,21 @@ let make = (
         }
     }
 
+    let rndProofStatus = () => {
+        switch stmt.proofStatus {
+            | None => React.null
+            | Some(status) => {
+                switch status {
+                    | #ready => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u2713")}</span>
+                    | #waiting => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u223F")}</span>
+                    | #noJstf => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("?")}</span>
+                    | #jstfIsIncorrect => 
+                        <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("\u2717")}</span>
+                }
+            }
+        }
+    }
+
     let rndTyp = () => {
         if (stmt.typEditMode) {
             <FormControl size=#small >
@@ -213,6 +228,9 @@ let make = (
         <tbody>
             <tr>
                 <td>
+                    {rndProofStatus()}
+                </td>
+                <td>
                     {rndLabel()}
                 </td>
                 <td>
@@ -226,6 +244,9 @@ let make = (
                 </td>
             </tr>
             <tr>
+                <td>
+                    {React.null}
+                </td>
                 <td>
                     {React.null}
                 </td>

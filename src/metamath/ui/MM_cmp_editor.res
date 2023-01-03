@@ -48,6 +48,7 @@ let userStmtLocStorToUserStmt = (userStmtLocStor:userStmtLocStor):userStmt => {
         expr: None,
         jstf: None,
         proof: None,
+        proofStatus: None,
     }
 }
 
@@ -282,13 +283,17 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actUnifyAllResultsAreReady = proofTreeDto => {
-        setState(applyUnifyAllResults(_,proofTreeDto))
+        setStatePriv(st => {
+            let st = applyUnifyAllResults(st, proofTreeDto)
+            editorSaveStateToLocStor(st, stateLocStorKey)
+            st
+        })
     }
 
     let actUnifyAll = () => {
         switch state.wrkCtx {
             | None => ()
-            | Some(wrkCtx) => {
+            | Some(_) => {
                 openModal(modalRef, () => rndProgress(~text="Unifying", ~pct=0.))->promiseMap(modalId => {
                     unify(
                         ~preCtxVer=state.preCtxV,
@@ -319,7 +324,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                         ~onProgress = pct => updateModal(modalRef, modalId, () => rndProgress(~text="Unifying", ~pct))
                     )->promiseMap(proofTreeDto => {
                         closeModal(modalRef, modalId)
-                        Js.Console.log2("proofTree", proofTreeDto)
                         actUnifyAllResultsAreReady(proofTreeDto)
                     })
                 })->ignore
