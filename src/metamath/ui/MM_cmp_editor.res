@@ -295,7 +295,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actUnifyAllResultsAreReady = proofTreeDto => {
-        Js.Console.log2("proofTreeDto", proofTreeDto)
         setStatePriv(st => {
             let st = applyUnifyAllResults(st, proofTreeDto)
             editorSaveStateToLocStor(st, stateLocStorKey)
@@ -357,16 +356,44 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         getTheOnlySelectedStmt()->Belt.Option.flatMap(stmt => stmt.proof)
     }
 
+    let proofToText = (ctx:mmContext,stmt:userStmt,proof:proof):string => {
+        switch proof {
+            | Compressed({labels, compressedProofBlock:blk}) => {
+                let asrt = `${stmt.label} $p ${stmt.cont->contToStr} $= ( ${labels->Js_array2.joinWith(" ")} ) ${blk} $.`
+                asrt
+            }
+            | _ => "Error: only compressed proofs are supported."
+        }
+    }
+
+    let rndExportedProof = (proofStr, modalId) => {
+        <Paper style=ReactDOM.Style.make( ~padding="10px", () ) >
+            <Col>
+                <pre style=ReactDOM.Style.make(~overflowWrap="break-word", ~whiteSpace="normal", ())>{React.string(proofStr)}</pre>
+                <Button onClick={_=>closeModal(modalRef, modalId)}> {React.string("Close")} </Button>
+            </Col>
+        </Paper>
+    }
+
     let actExportProof = () => {
         switch state.wrkCtx {
             | None => ()
             | Some(wrkCtx) => {
-                switch getSelectedProof() {
+                switch getTheOnlySelectedStmt() {
                     | None => ()
-                    | Some(proofNode) => {
-                        let proofTable = proofTreeCreateProofTable(proofNode)
-                        let proof = createProof(wrkCtx, proofTable, proofTable->Js_array2.length-1)
-                        Js.Console.log2("proof", proof)
+                    | Some(stmt) => {
+                        switch getSelectedProof() {
+                            | None => ()
+                            | Some(proofNode) => {
+                                let proofTable = proofTreeCreateProofTable(proofNode)
+                                let proof = createProof(wrkCtx, proofTable, proofTable->Js_array2.length-1)
+                                openModal(modalRef, () => React.null)->promiseMap(modalId => {
+                                    updateModal(modalRef, modalId, () => {
+                                        rndExportedProof(proofToText(wrkCtx,stmt,proof), modalId)
+                                    })
+                                })->ignore
+                            }
+                        }
                     }
                 }
             }
