@@ -197,7 +197,13 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         st
     })
     let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
-    let actToggleStmtChecked = id => setState(toggleStmtChecked(_,id))
+    let actToggleStmtChecked = id => {
+        setStatePriv(st => {
+            let st = toggleStmtChecked(st,id)
+            editorSaveStateToLocStor(st, stateLocStorKey)
+            st
+        })
+    }
     let actToggleMainCheckbox = () => {
         switch mainCheckboxState {
             | Some(true) | None => setState(uncheckAllStmts)
@@ -283,6 +289,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
 
     let actUnifyAllResultsAreReady = proofTreeDto => {
+        Js.Console.log2("proofTreeDto", proofTreeDto)
         setStatePriv(st => {
             let st = applyUnifyAllResults(st, proofTreeDto)
             editorSaveStateToLocStor(st, stateLocStorKey)

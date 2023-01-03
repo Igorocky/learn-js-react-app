@@ -91,9 +91,11 @@ let make = (
         }
     }
 
-    let altLeftClickHnd = (mouseEvt:ReactEvent.Mouse.t, clbk) => {
+    let altLeftClickHnd = (mouseEvt:ReactEvent.Mouse.t, clbk, ifNot: ReactEvent.Mouse.t => unit) => {
         if (mouseEvt->ReactEvent.Mouse.button == 0 && mouseEvt->ReactEvent.Mouse.altKey) {
             clbk()
+        } else {
+            ifNot(mouseEvt)
         }
     }
 
@@ -111,7 +113,7 @@ let make = (
                 {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actLabelEditDone)}
             </Row>
         } else {
-            <span onClick=altLeftClickHnd(_, onLabelEditRequested) >
+            <span onClick=altLeftClickHnd(_, onLabelEditRequested, _ => ()) >
                 {React.string(stmt.label)}
             </span>
         }
@@ -133,7 +135,7 @@ let make = (
             </Row>
         } else {
             <Paper 
-                onClick=altLeftClickHnd(_, onContEditRequested) 
+                onClick=altLeftClickHnd(_, onContEditRequested, _ => ()) 
                 style=ReactDOM.Style.make(~padding="1px 10px", ~backgroundColor="rgb(255,255,235)", ()) 
             >
             {
@@ -152,7 +154,7 @@ let make = (
             | Some(status) => {
                 switch status {
                     | #ready => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u2713")}</span>
-                    | #waiting => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u223F")}</span>
+                    | #waiting => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("\u223F")}</span>
                     | #noJstf => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("?")}</span>
                     | #jstfIsIncorrect => 
                         <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("\u2717")}</span>
@@ -173,19 +175,12 @@ let make = (
                 </Select>
             </FormControl>
         } else {
-            <span onClick=altLeftClickHnd(_, onTypEditRequested) style=ReactDOM.Style.make(~fontWeight="bold", ())>
+            <span 
+                onClick=altLeftClickHnd(_, onTypEditRequested, _ => actToggleInfoExpanded()) 
+                style=ReactDOM.Style.make(~cursor="pointer", ~fontWeight="bold", ())
+            >
                 {React.string((stmt.typ :> string)->Js_string2.toUpperCase)}
             </span>
-        }
-    }
-
-    let rndInfoBtn = () => {
-        if (stmt.typ == #p) {
-            <span onClick={_ => actToggleInfoExpanded()} style=ReactDOM.Style.make(~cursor="pointer", ~fontWeight="bold", ())>
-                {React.string("\u24D8")}
-            </span>
-        } else {
-            React.null
         }
     }
 
@@ -205,7 +200,7 @@ let make = (
                 {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone)}
             </Row>
         } else {
-            <Paper onClick=altLeftClickHnd(_, onJstfEditRequested) style=ReactDOM.Style.make(~padding="3px", ())>
+            <Paper onClick=altLeftClickHnd(_, onJstfEditRequested, _ => ()) style=ReactDOM.Style.make(~padding="3px", ())>
                 {React.string("Justification: ")}
                 {React.string(stmt.jstfText)}
             </Paper>
@@ -239,9 +234,6 @@ let make = (
                 <td>
                     {rndCont()}
                 </td>
-                <td>
-                    {rndInfoBtn()}
-                </td>
             </tr>
             <tr>
                 <td>
@@ -253,7 +245,7 @@ let make = (
                 <td>
                     {React.null}
                 </td>
-                <td colSpan=2 >
+                <td>
                     {rndInfoBody()}
                 </td>
             </tr>
