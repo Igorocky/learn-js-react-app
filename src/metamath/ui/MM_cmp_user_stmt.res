@@ -3,8 +3,10 @@ open Expln_React_common
 open Expln_React_Mui
 open MM_wrk_editor
 
-let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
-    <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool, ~title:option<string>=?, ()) => {
+    <span ?title>
+        <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+    </span>
 }
 
 type state = {
@@ -40,6 +42,7 @@ let make = (
     ~onTypEditRequested:unit=>unit, ~onTypEditDone:userStmtType=>unit,
     ~onContEditRequested:unit=>unit, ~onContEditDone:stmtCont=>unit,
     ~onJstfEditRequested:unit=>unit, ~onJstfEditDone:string=>unit,
+    ~onGenerateProof:unit=>unit,
 ) => {
     let (state, setState) = React.useState(_ => makeInitialState())
 
@@ -109,11 +112,16 @@ let make = (
                     value=state.newText
                     onChange=evt2str(actNewTextUpdated)
                     onKeyDown=ctrlEnterHnd(_, actLabelEditDone)
+                    title="Ctrl+Enter to save"
                 />
-                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actLabelEditDone)}
+                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actLabelEditDone, 
+                    ~title="Save, Ctrl+Enter", ())}
             </Row>
         } else {
-            <span onClick=altLeftClickHnd(_, onLabelEditRequested, _ => ()) >
+            <span 
+                onClick=altLeftClickHnd(_, onLabelEditRequested, _ => ()) 
+                title="Alt+<left-click> to change"
+            >
                 {React.string(stmt.label)}
             </span>
         }
@@ -130,13 +138,16 @@ let make = (
                     value=state.newText
                     onChange=evt2str(actNewTextUpdated)
                     onKeyDown=ctrlEnterHnd(_, actContEditDone)
+                    title="Ctrl+Enter to save"
                 />
-                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actContEditDone)}
+                {rndIconButton(~icon=<Icons2.Save/>, ~active= state.newText->Js.String2.trim != "",  ~onClick=actContEditDone, 
+                    ~title="Save, Ctrl+Enter", ())}
             </Row>
         } else {
             <Paper 
                 onClick=altLeftClickHnd(_, onContEditRequested, _ => ()) 
                 style=ReactDOM.Style.make(~padding="1px 10px", ~backgroundColor="rgb(255,255,235)", ()) 
+                title="Alt+<left-click> to change"
             >
             {
                 switch stmt.cont {
@@ -153,11 +164,33 @@ let make = (
             | None => React.null
             | Some(status) => {
                 switch status {
-                    | #ready => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u2713")}</span>
-                    | #waiting => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("\u223F")}</span>
-                    | #noJstf => <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("?")}</span>
+                    | #ready => 
+                        <span 
+                            title="Proof is ready, left-click to generate compressed proof"
+                            style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ~cursor="pointer", ())
+                            onClick={_=>onGenerateProof()}
+                        >{React.string("\u2713")}</span>
+                    | #waiting => 
+                        <span 
+                            title="Justification for this statement is correct"
+                            style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())
+                        >
+                            {React.string("\u223F")}
+                        </span>
+                    | #noJstf => 
+                        <span 
+                            title="Justification cannot be determined automatically"
+                            style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())
+                        >
+                            {React.string("?")}
+                        </span>
                     | #jstfIsIncorrect => 
-                        <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("\u2717")}</span>
+                        <span 
+                            title="Justification is incorrect"
+                            style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())
+                        >
+                            {React.string("\u2717")}
+                        </span>
                 }
             }
         }
@@ -182,6 +215,7 @@ let make = (
             <span 
                 onClick=altLeftClickHnd(_, onTypEditRequested, _ => actToggleInfoExpanded()) 
                 style=ReactDOM.Style.make(~cursor="pointer", ~fontWeight="bold", ())
+                title="Alt+<left-click> to change statement type. Left-click to show/hide the justification for provable."
             >
                 {React.string(typStr->Js_string2.toUpperCase)}
             </span>
@@ -200,11 +234,17 @@ let make = (
                     value=state.newText
                     onChange=evt2str(actNewTextUpdated)
                     onKeyDown=ctrlEnterHnd(_, actJstfEditDone)
+                    title="Ctrl+Enter to save"
                 />
-                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone)}
+                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actJstfEditDone, 
+                    ~title="Save, Ctrl+Enter", ())}
             </Row>
         } else {
-            <Paper onClick=altLeftClickHnd(_, onJstfEditRequested, _ => ()) style=ReactDOM.Style.make(~padding="3px", ())>
+            <Paper 
+                onClick=altLeftClickHnd(_, onJstfEditRequested, _ => ()) 
+                style=ReactDOM.Style.make(~padding="3px", ())
+                title="Alt+<left-click> to change"
+            >
                 {React.string("Justification: ")}
                 {React.string(stmt.jstfText)}
             </Paper>

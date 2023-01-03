@@ -17,8 +17,10 @@ let setNewText = (st,text):state => {
     }
 }
 
-let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
-    <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool, ~title:option<string>=?, ()) => {
+    <span ?title>
+        <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+    </span>
 }
 
 @react.component
@@ -66,8 +68,9 @@ let make = (
                     value=state.newText
                     onChange=evt2str(actNewTextUpdated)
                     onKeyDown=ctrlEnterHnd(_, actEditDone)
+                    title="Ctrl+Enter to save"
                 />
-                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actEditDone)}
+                {rndIconButton(~icon=<Icons2.Save/>, ~active=true,  ~onClick=actEditDone, ~title="Save, Ctrl+Enter", ())}
             </Row>
         } else {
             let style = if (text->Js.String2.trim == "") {
@@ -75,7 +78,12 @@ let make = (
             } else {
                 ReactDOM.Style.make(~padding="0px", ())
             }
-            <Paper variant=#outlined onClick=altLeftClickHnd(_, onEditRequested) style >
+            <Paper 
+                variant=#outlined 
+                onClick=altLeftClickHnd(_, onEditRequested) 
+                style 
+                title="Alt+<left-click> to change"
+            >
                 <pre>
                     {React.string(text)}
                 </pre>

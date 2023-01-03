@@ -201,10 +201,13 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
                 value=state.parens 
                 onChange=evt2str(onParensChange)
                 error={!state.parensIsValid}
+                title="Parentheses are used to speed up finding of substitutions"
             />
-            <IconButton onClick={_ => syncParens()}>
-                <Icons2.Sync/>
-            </IconButton>
+            <span title="Determine parentheses from the loaded MM file">
+                <IconButton onClick={_ => syncParens()}>
+                    <Icons2.Sync/>
+                </IconButton>
+            </span>
         </Row>
         // <MM_cmp_colors
         //     types=state.types

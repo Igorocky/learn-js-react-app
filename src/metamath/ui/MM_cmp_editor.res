@@ -132,8 +132,10 @@ let readEditorStateFromLocStor = (key:string):option<editorStateLocStor> => {
     }
 }
 
-let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool) => {
-    <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool, ~title:option<string>=?, ()) => {
+    <span ?title>
+        <IconButton disabled={!active} onClick={_ => onClick()} color="primary"> icon </IconButton>
+    </span>
 }
 
 let stateLocStorKey = "editor-state"
@@ -343,19 +345,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         }
     }
 
-    let getTheOnlySelectedStmt = () => {
-        if (state.checkedStmtIds->Js_array2.length != 1) {
-            None
-        } else {
-            let stmtId = state.checkedStmtIds[0]
-            state.stmts->Js.Array2.find(stmt => stmt.id == stmtId)
-        }
-    }
-
-    let getSelectedProof = () => {
-        getTheOnlySelectedStmt()->Belt.Option.flatMap(stmt => stmt.proof)
-    }
-
     let splitIntoChunks = (str, chunkMaxSize): array<string> => {
         let len = str->Js_string2.length
         if (len <= chunkMaxSize) {
@@ -417,14 +406,14 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         </Paper>
     }
 
-    let actExportProof = () => {
+    let actExportProof = (stmtId) => {
         switch state.wrkCtx {
             | None => ()
             | Some(wrkCtx) => {
-                switch getTheOnlySelectedStmt() {
+                switch state.stmts->Js.Array2.find(stmt => stmt.id == stmtId) {
                     | None => ()
                     | Some(stmt) => {
-                        switch getSelectedProof() {
+                        switch stmt.proof {
                             | None => ()
                             | Some(proofNode) => {
                                 let proofTable = proofTreeCreateProofTable(proofNode)
@@ -454,7 +443,6 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         let generalModificationActionIsEnabled =
             !editIsActive
             && !thereAreSyntaxErrors
-        let canExportProof = state.wrkCtx->Belt.Option.isSome && getSelectedProof()->Belt.Option.isSome
         let atLeastOneStmtIsSelected = mainCheckboxState->Belt_Option.getWithDefault(true)
         <Paper>
             <Row>
@@ -464,24 +452,30 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     checked={mainCheckboxState->Belt_Option.getWithDefault(false)}
                     onChange={_ => actToggleMainCheckbox()}
                 />
-                {rndIconButton(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active= !editIsActive && canMoveCheckedStmts(state,false))}
-                {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active= !editIsActive && canMoveCheckedStmts(state,true))}
-                {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active= !editIsActive)}
+                {rndIconButton(~icon=<Icons2.ArrowDownward/>, ~onClick=actMoveCheckedStmtsDown, ~active= !editIsActive && canMoveCheckedStmts(state,false),
+                    ~title="Move selected statements down", ())}
+                {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active= !editIsActive && canMoveCheckedStmts(state,true),
+                    ~title="Move selected statements up", ())}
+                {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active= !editIsActive, 
+                    ~title="Add new statement (and place before selected statements if any)", ())}
                 {rndIconButton(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, 
-                    ~active= !editIsActive && atLeastOneStmtIsSelected
+                    ~active= !editIsActive && atLeastOneStmtIsSelected, ~title="Delete selected statements", ()
                 )}
-                {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
+                {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state), 
+                    ~title="Duplicate selected statement", ())}
                 { 
                     rndIconButton(~icon=<Icons2.Search/>, ~onClick=actSearchAsrt, 
-                        ~active=generalModificationActionIsEnabled && state.frms->Belt_MapString.size > 0
+                        ~active=generalModificationActionIsEnabled && state.frms->Belt_MapString.size > 0,
+                        ~title="Add new statements from existing assertions (and place before selected statements if any)", ()
                     ) 
                 }
-                { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled ) }
+                { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled,
+                    ~title="Apply a substitution to all statements", () ) }
                 { 
                     rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, 
-                        ~active=generalModificationActionIsEnabled && !atLeastOneStmtIsSelected ) 
+                        ~active=generalModificationActionIsEnabled && !atLeastOneStmtIsSelected, 
+                        ~title="Unify all statements", () )
                 }
-                { rndIconButton(~icon=<Icons2.IosShare/>, ~onClick=actExportProof, ~active=canExportProof ) }
             </Row>
         </Paper>
     }
@@ -510,6 +504,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     
                     onJstfEditRequested={() => actBeginEdit(setJstfEditMode,stmt.id)}
                     onJstfEditDone={newJstf => actCompleteEdit(completeJstfEditMode(_,stmt.id,newJstf))}
+
+                    onGenerateProof={()=>actExportProof(stmt.id)}
                 />
                 {rndError(stmt.stmtErr)}
             </td>
