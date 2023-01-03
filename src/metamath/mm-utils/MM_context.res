@@ -311,6 +311,10 @@ let disjForEach = (disjMutable, consumer) => {
     })
 }
 
+let disjIsEmpty = disjMutable => {
+    disjMutable->mutableMapIntSize == 0
+}
+
 let isDisj = (ctx,n,m) => {
     ctx.contents->forEachCtxInReverseOrder(ctx => {
         if (ctx.disj->disjContains(n,m)) {

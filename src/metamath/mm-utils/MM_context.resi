@@ -78,6 +78,7 @@ let disjAddPair: (disjMutable, int, int) => unit
 let disjContains: (disjMutable, int, int) => bool
 let disjForEachArr: (disjMutable, array<int> => unit) => unit
 let disjForEach: (disjMutable, (int,int) => unit) => unit
+let disjIsEmpty: disjMutable => bool
 
 let exprEq: (expr,expr) => bool
 

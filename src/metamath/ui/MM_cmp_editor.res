@@ -379,7 +379,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 let localVars = ctx->getLocalVars
                 let localDisj = ctx->getLocalDisj
                 let localHyps = ctx->getLocalHyps
-                let blockIsRequired = localHyps->Js.Array2.length > 0
+                let blockIsRequired = localHyps->Js.Array2.length > 0 || !(localDisj->disjIsEmpty)
                 let result = []
                 if (blockIsRequired) {
                     result->Js.Array2.push("${")->ignore
@@ -453,9 +453,9 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     let rndButtons = () => {
         let generalModificationActionIsEnabled =
             !editIsActive
-            && !(mainCheckboxState->Belt_Option.getWithDefault(true))
             && !thereAreSyntaxErrors
         let canExportProof = state.wrkCtx->Belt.Option.isSome && getSelectedProof()->Belt.Option.isSome
+        let atLeastOneStmtIsSelected = mainCheckboxState->Belt_Option.getWithDefault(true)
         <Paper>
             <Row>
                 <Checkbox
@@ -468,7 +468,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 {rndIconButton(~icon=<Icons2.ArrowUpward/>, ~onClick=actMoveCheckedStmtsUp, ~active= !editIsActive && canMoveCheckedStmts(state,true))}
                 {rndIconButton(~icon=<Icons2.Add/>, ~onClick=actAddNewStmt, ~active= !editIsActive)}
                 {rndIconButton(~icon=<Icons2.DeleteForever/>, ~onClick=actDeleteCheckedStmts, 
-                    ~active= !editIsActive && mainCheckboxState->Belt.Option.getWithDefault(true)
+                    ~active= !editIsActive && atLeastOneStmtIsSelected
                 )}
                 {rndIconButton(~icon=<Icons2.ControlPointDuplicate/>, ~onClick=actDuplicateStmt, ~active= !editIsActive && isSingleStmtChecked(state))}
                 { 
@@ -479,7 +479,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                 { rndIconButton(~icon=<Icons2.TextRotationNone/>, ~onClick=actSubstitute, ~active=generalModificationActionIsEnabled ) }
                 { 
                     rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, 
-                        ~active=generalModificationActionIsEnabled ) 
+                        ~active=generalModificationActionIsEnabled && !atLeastOneStmtIsSelected ) 
                 }
                 { rndIconButton(~icon=<Icons2.IosShare/>, ~onClick=actExportProof, ~active=canExportProof ) }
             </Row>
