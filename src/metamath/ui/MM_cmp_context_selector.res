@@ -97,7 +97,7 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
             nextId: 1, 
             singleScopes: [createEmptySingleScope("0")], 
             expanded: true, 
-            loadedContextSummary: ""
+            loadedContextSummary: "",
         }
     })
     let (prevState, setPrevState) = React.useState(_ => state)
@@ -106,6 +106,15 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
         setState(prev => prev->setLoadedContextSummary(getSummary(prev)))
         None
     })
+
+    let actNewCtxIsReady = ctx => {
+        setState(st => {
+            let st = st->setLoadedContextSummary(getSummary(st))
+            setPrevState(_ => st)
+            st
+        })
+        onChange(ctx)
+    }
 
     let rndParseMmFileProgress = (fileName, pct) => {
         rndProgress(~text=`Parsing ${fileName}`, ~pct)
@@ -196,45 +205,67 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
         }
     }
 
+    let scopeIsEmpty = state.singleScopes->Js.Array2.length == 1 && state.singleScopes[0].fileName->Belt_Option.isNone
+
     let applyChanges = () => {
-        openModal(modalRef, _ => rndLoadMmContextProgress(0.))->promiseMap(modalId => {
-            MM_wrk_LoadCtx.beginLoadingMmContext(
-                ~scopes = state.singleScopes->Js.Array2.map(ss => {
-                    let stopBefore = if (ss.readInstr == #stopBefore) {ss.label} else {None}
-                    let stopAfter = if (ss.readInstr == #stopAfter) {ss.label} else {None}
-                    let label = stopBefore->Belt_Option.getWithDefault(
-                        stopAfter->Belt_Option.getWithDefault(
-                            ss.allLabels->Belt_Array.get(ss.allLabels->Js_array2.length-1)->Belt_Option.getWithDefault("")
+        if (scopeIsEmpty) {
+            actNewCtxIsReady(createContext(()))
+        } else {
+            openModal(modalRef, _ => rndLoadMmContextProgress(0.))->promiseMap(modalId => {
+                MM_wrk_LoadCtx.beginLoadingMmContext(
+                    ~scopes = state.singleScopes->Js.Array2.map(ss => {
+                        let stopBefore = if (ss.readInstr == #stopBefore) {ss.label} else {None}
+                        let stopAfter = if (ss.readInstr == #stopAfter) {ss.label} else {None}
+                        let label = stopBefore->Belt_Option.getWithDefault(
+                            stopAfter->Belt_Option.getWithDefault(
+                                ss.allLabels->Belt_Array.get(ss.allLabels->Js_array2.length-1)->Belt_Option.getWithDefault("")
+                            )
                         )
-                    )
-                    {
-                        MM_wrk_LoadCtx.ast: switch ss.ast {
-                            | Some(Ok(ast)) => ast
-                            | _ => raise(MmException({msg:`Cannot load an MM context from an empty or error ast.`}))
-                        },
-                        stopBefore,
-                        stopAfter,
-                        expectedNumOfAssertions: ss.allLabels->Js_array2.indexOf(label) + 1
-                    }
-                }),
-                ~onProgress = pct => updateModal(modalRef, modalId, _ => rndLoadMmContextProgress(pct)),
-                ~onDone = ctx => {
-                    switch ctx {
-                        | Error(msg) => Js.Console.log(msg)
-                        | Ok(ctx) => {
-                            setState(st => {
-                                let st = st->setLoadedContextSummary(getSummary(st))
-                                setPrevState(_ => st)
-                                st
-                            })
-                            closeAccordion()
-                            onChange(ctx)
+                        {
+                            MM_wrk_LoadCtx.ast: switch ss.ast {
+                                | Some(Ok(ast)) => ast
+                                | _ => raise(MmException({msg:`Cannot load an MM context from an empty or error ast.`}))
+                            },
+                            stopBefore,
+                            stopAfter,
+                            expectedNumOfAssertions: ss.allLabels->Js_array2.indexOf(label) + 1
                         }
+                    }),
+                    ~onProgress = pct => updateModal(modalRef, modalId, _ => rndLoadMmContextProgress(pct)),
+                    ~onDone = ctx => {
+                        switch ctx {
+                            | Error(msg) => {
+                                openModal(modalRef, _ => React.null)->promiseMap(modalId => {
+                                    updateModal(modalRef, modalId, () => {
+                                        <Paper style=ReactDOM.Style.make(~padding="10px", ())>
+                                            <Col spacing=1.>
+                                                {React.string("Error loading context:")}
+                                                <pre style=ReactDOM.Style.make(~color="red", ())>
+                                                    {React.string(msg)}
+                                                </pre>
+                                                <Button
+                                                    onClick={_=>closeModal(modalRef, modalId)}
+                                                    variant=#contained
+                                                > 
+                                                    {React.string("Ok")} 
+                                                </Button>
+                                                <Row>
+                                                </Row>
+                                            </Col>
+                                        </Paper>
+                                    })
+                                })->ignore
+                            }
+                            | Ok(ctx) => {
+                                actNewCtxIsReady(ctx)
+                                closeAccordion()
+                            }
+                        }
+                        closeModal(modalRef, modalId)
                     }
-                    closeModal(modalRef, modalId)
-                }
-            )
-        })->ignore
+                )
+            })->ignore
+        }
     }
 
     let rndSaveButtons = () => {
@@ -258,7 +289,6 @@ let make = (~onChange:mmContext=>unit, ~modalRef:modalRef) => {
                     | _ => false
                 }
             })
-            let scopeIsEmpty = state.singleScopes->Js.Array2.length == 1 && state.singleScopes[0].fileName->Belt_Option.isNone
             <Row>
                 <Button variant=#contained disabled={!scopeIsCorrect && !scopeIsEmpty} onClick={_=>applyChanges()} >
                     {React.string("Apply changes")}
