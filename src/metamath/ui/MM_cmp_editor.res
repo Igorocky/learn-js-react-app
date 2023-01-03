@@ -216,7 +216,29 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
         let (st, _) = addNewStmt(st)
         st
     })
-    let actDeleteCheckedStmts = () => setState(deleteCheckedStmts)
+    let actDeleteCheckedStmts = () => {
+        openModal(modalRef, _ => React.null)->promiseMap(modalId => {
+            updateModal(modalRef, modalId, () => {
+                <Paper style=ReactDOM.Style.make(~padding="10px", ())>
+                    <Col spacing=1.>
+                        {React.string("Delete selected statements?")}
+                        <Row>
+                            <Button onClick={_=>closeModal(modalRef, modalId)}> {React.string("Cancel")} </Button>
+                            <Button
+                                onClick={_=>{
+                                    closeModal(modalRef, modalId)
+                                    setState(deleteCheckedStmts)
+                                }}
+                                variant=#contained
+                            > 
+                                {React.string("Delete")} 
+                            </Button>
+                        </Row>
+                    </Col>
+                </Paper>
+            })
+        })->ignore
+    }
     let actToggleStmtChecked = id => {
         setStatePriv(st => {
             let st = toggleStmtChecked(st,id)
