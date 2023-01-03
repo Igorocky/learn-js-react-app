@@ -407,6 +407,16 @@ let proofTreeProve = (
     let disj = ctx->getAllDisj
     let hyps = ctx->getAllHyps
     let tree = createEmptyProofTree(~frms, ~maxVar, ~disj, ~hyps, ~parenCnt, )
+    ctx->getLocalHyps->Js_array2.forEach(hyp => {
+        let rootNode = createOrUpdateNode(
+            ~tree, 
+            ~label=Some(hyp.label), 
+            ~expr=hyp.expr, 
+            ~child=None
+        )
+        rootNode.proof = Some(Hypothesis({label:hyp.label}))
+        tree.rootNodes->Belt_MutableMap.set(rootNode.expr, rootNode)
+    })
     let numOfStmts = stmts->Js_array2.length
     for stmtIdx in 0 to numOfStmts - 1 {
         tree.nodes->Belt_MutableMap.clear
@@ -419,7 +429,13 @@ let proofTreeProve = (
         tree.rootNodes->Belt_MutableMap.set(rootNode.expr, rootNode)
         proveNode(
             ~tree,
-            ~stmts=stmts->Js_array2.filteri((_,i) => i < stmtIdx),
+            ~stmts=tree.rootNodes->Belt_MutableMap.valuesToArray->Js_array2.map(node => {
+                {
+                    label: node.label,
+                    expr: node.expr,
+                    justification: None
+                }
+            }),
             ~node=rootNode,
             ~justification=stmts[stmtIdx].justification,
             ~syntaxProof,

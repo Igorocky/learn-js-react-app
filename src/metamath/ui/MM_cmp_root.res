@@ -64,7 +64,7 @@ let make = () => {
             if (st->UseTabs.getTabs->Js_array2.length == 0) {
                 let (st, _) = st->UseTabs.addTab(~label="Settings", ~closable=false, ~data=Settings)
                 let (st, editorTabId) = st->UseTabs.addTab(~label="Editor", ~closable=false, ~data=Editor)
-                let (st, _) = st->UseTabs.addTab(~label="Search", ~closable=false, ~data=Search)
+                // let (st, _) = st->UseTabs.addTab(~label="Search", ~closable=false, ~data=Search)
                 let st = st->UseTabs.openTab(editorTabId)
                 st
             } else {

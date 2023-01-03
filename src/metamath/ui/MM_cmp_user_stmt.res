@@ -155,7 +155,7 @@ let make = (
                 switch status {
                     | #ready => <span style=ReactDOM.Style.make(~color="green", ~fontWeight="bold", ())>{React.string("\u2713")}</span>
                     | #waiting => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("\u223F")}</span>
-                    | #noJstf => <span style=ReactDOM.Style.make(~color="orange", ~fontWeight="bold", ())>{React.string("?")}</span>
+                    | #noJstf => <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("?")}</span>
                     | #jstfIsIncorrect => 
                         <span style=ReactDOM.Style.make(~color="red", ~fontWeight="bold", ())>{React.string("\u2717")}</span>
                 }
@@ -170,16 +170,20 @@ let make = (
                     value=""
                     onChange=evt2str(actTypEditDone)
                 >
-                    <MenuItem value="e">{React.string("E")}</MenuItem>
+                    <MenuItem value="e">{React.string("H")}</MenuItem>
                     <MenuItem value="p">{React.string("P")}</MenuItem>
                 </Select>
             </FormControl>
         } else {
+            let typStr = switch stmt.typ {
+                | #e => "H"
+                | #p => "P"
+            }
             <span 
                 onClick=altLeftClickHnd(_, onTypEditRequested, _ => actToggleInfoExpanded()) 
                 style=ReactDOM.Style.make(~cursor="pointer", ~fontWeight="bold", ())
             >
-                {React.string((stmt.typ :> string)->Js_string2.toUpperCase)}
+                {React.string(typStr->Js_string2.toUpperCase)}
             </span>
         }
     }

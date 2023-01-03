@@ -206,14 +206,14 @@ let make = (~modalRef:modalRef, ~ctx:mmContext, ~initialSettings:settings, ~onCh
                 <Icons2.Sync/>
             </IconButton>
         </Row>
-        <MM_cmp_colors
-            types=state.types
-            colors=state.colors
-            availableColors=allColors
-            onAdd=onTypeColorAdd
-            onTypeChange
-            onColorChange
-        />
+        // <MM_cmp_colors
+        //     types=state.types
+        //     colors=state.colors
+        //     availableColors=allColors
+        //     onAdd=onTypeColorAdd
+        //     onTypeChange
+        //     onColorChange
+        // />
         {
             if (!eqState(prevState, state)) {
                 <Row spacing=3. >

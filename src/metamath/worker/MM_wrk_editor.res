@@ -491,7 +491,20 @@ let refreshWrkCtx = (st:editorState):editorState => {
     )
     let st = switch wrkCtxRes {
         | Error(wrkCtxErr) => parseWrkCtxErr(st, wrkCtxErr)
-        | Ok(wrkCtx) => {...st, wrkCtx:Some(wrkCtx)}
+        | Ok(wrkCtx) => {
+            let st = {...st, wrkCtx:Some(wrkCtx)}
+            let st = st.stmts->Js_array2.reduce(
+                (st,stmt) => {
+                    if (stmt.typ == #e) {
+                        st->updateStmt(stmt.id, stmt => {...stmt, expr:Some(wrkCtx->ctxSymsToIntsExn(stmt.cont->contToArrStr))})
+                    } else {
+                        st
+                    }
+                },
+                st
+            )
+            st
+        }
     }
     st
 }
@@ -568,9 +581,37 @@ let validateStmtLabel = (stmt:userStmt, wrkCtx:mmContext, usedLabels:Belt_Mutabl
     }
 }
 
+let checkAllStmtsAreUnique = (st:editorState):editorState => {
+    let declaredStmts = Belt_MutableMap.make(~id=module(ExprCmp))
+    st.stmts->Js_array2.reduce(
+        (st,stmt) => {
+            if (editorStateHasErrors(st)) {
+                st
+            } else {
+                let stmt = switch stmt.expr {
+                    | None => raise(MmException({msg:`Cannot checkAllStmtsAreUnique without expr.`}))
+                    | Some(expr) => {
+                        switch declaredStmts->Belt_MutableMap.get(expr) {
+                            | Some(prevStmtLabel) => {
+                                {...stmt, stmtErr:Some(`This statement is the same as the previous one - '${prevStmtLabel}'`)}
+                            }
+                            | None => {
+                                declaredStmts->Belt_MutableMap.set(expr, stmt.label)
+                                stmt
+                            }
+                        }
+                    }
+                }
+                st->updateStmt(stmt.id, _ => stmt)
+            }
+        },
+        st
+    )
+}
+
 let prepareProvablesForUnification = (st:editorState):editorState => {
     switch st.wrkCtx {
-        | None => st
+        | None => raise(MmException({msg:`Cannot prepareProvablesForUnification without wrkCtx.`}))
         | Some(wrkCtx) => {
             let usedLabels = Belt_MutableSetString.make()
             st.stmts->Js_array2.reduce(
@@ -593,10 +634,21 @@ let prepareProvablesForUnification = (st:editorState):editorState => {
 
 let prepareEditorForUnification = st => {
     let st = removeAllErrorsInEditorState(st)
-    let st = removeAllProofData(st)
-    let st = refreshWrkCtx(st)
-    let st = prepareProvablesForUnification(st)
-    st
+    [
+        removeAllProofData,
+        refreshWrkCtx,
+        prepareProvablesForUnification,
+        checkAllStmtsAreUnique,
+    ]->Js.Array2.reduce(
+        (st,act) => {
+            if (editorStateHasErrors(st)) {
+                st
+            } else {
+                act(st)
+            }
+        },
+        st
+    )
 }
 
 let createNewVars = (st:editorState, varTypes:array<int>):(editorState,array<int>) => {

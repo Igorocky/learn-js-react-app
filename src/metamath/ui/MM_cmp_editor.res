@@ -375,7 +375,7 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
 
     let rndStmt = (stmt:userStmt) => {
         <tr key=stmt.id >
-            <td>
+            <td style=ReactDOM.Style.make(~verticalAlign="top", ())>
                 <Checkbox
                     disabled=editIsActive
                     checked={state->isStmtChecked(stmt.id)}
