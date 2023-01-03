@@ -140,6 +140,23 @@ let rndIconButton = (~icon:reElem, ~onClick:unit=>unit, ~active:bool, ~title:opt
 
 let stateLocStorKey = "editor-state"
 
+let lastUsedAsrtSearchTypLocStorKey = "search-asrt-typ"
+
+let saveLastUsedTyp = (ctx,typInt) => {
+    switch ctx->ctxIntToSym(typInt) {
+        | None => ()
+        | Some(typStr) =>
+            Dom_storage2.localStorage->Dom_storage2.setItem(lastUsedAsrtSearchTypLocStorKey, typStr)
+    }
+}
+
+let getLastUsedTyp = (ctx) => {
+    switch Dom_storage2.localStorage->Dom_storage2.getItem(lastUsedAsrtSearchTypLocStorKey) {
+        | None => None
+        | Some(typStr) => ctx->ctxSymToInt(typStr)
+    }
+}
+
 @react.component
 let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int, ~preCtx:mmContext, ~top:int) => {
     let (state, setStatePriv) = React.useState(_ => createInitialEditorState(
@@ -263,6 +280,8 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                             }
                             wrkCtx
                             frms=state.frms
+                            initialTyp={getLastUsedTyp(state.preCtx)}
+                            onTypChange={saveLastUsedTyp(state.preCtx, _)}
                             onCanceled={()=>closeModal(modalRef, modalId)}
                             onResultsSelected={selectedResults=>{
                                 closeModal(modalRef, modalId)
@@ -473,7 +492,9 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
                     ~title="Apply a substitution to all statements", () ) }
                 { 
                     rndIconButton(~icon=<Icons2.Hub/>, ~onClick=actUnifyAll, 
-                        ~active=generalModificationActionIsEnabled && !atLeastOneStmtIsSelected, 
+                        ~active=generalModificationActionIsEnabled 
+                                    && !atLeastOneStmtIsSelected
+                                    && state.stmts->Js_array2.length > 0, 
                         ~title="Unify all statements", () )
                 }
             </Row>

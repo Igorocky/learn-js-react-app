@@ -26,7 +26,7 @@ type state = {
     checkedResultsIdx: array<int>
 }
 
-let makeInitialState = (frms) => {
+let makeInitialState = (frms, initialTyp:option<int>) => {
     if (frms->Belt_MapString.size == 0) {
         raise(MmException({msg:`Cannot search assertions when frms are empty.`}))
     }
@@ -40,7 +40,9 @@ let makeInitialState = (frms) => {
     {
         label: "",
         allTypes,
-        typ: allTypes[0],
+        typ: initialTyp
+                ->Belt_Option.map(iniTyp => if (allTypes->Js.Array2.includes(iniTyp)) {iniTyp} else {allTypes[0]})
+                ->Belt_Option.getWithDefault(allTypes[0]),
         patternStr: "",
         patternErr: None,
         results: None,
@@ -145,16 +147,19 @@ let make = (
     ~hyps: array<wrkCtxHyp>,
     ~wrkCtx: mmContext,
     ~frms: Belt_MapString.t<frmSubsData>,
+    ~initialTyp:option<int>,
+    ~onTypChange:int=>unit,
     ~onCanceled:unit=>unit,
     ~onResultsSelected:array<applyAssertionResult>=>unit
 ) => {
-    let (state, setState) = React.useState(() => makeInitialState(frms))
+    let (state, setState) = React.useState(() => makeInitialState(frms, initialTyp))
 
     let actResultsRetrieved = results => {
         setState(setResults(_, results, wrkCtx, frms))
     }
 
     let actSearch = () => {
+        onTypChange(state.typ)
         let incorrectSymbol = state.patternStr->getSpaceSeparatedValuesAsArray->Js_array2.find(sym => !(wrkCtx->isConst(sym)))
         switch incorrectSymbol {
             | Some(sym) => setState(setPatternErr(_, Some(`'${sym}' - is not a constant.`)))

@@ -98,7 +98,7 @@ let make = (~modalRef:modalRef) => {
     {
         state.modals
             ->Js.Array2.map(modal=>{
-                <Dialog key=modal.id opn=true>
+                <Dialog key=modal.id opn=true maxWidth="xl">
                     {modal.render()}
                 </Dialog>
             })
