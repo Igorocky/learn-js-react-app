@@ -676,6 +676,16 @@ let getAllDisj = (ctx:mmContext):disjMutable => {
     disj
 }
 
+let getLocalDisj = (ctx:mmContext):disjMutable => {
+    let disj = disjMutableMake()
+    ctx.contents.disj->mutableMapIntForEach((n,ms) => {
+        ms->mutableSetIntForEach(m => {
+            disj->disjAddPair(n,m)
+        })
+    })
+    disj
+}
+
 let createContext: (~parent:mmContext=?, ()) => mmContext = (~parent=?, ()) => {
     let pCtxContentsOpt = switch parent {
         | Some(pCtx) => Some(pCtx.contents)

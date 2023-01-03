@@ -45,6 +45,7 @@ let getHypothesis: (mmContext,string) => option<hypothesis>
 let getMandHyps: (mmContext, expr) => array<hypothesis>
 let getAllHyps: mmContext => Belt_MapString.t<hypothesis>
 let getAllDisj: mmContext => disjMutable
+let getLocalDisj: mmContext => disjMutable
 let getFrame: (mmContext,string) => option<frame>
 let getLocalVars: mmContext => array<string>
 let getLocalConsts: mmContext => array<string>
