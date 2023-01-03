@@ -81,8 +81,8 @@ let getSummary = st => {
             let fileName = ss.fileName->Belt_Option.getWithDefault("")
             let readInstr = switch ss.readInstr {
                 | #all => ""
-                | #stopBefore => `, stoped before '${ss.label->Belt_Option.getWithDefault("")}'`
-                | #stopAfter => `, stoped after '${ss.label->Belt_Option.getWithDefault("")}'`
+                | #stopBefore => `, stopped before '${ss.label->Belt_Option.getWithDefault("")}'`
+                | #stopAfter => `, stopped after '${ss.label->Belt_Option.getWithDefault("")}'`
             }
             fileName ++ readInstr
         })
