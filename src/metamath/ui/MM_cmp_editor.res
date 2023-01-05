@@ -259,7 +259,11 @@ let make = (~modalRef:modalRef, ~settingsV:int, ~settings:settings, ~preCtxV:int
     }
     let actMoveCheckedStmtsUp = () => setState(moveCheckedStmts(_, true))
     let actMoveCheckedStmtsDown = () => setState(moveCheckedStmts(_, false))
-    let actDuplicateStmt = () => setState(duplicateCheckedStmt)
+    let actDuplicateStmt = () => setState(st => {
+        let st = duplicateCheckedStmt(st)
+        let st = uncheckAllStmts(st)
+        st
+    })
     let actBeginEdit0 = (setter:editorState=>editorState) => {
         if (!editIsActive) {
             setState(setter)
