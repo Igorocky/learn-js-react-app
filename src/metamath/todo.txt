@@ -5,11 +5,6 @@
     3. Unify all - "index out of bounds"
 - fix the bug:
     0. load set.mm, read all
-    1. Add 0dp2dp
-    2. remove its justification
-    3. Unify all - justification is not found for 0dp2dp
-- fix the bug:
-    0. load set.mm, read all
     1. search for the pattern "|- ( ( 0 . _ class class ) x. ; 1 0 ) = ( class . class )"
     2. The search is too slow (hangs on 77%). 0dp2dp is expected to be found.
 - try to replace the array with a map in MM_parenCounter.
