@@ -5,7 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
-    "@expln/utils": "0.0.11",
+    "@expln/utils": "0.0.17",
     "@fontsource/roboto": "^4.5.8",
     "@mui/icons-material": "^5.10.9",
     "@mui/material": "^5.10.11",
@@ -27,7 +27,7 @@
   "scripts": {
     "compile": "rescript",
     "compile-with-deps": "rescript build -with-deps",
-    "compile-test": "rescript && mocha src/metamath/test/**/*.js",
+    "compile-test": "rescript && mocha src/metamath/test/**/*.js",.
     "clean-and-compile-with-deps": "npm run rescript-clean && npm run compile-with-deps",
     "rescript-start": "rescript build -w",
     "rescript-clean": "rescript clean -with-deps",
