@@ -167,27 +167,23 @@ let make = () => {
     //-> Belt_Array.mapWithIndex((i,c) => <circle key=i2s(i) cx=f2s(c["x"]) cy=f2s(c["y"]) r="0.3"/>)
   let textColor = if(clickIsCorrect){"#017101"}else{"#a30000"}
 
-  <Col>
-    //renderCellName(
-      //remainingCellNums[0], 
-      //style(~fontSize="40px", ~color=textColor, ())
-    //),
-    <svg
-      viewBox=viewBox(boundaries)
-      width=f2s(viewWidth) 
-      height=f2s(viewHeight) 
-      onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
-    >
-    {React.array(
-      Belt_Array.concatMany([
-        [renderBackgroud()],
-        //circles,
-        [shape],
-        [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}],
-        [renderCellNameSvg(remainingCellNums[0], textColor)],
-        [renderTransparentPane()]
-      ])
-    )}
-    </svg>
-  </Col>
+    <Col alignItems=#center spacing=2. justifyContent=#"space-between" style=ReactDOM.Style.make(~marginTop="100px", ())>
+        <svg
+          viewBox=viewBox(boundaries)
+          width=f2s(viewWidth)
+          height=f2s(viewHeight)
+          onMouseDown = {e => svgOnClick(~mouseEvent=e,~boundaries,~viewWidth,~viewHeight,~customHandler=clickHandler)}
+        >
+        {React.array(
+          Belt_Array.concatMany([
+            [renderBackgroud()],
+            //circles,
+            [shape],
+            [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}],
+            [renderCellNameSvg(remainingCellNums[0], textColor)],
+            [renderTransparentPane()]
+          ])
+        )}
+        </svg>
+    </Col>
 }
