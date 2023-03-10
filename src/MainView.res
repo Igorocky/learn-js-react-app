@@ -8,6 +8,6 @@ let make = () => {
       {id: "4", title: "KeyTrainer", render: _ => <KeyTrainer/>},
       {id: "5", title: "MM_cmp_context_loader", render: _ => <MM_cmp_root/>},
     ]
-    defaultViewId="5"
+    defaultViewId="2"
   />
 }

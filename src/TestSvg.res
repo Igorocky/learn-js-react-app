@@ -99,7 +99,23 @@ let renderShape = () => {
   let pointsStr = points->Belt_Array.joinWith(" ", p=>`${p->pntX->Belt.Float.toString},${p->pntY->Belt.Float.toString}`)
   <polyline key="shape" stroke="black" fill="none" strokeWidth="0.03" strokeLinejoin="miter" points=pointsStr />
 }
-let shape = renderShape()
+
+let renderShape2 = () => {
+  let baseToReal = (x,y) =>
+    ex
+      ->vecMult(Belt_Int.toFloat(x) *. 2. *. cellSize)
+      ->vecAdd(ey->vecMult(Belt_Int.toFloat(y) *. 2. *. cellSize))
+      ->vecEnd
+  let ps = ints(0,4)->Js_array2.map(x => ints(0,4)->Js_array2.map(y => baseToReal(x,y)))
+  let points = [
+    ps[0][0], ps[4][0],  ps[4][4],  ps[0][4],   ps[0][0],
+    ps[1][0], ps[1][4], ps[2][4], ps[2][0], ps[3][0], ps[3][4],
+    ps[4][4], ps[4][3], ps[0][3], ps[0][2], ps[4][2], ps[4][1], ps[0][1]
+  ]
+  let pointsStr = points->Belt_Array.joinWith(" ", p=>`${p->pntX->Belt.Float.toString},${p->pntY->Belt.Float.toString}`)
+  <polyline key="shape" stroke="black" fill="none" strokeWidth="0.03" strokeLinejoin="miter" points=pointsStr />
+}
+let shape = renderShape2()
 
 let renderCellNameSvg = (n,color) => {
   let (c, _) = allCells[n]
