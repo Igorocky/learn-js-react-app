@@ -151,7 +151,7 @@ let make = () => {
     let userClickedColor = if (e["button"] == 0) {1} else {0}
     let clickIsCorrect = switch clickedCellNum {
       | None => false
-      | Some(n) => n == remainingCellNums[0] && userClickedColor == getCellColor(numToCell(n))
+      | Some(n) => n == remainingCellNums[0] && ( userClickedColor == getCellColor(numToCell(n)) || true)
     }
     setClickIsCorrect(_ => clickIsCorrect)
     if (clickIsCorrect) {
