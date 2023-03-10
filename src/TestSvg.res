@@ -8,7 +8,13 @@ type boundaries = Expln_2d.boundaries
 let f2s = Belt.Float.toString
 let i2s = Belt.Int.toString
 let i2f = Belt_Int.toFloat
-let viewBox = b => `${f2s(b->bndMinX)} ${f2s(b->bndMinY)} ${f2s(b->bndWidth)} ${f2s(b->bndHeight)}`
+
+let viewWidth = 400.
+let viewHeight = 400.
+let cellSize = 1.
+
+let margin = cellSize /. 100.
+let viewBox = b => `${f2s(b->bndMinX -. margin)} ${f2s(b->bndMinY -. margin)} ${f2s(b->bndWidth +. margin *. 2.)} ${f2s(b->bndHeight +. margin *. 2.)}`
 let ints = Belt.Array.range
 
 let makePoint = (x,y) => ex->vecMult(x)->vecAdd(ey->vecMult(-.y))->vecEnd
@@ -37,9 +43,6 @@ let svgOnClick = (~mouseEvent, ~viewWidth, ~viewHeight, ~boundaries, ~customHand
   customHandler(nativeEvent, makePoint(clickImageX, clickImageY))
 }
 
-let viewWidth = 400.
-let viewHeight = 400.
-let cellSize = 1.
 let boundaries = bndFromPoints([ex->vecBegin, ex->vecBegin->pntTr(ex->vecAdd(ey)->vecMult(cellSize *. 8.))])
 
 type cell = {x:int, y:int}
@@ -61,7 +64,7 @@ let allCells = ints(0,63)->Js_array2.map(i => {
   (cell, cellToBoudaries(cell))
 })
 let getCellColor = ({x,y}) => mod(x+y, 2)
-let getCellColorStr = c => if (getCellColor(c) == 0) {"black"} else {"lightgrey"}
+let getCellColorStr = c => if (getCellColor(c) == 0) {"black"} else {"white"}
 let getClickedCellNum = p => allCells->Belt_Array.getIndexBy(((_,b)) => b->bndIncludes(p))
 let renderCellByNumOpt = nOpt => switch nOpt {
   | None => React.null
@@ -79,7 +82,7 @@ let renderCellByNumOpt = nOpt => switch nOpt {
 }
 
 let renderBackgroud = () =>
-  <rect key="background" x="-1000" y="-1000" width="10000" height="10000" fill="grey"/>
+  <rect key="background" x="-1000" y="-1000" width="10000" height="10000" fill="lightgrey"/>
 
 let renderTransparentPane = () =>
   <rect key="TransparentPane" x="-1000" y="-1000" width="10000" height="10000" fill="black" opacity="0"/>
@@ -178,8 +181,8 @@ let make = () => {
           Belt_Array.concatMany([
             [renderBackgroud()],
             //circles,
-            [shape],
             [if (clickIsCorrect) {renderCellByNumOpt(clickedCellNum)} else {React.null}],
+            [shape],
             [renderCellNameSvg(remainingCellNums[0], textColor)],
             [renderTransparentPane()]
           ])
